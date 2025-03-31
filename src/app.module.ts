@@ -14,6 +14,10 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { UserModule } from './user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Manager, ManagerSchema } from './manager/manager.entity';
+import { PersonalTrainersModule } from './personal-trainers/personal-trainers.module';
+import { SubscriptionModule } from './subscription/subscription.module';
+import { GymModule } from './gym/gym.module';
+import { GymOwnerModule } from './gym-owner/gym-owner.module';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Manager.name, schema: ManagerSchema }]),
@@ -27,6 +31,10 @@ import { Manager, ManagerSchema } from './manager/manager.entity';
     ManagerModule,
     // StripeModule,
     TransactionsModule,
+    PersonalTrainersModule,
+    SubscriptionModule,
+    GymModule,
+    GymOwnerModule,
   ],
   controllers: [AppController],
   providers: [AppService, ManagerSeeding],

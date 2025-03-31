@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isUUID } from 'class-validator';
+import { isMongoId, isUUID } from 'class-validator';
 import { Model } from 'mongoose';
 import { BadRequestException } from 'src/error/bad-request-error';
 import { NotFoundException } from 'src/error/not-found-error';
@@ -35,25 +35,25 @@ export class ManagerService {
     }
 
     const hashedPassword = await Manager.hashPassword(body.password);
-    const user = this.managerEntity.create({
+    const savedManager = await this.managerEntity.create({
       email: body.email.trim().toLowerCase(),
       password: hashedPassword,
       username: body.username.trim(),
+      roles: body.roles,
     });
-    const savedUser = await this.managerEntity.create(user);
 
     const token = await this.tokenService.generateTokens({
-      managerId: savedUser.id,
+      managerId: savedManager.id,
       userId: null,
     });
     return {
-      ...returnManager(savedUser),
+      ...returnManager(savedManager),
       token: token.accessToken,
     };
   }
 
   async findOne(id: string): Promise<ManagerCreatedDto> {
-    if (!isUUID(id)) {
+    if (!isMongoId(id)) {
       throw new BadRequestException('Invalid id');
     }
     const manager = await this.managerEntity.findById(id);
@@ -82,9 +82,7 @@ export class ManagerService {
       managerId: manager.id,
       userId: null,
     });
-    console.log('token', token);
     //   ?.token;
-    console.log('manager', manager);
 
     return {
       ...returnManager(manager),

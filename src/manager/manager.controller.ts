@@ -130,7 +130,7 @@ export class ManagerController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: [Manager] })
-  @Roles(Role.read)
+  @Roles(Role.ReadPersonalTrainers)
   getAll() {
     return this.ManagerService.getAll();
   }
@@ -171,5 +171,17 @@ export class ManagerController {
     const refreshToken = await this.AuthService.refreshToken(token, deviceId);
     res.setCookie('token', refreshToken.token, cookieOptions);
     return refreshToken;
+  }
+
+  @Get('clear-cookies')
+  clearCookies(@Res({ passthrough: true }) res: FastifyReply) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '*',
+    });
+
+    return { message: 'Cookies cleared' };
   }
 }

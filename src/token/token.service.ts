@@ -85,14 +85,10 @@ export class TokenService {
       .findOne({
         $or: [
           {
-            user: {
-              _id: data?.userId,
-            },
+            user: data?.userId,
           },
           {
-            manager: {
-              _id: data?.managerId,
-            },
+            manager: data?.managerId,
           },
         ],
       })
@@ -116,15 +112,10 @@ export class TokenService {
     } else {
       const tokenData = {
         ...data,
-        ...(data.userId
-          ? {
-              user: {
-                id: data?.userId,
-              },
-            }
-          : {}),
-        ...(data.managerId ? { manager: { id: data?.managerId } } : {}),
+        ...(data.userId ? { user: data?.userId } : {}),
+        ...(data.managerId ? { manager: data?.managerId } : {}),
       };
+      console.log('tokenData', tokenData);
       return await this.tokenRepository.create(tokenData);
     }
   }

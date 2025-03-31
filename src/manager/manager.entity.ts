@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { Types } from 'mongoose';
+import { Role } from 'src/decorators/roles/role.enum';
 import { MainEntity } from 'src/main-classes/mainEntity';
 import Token from 'src/token/token.entity';
 
@@ -27,6 +28,9 @@ export class Manager extends MainEntity {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Token' }] })
   tokens: Token[];
+
+  @Prop({ type: [String], enum: Role, default: [Role.Any] })
+  roles: Role[];
 
   static async isPasswordMatch(
     password: string,

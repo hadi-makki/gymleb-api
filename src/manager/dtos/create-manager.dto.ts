@@ -1,12 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsString,
   IsStrongPassword,
   IsUUID,
   Matches,
 } from 'class-validator';
+import { Role } from 'src/decorators/roles/role.enum';
 
 export class CreateManagerDto {
   @ApiProperty()
@@ -27,4 +30,8 @@ export class CreateManagerDto {
   @IsEmail()
   @IsNotEmpty()
   email: string;
+
+  @ApiProperty()
+  @IsEnum(Role, { each: true })
+  roles: Role[];
 }
