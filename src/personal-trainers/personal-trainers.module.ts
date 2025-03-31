@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ManagerModule } from 'src/manager/manager.module';
+import { AuthenticationModule } from 'src/common/AuthModule.module';
 import {
   PersonalTrainer,
   PersonalTrainerSchema,
@@ -10,7 +10,7 @@ import { PersonalTrainersService } from './personal-trainers.service';
 
 @Module({
   imports: [
-    ManagerModule,
+    AuthenticationModule,
     MongooseModule.forFeature([
       { name: PersonalTrainer.name, schema: PersonalTrainerSchema },
     ]),

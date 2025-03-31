@@ -28,6 +28,14 @@ import { ManagerController } from 'src/manager/manager.controller';
     AuthService,
     UserService,
   ],
-  controllers: [ManagerController],
+  exports: [
+    ManagerService,
+    JwtService,
+    ConfigService,
+    AuthService,
+    UserService,
+    MongooseModule,
+    TokenService,
+  ],
 })
-export class ManagerModule {}
+export class AuthenticationModule {}

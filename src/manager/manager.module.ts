@@ -28,14 +28,5 @@ import { UserService } from 'src/user/user.service';
     UserService,
   ],
   controllers: [ManagerController],
-  exports: [
-    ManagerService,
-    JwtService,
-    ConfigService,
-    AuthService,
-    UserService,
-    MongooseModule,
-    TokenService,
-  ],
 })
 export class ManagerModule {}
