@@ -14,8 +14,12 @@ import { UpdateGymDto } from './dto/update-gym.dto';
 import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
 import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Gym } from './entities/gym.entity';
-
+import { Roles } from 'src/decorators/roles/Role';
+import { Role } from 'src/decorators/roles/role.enum';
+import { User } from 'src/decorators/users.decorator';
+import { Manager } from 'src/manager/manager.entity';
 @Controller('gym')
+@Roles(Role.GymOwner)
 export class GymController {
   constructor(private readonly gymService: GymService) {}
 
@@ -73,5 +77,12 @@ export class GymController {
   })
   remove(@Param('id') id: string) {
     return this.gymService.remove(id);
+  }
+
+  @Get('analytics')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Get gym analytics' })
+  getGymAnalytics(@User() user: Manager) {
+    return this.gymService.getGymAnalytics(user);
   }
 }

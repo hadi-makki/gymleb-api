@@ -18,9 +18,15 @@ import { PersonalTrainersModule } from './personal-trainers/personal-trainers.mo
 import { SubscriptionModule } from './subscription/subscription.module';
 import { GymModule } from './gym/gym.module';
 import { GymOwnerModule } from './gym-owner/gym-owner.module';
+import { MemberModule } from './member/member.module';
+import { GymSeeding } from './seeder/gym.seeding';
+import { Gym, GymSchema } from './gym/entities/gym.entity';
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Manager.name, schema: ManagerSchema }]),
+    MongooseModule.forFeature([
+      { name: Manager.name, schema: ManagerSchema },
+      { name: Gym.name, schema: GymSchema },
+    ]),
     ConfigModule,
     DatabaseModule,
     MediaModule,
@@ -35,9 +41,10 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
     SubscriptionModule,
     GymModule,
     GymOwnerModule,
+    MemberModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ManagerSeeding],
+  providers: [AppService, ManagerSeeding, GymSeeding],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

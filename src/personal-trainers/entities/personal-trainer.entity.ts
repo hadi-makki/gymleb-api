@@ -4,8 +4,9 @@ import { MainEntity } from 'src/main-classes/mainEntity';
 import { Manager } from 'src/manager/manager.entity';
 import { User } from 'src/user/user.entity';
 import { Gym } from 'src/gym/entities/gym.entity';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 
-@Schema()
+@CustomSchema()
 export class PersonalTrainer extends Manager {
   @Prop({ required: true, type: [Types.ObjectId], ref: 'User' })
   users: User[];

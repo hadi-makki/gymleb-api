@@ -1,21 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { Types } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 import { Role } from 'src/decorators/roles/role.enum';
 import { MainEntity } from 'src/main-classes/mainEntity';
 import Token from 'src/token/token.entity';
 
-@Schema({
-  timestamps: true,
-  toJSON: {
-    virtuals: true,
-    versionKey: false,
-    transform: (_, ret) => {
-      ret.id = ret._id;
-      delete ret._id;
-    },
-  },
-})
+@CustomSchema()
 export class Manager extends MainEntity {
   @Prop({ required: true, unique: true })
   username: string;

@@ -31,6 +31,10 @@ export class ManagerAuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    if (!requiredRoles) {
+      requiredRoles.push(Role.SuperAdmin);
+    }
+
     const validatedData = await this.tokenService.validateJwt(
       request,
       context.switchToHttp().getResponse(),
@@ -44,7 +48,9 @@ export class ManagerAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const manager = await this.managerRepository.findById(userId);
+    const manager = await this.managerRepository
+      .findById(userId)
+      .populate('roles');
 
     if (
       !manager ||

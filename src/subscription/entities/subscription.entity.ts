@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 import { Gym } from 'src/gym/entities/gym.entity';
 import { PersonalTrainer } from 'src/personal-trainers/entities/personal-trainer.entity';
 import { User } from 'src/user/user.entity';
@@ -11,8 +12,11 @@ export enum SubscriptionType {
   DAILY_GYM = 'daily_gym',
 }
 
-@Schema()
+@CustomSchema()
 export class Subscription {
+  @Prop({ type: String })
+  title: string;
+
   @Prop({ type: String, enum: SubscriptionType })
   type: SubscriptionType;
 
@@ -24,9 +28,6 @@ export class Subscription {
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   user: User;
-
-  @Prop({ type: Types.ObjectId, ref: 'PersonalTrainer', required: false })
-  personalTrainer: PersonalTrainer;
 
   @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
   gym: Gym;

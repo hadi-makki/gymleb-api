@@ -171,6 +171,7 @@ export class TokenService {
         iat: number;
         exp: number;
       };
+
       const checkToken = await this.getTokenByAccessToken(token);
 
       if (!checkToken) {

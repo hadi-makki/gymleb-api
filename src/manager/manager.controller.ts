@@ -121,6 +121,7 @@ export class ManagerController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   async me(@User() user: Manager) {
+    console.log('user', user);
     return returnManager(user);
   }
 

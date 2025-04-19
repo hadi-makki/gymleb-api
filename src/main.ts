@@ -47,6 +47,7 @@ async function bootstrap() {
         callback(new ForbiddenException('Not allowed by CORS'), false); // Deny the origin
       }
     },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   });
 

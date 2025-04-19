@@ -1,20 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 
 export type MainDocument = MainEntity & Document;
 
-@Schema({
-  collection: 'main',
-  timestamps: true,
-  toJSON: {
-    virtuals: true,
-    versionKey: false,
-    transform: (_, ret) => {
-      ret.id = ret._id;
-      delete ret._id;
-    },
-  },
-})
+@CustomSchema()
 export class MainEntity extends Document {
   id: string;
   @Prop({ required: true, default: Date.now })

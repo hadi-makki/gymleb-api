@@ -9,13 +9,19 @@ import { GymController } from './gym.controller';
 import { GymService } from './gym.service';
 import { Manager, ManagerSchema } from 'src/manager/manager.entity';
 import { AuthenticationModule } from 'src/common/AuthModule.module';
-
+import {
+  Transaction,
+  TransactionSchema,
+} from 'src/transactions/transaction.entity';
+import { Member, MemberSchema } from 'src/member/entities/member.entity';
 @Module({
   imports: [
     AuthenticationModule,
     MongooseModule.forFeature([
       { name: Gym.name, schema: GymSchema },
       { name: GymOwner.name, schema: GymOwnerSchema },
+      { name: Transaction.name, schema: TransactionSchema },
+      { name: Member.name, schema: MemberSchema },
     ]),
   ],
   controllers: [GymController],

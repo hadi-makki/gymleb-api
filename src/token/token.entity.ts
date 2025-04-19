@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 import { MainEntity } from 'src/main-classes/mainEntity';
 import { Manager } from 'src/manager/manager.entity';
 import { User } from 'src/user/user.entity';
@@ -10,7 +11,7 @@ export enum TokenType {
   ResetPassword = 'reset-password',
 }
 
-@Schema({ timestamps: true })
+@CustomSchema()
 class Token extends MainEntity {
   @Prop({ type: String, unique: true, default: null })
   accessToken: string;

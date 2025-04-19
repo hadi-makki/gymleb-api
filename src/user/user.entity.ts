@@ -7,10 +7,11 @@ import { Transaction } from 'src/transactions/transaction.entity';
 import { PersonalTrainer } from 'src/personal-trainers/entities/personal-trainer.entity';
 import { Gym } from 'src/gym/entities/gym.entity';
 import { Subscription } from 'src/subscription/entities/subscription.entity';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 
 export type UserDocument = User & Document;
 
-@Schema({ collection: 'user', timestamps: true })
+@CustomSchema()
 export class User extends MainEntity {
   @Prop({ required: true })
   email: string;

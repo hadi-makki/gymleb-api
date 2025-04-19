@@ -1,27 +1,27 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 import { MainEntity } from 'src/main-classes/mainEntity';
 import { Product } from 'src/products/products.entity';
 import { User } from 'src/user/user.entity';
-
+import { Gym } from 'src/gym/entities/gym.entity';
+import { Subscription } from 'src/subscription/entities/subscription.entity';
+import { Member } from 'src/member/entities/member.entity';
 export type TransactionDocument = Transaction & Document;
 
-@Schema({ collection: 'transactions' })
+@CustomSchema()
 export class Transaction extends MainEntity {
   @Prop({ type: String, required: false })
-  invoiceId: string;
+  endDate: string;
 
-  @Prop({ type: Date, required: true })
-  invoiceDate: Date;
+  @Prop({ type: Types.ObjectId, required: false, ref: 'Gym' })
+  gym: Gym;
 
-  @Prop({ type: String, required: false })
-  status: string;
+  @Prop({ type: Types.ObjectId, required: false, ref: 'Subscription' })
+  subscription: Subscription;
 
-  @Prop({ type: Product, required: false, ref: 'Product' })
-  product: Product;
-
-  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
-  user: User;
+  @Prop({ type: Types.ObjectId, required: false, ref: 'Member' })
+  member: Member;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

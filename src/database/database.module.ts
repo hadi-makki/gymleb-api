@@ -12,7 +12,7 @@ dotenv.config({
 @Module({
   imports: [
     MongooseModule.forRoot(
-      isLocalEnv ? process.env.LOCAL_MONGODB_URI : process.env.MONGODB_URI,
+      isLocalEnv() ? process.env.LOCAL_MONGODB_URI : process.env.MONGODB_URI,
     ),
   ],
 })

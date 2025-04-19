@@ -1,28 +1,10 @@
-import { CallWith } from './dto/request/create-setup-intent.dto';
+import { SubscriptionType } from 'src/subscription/entities/subscription.entity';
 
 export interface PaymentDetails {
   subscriptionId: string;
-  invoiceId: string;
-  customerId: string;
-  amount: number;
-  customer_phoneNumber?: string;
-  currency: string;
-  paymentMethod: string;
-  products: Array<{
-    name: string;
-    productId: string;
-    quantity: number;
-    price: number;
-  }>;
-  metadata: {
-    productId: string;
-    userId: string;
-    callWith: CallWith;
-    callDuration: number;
-  };
-  status: string;
-  created: Date;
-  baseId?: string;
+  memberId: string;
+  gymId: string;
+  subscriptionType: SubscriptionType;
 }
 
 export interface GooglePaymentsDetails {

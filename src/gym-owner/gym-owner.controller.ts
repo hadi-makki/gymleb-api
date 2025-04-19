@@ -14,8 +14,13 @@ import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { GymOwner } from './entities/gym-owner.entity';
-
+import { Roles } from 'src/decorators/roles/Role';
+import { Role } from 'src/decorators/roles/role.enum';
+import { Manager } from 'src/manager/manager.entity';
+import { User } from 'src/decorators/users.decorator';
+import { returnManager } from 'src/functions/returnUser';
 @Controller('gym-owner')
+@Roles(Role.GymOwner)
 export class GymOwnerController {
   constructor(private readonly gymOwnerService: GymOwnerService) {}
 
@@ -75,5 +80,16 @@ export class GymOwnerController {
   })
   remove(@Param('id') id: string) {
     return this.gymOwnerService.remove(id);
+  }
+
+  @Get('me')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Get the gym owner by id' })
+  @ApiOkResponse({
+    description: 'The gym owner has been successfully retrieved.',
+    type: GymOwner,
+  })
+  getGymOwner(@User() user: Manager) {
+    return returnManager(user);
   }
 }

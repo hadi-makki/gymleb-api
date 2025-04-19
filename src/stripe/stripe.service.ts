@@ -94,64 +94,61 @@ export class StripeService {
   private async handlePaymentIntentSucceeded(
     paymentIntent: Stripe.PaymentIntent,
   ) {
-    // Fetch additional customer details
-    const customer = paymentIntent.customer
-      ? ((await this.stripe.customers.retrieve(
-          paymentIntent.customer as string,
-        )) as Stripe.Customer)
-      : null;
-    // Fetch payment method details
-    const paymentMethod = paymentIntent.payment_method
-      ? await this.stripe.paymentMethods.retrieve(
-          paymentIntent.payment_method as string,
-        )
-      : null;
-
-    // Get the associated invoice if it exists
-    const invoice = paymentIntent.invoice
-      ? await this.stripe.invoices.retrieve(paymentIntent.invoice as string)
-      : null;
-
-    const paymentDetails: PaymentDetails = {
-      subscriptionId: invoice?.subscription as string,
-      invoiceId: invoice?.id || null,
-      customerId: customer?.id || 'guest',
-      amount: paymentIntent.amount / 100, // Convert from cents to dollars
-      currency: paymentIntent.currency,
-      paymentMethod: paymentMethod?.type || 'unknown',
-      products: [], // Will be populated if there's an invoice
-      metadata: paymentIntent.metadata as unknown as {
-        productId: string;
-        userId: string;
-        callWith: CallWith;
-        callDuration: number;
-      },
-      status: paymentIntent.status,
-      created: new Date(paymentIntent.created * 1000),
-    };
-
-    // If there's an invoice, get the line items
-    if (invoice) {
-      paymentDetails.products = invoice.lines.data.map((item) => ({
-        name: item.description || 'Unnamed product',
-        quantity: item.quantity || 1,
-        productId: item.price?.product as string,
-        price: (item.amount || 0) / 100, // Convert from cents to dollars
-      }));
-    }
-    this.logger.log('Payment Intent Succeeded Summarized:', {
-      ...paymentDetails,
-      raw_payment_intent_id: paymentIntent.id,
-    });
-    // Here you would typically:
-    // 1. Update your database with the payment information
-    // 2. Send confirmation emails
-    // 3. Update inventory
-    // 4. Trigger any necessary fulfillment processes
-    await this.transactionsService.createAiPhoneNumberTransaction(
-      paymentDetails,
-    );
-    return paymentDetails;
+    // // Fetch additional customer details
+    // const customer = paymentIntent.customer
+    //   ? ((await this.stripe.customers.retrieve(
+    //       paymentIntent.customer as string,
+    //     )) as Stripe.Customer)
+    //   : null;
+    // // Fetch payment method details
+    // const paymentMethod = paymentIntent.payment_method
+    //   ? await this.stripe.paymentMethods.retrieve(
+    //       paymentIntent.payment_method as string,
+    //     )
+    //   : null;
+    // // Get the associated invoice if it exists
+    // const invoice = paymentIntent.invoice
+    //   ? await this.stripe.invoices.retrieve(paymentIntent.invoice as string)
+    //   : null;
+    // const paymentDetails: PaymentDetails = {
+    //   subscriptionId: invoice?.subscription as string,
+    //   invoiceId: invoice?.id || null,
+    //   customerId: customer?.id || 'guest',
+    //   amount: paymentIntent.amount / 100, // Convert from cents to dollars
+    //   currency: paymentIntent.currency,
+    //   paymentMethod: paymentMethod?.type || 'unknown',
+    //   products: [], // Will be populated if there's an invoice
+    //   metadata: paymentIntent.metadata as unknown as {
+    //     productId: string;
+    //     userId: string;
+    //     callWith: CallWith;
+    //     callDuration: number;
+    //   },
+    //   status: paymentIntent.status,
+    //   created: new Date(paymentIntent.created * 1000),
+    // };
+    // // If there's an invoice, get the line items
+    // if (invoice) {
+    //   paymentDetails.products = invoice.lines.data.map((item) => ({
+    //     name: item.description || 'Unnamed product',
+    //     quantity: item.quantity || 1,
+    //     productId: item.price?.product as string,
+    //     price: (item.amount || 0) / 100, // Convert from cents to dollars
+    //   }));
+    // }
+    // this.logger.log('Payment Intent Succeeded Summarized:', {
+    //   ...paymentDetails,
+    //   raw_payment_intent_id: paymentIntent.id,
+    // });
+    // // Here you would typically:
+    // // 1. Update your database with the payment information
+    // // 2. Send confirmation emails
+    // // 3. Update inventory
+    // // 4. Trigger any necessary fulfillment processes
+    // await this.transactionsService.createAiPhoneNumberTransaction(
+    //   paymentDetails,
+    // );
+    // return paymentDetails;
   }
 
   async createBuyPhoneNumberPayment(data: CreatePaymentIntentDto) {

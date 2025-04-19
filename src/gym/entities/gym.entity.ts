@@ -1,11 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 import { GymOwner } from 'src/gym-owner/entities/gym-owner.entity';
+import { MainEntity } from 'src/main-classes/mainEntity';
+import { Manager } from 'src/manager/manager.entity';
 import { PersonalTrainer } from 'src/personal-trainers/entities/personal-trainer.entity';
 import { Subscription } from 'src/subscription/entities/subscription.entity';
 
-@Schema()
-export class Gym {
+@CustomSchema()
+export class Gym extends MainEntity {
   @Prop({ type: String })
   name: string;
 
@@ -21,8 +24,8 @@ export class Gym {
   @Prop({ type: [Types.ObjectId], ref: 'Subscription', required: false })
   subscriptions: Subscription[];
 
-  @Prop({ type: Types.ObjectId, ref: 'GymOwner' })
-  gymOwner: GymOwner;
+  @Prop({ type: Types.ObjectId, ref: 'Manager' })
+  owner: Manager;
 }
 
 export const GymSchema = SchemaFactory.createForClass(Gym);

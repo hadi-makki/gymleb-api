@@ -1,8 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { CustomSchema } from 'src/decorators/custom-schema.decorator';
 import { User } from 'src/user/user.entity';
 
-@Schema({ collection: 'media' })
+@CustomSchema()
 export class Media extends Document {
   @Prop({ required: true })
   s3Key: string;
