@@ -1,19 +1,19 @@
 import { Module } from '@nestjs/common';
 import { StripeController } from './stripe.controller';
 import { StripeService } from './stripe.service';
-import { User, UserSchema } from 'src/user/user.entity';
+import { User, UserSchema } from '../user/user.entity';
 import {
   Transaction,
   TransactionSchema,
-} from 'src/transactions/transaction.entity';
-import { TransactionsService } from 'src/transactions/transactions.service';
+} from '../transactions/transaction.entity';
+import { TransactionsService } from '../transactions/transactions.service';
 import { ConfigService } from '@nestjs/config';
-import { Manager, ManagerSchema } from 'src/manager/manager.entity';
-import { TokenService } from 'src/token/token.service';
-import Token, { TokenSchema } from 'src/token/token.entity';
+import { Manager, ManagerSchema } from '../manager/manager.entity';
+import { TokenService } from '../token/token.service';
+import Token, { TokenSchema } from '../token/token.entity';
 import { JwtService } from '@nestjs/jwt';
-import { Product, ProductSchema } from 'src/products/products.entity';
-import { ProductsService } from 'src/products/products.service';
+import { Product, ProductSchema } from '../products/products.entity';
+import { ProductsService } from '../products/products.service';
 import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({

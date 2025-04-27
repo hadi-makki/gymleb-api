@@ -5,13 +5,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { addDays } from 'date-fns';
 import { Request, Response } from 'express';
 import { Model } from 'mongoose';
-import { UnauthorizedException } from 'src/error/unauthorized-error';
-import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
-import { Manager } from 'src/manager/manager.entity';
-import { User } from 'src/user/user.entity';
+import { UnauthorizedException } from '../error/unauthorized-error';
+import { SuccessMessageReturn } from '../main-classes/success-message-return';
+import { Manager } from '../manager/manager.entity';
+import { User } from '../user/user.entity';
 import { GenerateTokenDTO } from './token.dto';
 import TokenEntity from './token.entity';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { Member } from '../member/entities/member.entity';
 @Injectable()
 export class TokenService {
   constructor(
@@ -19,8 +20,9 @@ export class TokenService {
     private readonly tokenRepository: Model<TokenEntity>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    @InjectModel(User.name)
-    private readonly userRepository: Model<User>,
+
+    @InjectModel(Member.name)
+    private readonly memberRepository: Model<Member>,
     // private readonly TokenService: TokenService,
     @InjectModel(Manager.name)
     private readonly managerRepository: Model<Manager>,
@@ -85,34 +87,45 @@ export class TokenService {
       .findOne({
         $or: [
           {
-            user: data?.userId,
+            member: data?.userId,
           },
           {
             manager: data?.managerId,
           },
         ],
       })
-      .populate('user')
+      .populate('member')
       .populate('manager');
 
     if (checkToken) {
+      console.log('checkToken', checkToken);
       checkToken.refreshToken = data.refreshToken;
       checkToken.refreshExpirationDate = data.refreshExpirationDate;
       checkToken.accessToken = data.accessToken;
       checkToken.accessExpirationDate = data.accessExpirationDate;
-      if (data.userId && data.userId !== checkToken.user.id) {
-        const user = await this.userRepository.findById(data.userId);
-        checkToken.user = user;
+      if (data.userId && data.userId !== checkToken.member.id) {
+        console.log('data.userId', data.userId);
+        const member = await this.memberRepository.findById(data.userId);
+        if (!member) {
+          throw new UnauthorizedException('User not found');
+        }
+        checkToken.member = member;
       }
       if (data.managerId && data.managerId !== checkToken.manager.id) {
+        console.log('data.managerId', data.managerId);
         const manager = await this.managerRepository.findById(data.managerId);
+        if (!manager) {
+          throw new UnauthorizedException('Manager not found');
+        }
         checkToken.manager = manager;
       }
+      console.log('checkToken', checkToken);
       return await checkToken.save();
     } else {
+      console.log('data.userId', data.userId);
       const tokenData = {
         ...data,
-        ...(data.userId ? { user: data?.userId } : {}),
+        ...(data.userId ? { member: data?.userId } : {}),
         ...(data.managerId ? { manager: data?.managerId } : {}),
       };
       console.log('tokenData', tokenData);
@@ -128,12 +141,12 @@ export class TokenService {
 
   async deleteTokensByUserId(userId: string): Promise<SuccessMessageReturn> {
     const tokenToDelete = await this.tokenRepository.find({
-      user: {
+      member: {
         id: userId,
       },
     });
     if (tokenToDelete) {
-      await this.tokenRepository.deleteMany({ user: { id: userId } });
+      await this.tokenRepository.deleteMany({ member: { id: userId } });
     }
     return {
       message: 'Tokens deleted successfully',
@@ -142,7 +155,7 @@ export class TokenService {
 
   async getTokensByUserId(userId: string): Promise<TokenEntity[]> {
     return await this.tokenRepository.findOne({
-      user: {
+      member: {
         id: userId,
       },
     });
@@ -151,20 +164,23 @@ export class TokenService {
   async validateJwt(
     req: FastifyRequest,
     res: FastifyReply,
+    isMember: boolean = false,
   ): Promise<{
     sub: string;
     iat: number;
     exp: number;
   }> {
     const token = req.cookies.token;
+    const memberToken = req.cookies.memberToken;
 
-    console.log('token', token);
+    const tokenToUse = isMember ? memberToken : token;
 
-    if (!token) {
+    if (!tokenToUse) {
       throw new UnauthorizedException('Missing Authorization Header');
     }
+
     try {
-      const decodedJwt = (await this.jwtService.verifyAsync(token, {
+      const decodedJwt = (await this.jwtService.verifyAsync(tokenToUse, {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
       })) as {
         sub: string;
@@ -172,7 +188,7 @@ export class TokenService {
         exp: number;
       };
 
-      const checkToken = await this.getTokenByAccessToken(token);
+      const checkToken = await this.getTokenByAccessToken(tokenToUse);
 
       if (!checkToken) {
         throw new UnauthorizedException('Invalid Token');

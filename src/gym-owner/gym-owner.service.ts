@@ -8,13 +8,17 @@ import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { GymOwner } from './entities/gym-owner.entity';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Manager } from 'src/manager/manager.entity';
-import { Role } from 'src/decorators/roles/role.enum';
+import { Manager } from '../manager/manager.entity';
+import { Role } from '../decorators/roles/role.enum';
+import { Gym } from '../gym/entities/gym.entity';
+import { Days } from '../seeder/gym.seeding';
 @Injectable()
 export class GymOwnerService {
   constructor(
     @InjectModel(Manager.name)
     private readonly gymOwnerModel: Model<Manager>,
+    @InjectModel(Gym.name)
+    private readonly gymModel: Model<Gym>,
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto) {
@@ -25,9 +29,26 @@ export class GymOwnerService {
       throw new BadRequestException('Gym owner already exists');
     }
     const gymOwner = await this.gymOwnerModel.create({
-      ...createGymOwnerDto,
+      name: createGymOwnerDto.name,
+      email: createGymOwnerDto.email,
+      password: await Manager.hashPassword(createGymOwnerDto.password),
+      address: createGymOwnerDto.address,
+      phone: createGymOwnerDto.phone,
+      username: createGymOwnerDto.name.toLowerCase().split(' ').join(''),
       roles: [Role.GymOwner],
     });
+    const checkGym = await this.gymModel.create({
+      name: createGymOwnerDto.name,
+      address: createGymOwnerDto.address,
+      phone: createGymOwnerDto.phone,
+      email: createGymOwnerDto.email,
+      password: createGymOwnerDto.password,
+      openingDays: Days,
+      owner: gymOwner.id,
+    });
+    gymOwner.gym = checkGym.id;
+    await gymOwner.save();
+
     return gymOwner;
   }
 

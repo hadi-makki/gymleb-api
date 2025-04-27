@@ -20,15 +20,15 @@ import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
-} from 'src/error/api-responses.decorator';
-import { AuthGuard } from 'src/guards/auth.guard';
-import { User } from 'src/decorators/users.decorator';
-import { User as UserEntity } from 'src/user/user.entity';
+} from '../error/api-responses.decorator';
+import { AuthGuard } from '../guards/auth.guard';
+import { User } from '../decorators/users.decorator';
+import { User as UserEntity } from '../user/user.entity';
 import { UserCreatedDto } from './dtos/response/user-created.dto';
 import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 import { RefreshDto } from './dtos/refresh-token.dto';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { cookieOptions } from 'src/utils/constants';
+import { cookieOptions } from '../utils/constants';
 @Controller('auth')
 @ApiTags('auth')
 @ApiBadRequestResponse()

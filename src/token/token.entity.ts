@@ -1,9 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
-import { MainEntity } from 'src/main-classes/mainEntity';
-import { Manager } from 'src/manager/manager.entity';
-import { User } from 'src/user/user.entity';
+import { CustomSchema } from '../decorators/custom-schema.decorator';
+import { MainEntity } from '../main-classes/mainEntity';
+import { Manager } from '../manager/manager.entity';
+import { Member } from '../member/entities/member.entity';
+import { User } from '../user/user.entity';
 
 export enum TokenType {
   Access = 'access',
@@ -30,6 +31,9 @@ class Token extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'User', nullable: true })
   user: User;
+
+  @Prop({ type: Types.ObjectId, ref: 'Member', nullable: true })
+  member: Member;
 
   @Prop({ type: Types.ObjectId, ref: 'Manager', nullable: true })
   manager: Manager;

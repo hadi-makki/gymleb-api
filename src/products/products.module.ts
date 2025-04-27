@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { User, UserSchema } from 'src/user/user.entity';
+import { User, UserSchema } from '../user/user.entity';
 import { ProductsController } from './products.controller';
 import { Product, ProductSchema } from './products.entity';
 import { SubscriptionPlanSeeding } from './products.seed';

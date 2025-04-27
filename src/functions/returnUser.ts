@@ -1,5 +1,5 @@
-import { Manager } from 'src/manager/manager.entity';
-import { User } from 'src/user/user.entity';
+import { Manager } from '../manager/manager.entity';
+import { User } from '../user/user.entity';
 
 export function returnUser(user: User) {
   return {
@@ -18,5 +18,6 @@ export function returnManager(manager: Manager) {
     email: manager.email,
     createdAt: manager.createdAt,
     updatedAt: manager.updatedAt,
+    gym: manager.gym,
   };
 }

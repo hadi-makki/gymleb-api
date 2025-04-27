@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MainDto } from 'src/main-classes/main-dto';
+import { MainDto } from '../../../main-classes/main-dto';
 
 export class UserCreatedDto extends MainDto {
   @ApiProperty()

@@ -4,13 +4,15 @@ import { UpdateMemberDto } from './dto/update-member.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Member } from './entities/member.entity';
-import { Manager } from 'src/manager/manager.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { NotFoundException } from 'src/error/not-found-error';
-import { Subscription } from 'src/subscription/entities/subscription.entity';
-import { TransactionsService } from 'src/transactions/transactions.service';
+import { Manager } from '../manager/manager.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { NotFoundException } from '../error/not-found-error';
+import { Subscription } from '../subscription/entities/subscription.entity';
+import { TransactionsService } from '../transactions/transactions.service';
 import { isMongoId, isUUID } from 'class-validator';
-import { BadRequestException } from 'src/error/bad-request-error';
+import { BadRequestException } from '../error/bad-request-error';
+import { LoginMemberDto } from './dto/login-member.dto';
+import { TokenService } from '../token/token.service';
 
 @Injectable()
 export class MemberService {
@@ -22,6 +24,7 @@ export class MemberService {
     @InjectModel(Subscription.name)
     private subscriptionModel: Model<Subscription>,
     private readonly transationService: TransactionsService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async create(createMemberDto: CreateMemberDto, manager: Manager) {
@@ -41,16 +44,43 @@ export class MemberService {
       throw new NotFoundException('Subscription not found');
     }
 
+    let username =
+      createMemberDto.name
+        .split(' ')
+        .map((name) => name[0])
+        .join('')
+        .toLowerCase() + Math.floor(1000 + Math.random() * 9000);
+
+    const checkUsername = await this.memberModel.findOne({
+      username: username,
+    });
+
+    if (checkUsername) {
+      username =
+        createMemberDto.name
+          .split(' ')
+          .map((name) => {
+            return `${name[0]}${name[1]}`;
+          })
+          .join('')
+          .toLowerCase() + Math.floor(1000 + Math.random() * 9000);
+    }
+
     const member = await this.memberModel.create({
       ...createMemberDto,
       gym: gym.id,
       subscription: subscription.id,
+      username: username,
+      passCode: `${createMemberDto.name.slice(0, 3).toLowerCase()}-${Math.floor(
+        1000 + Math.random() * 9000,
+      )}`,
     });
     const transaction = await this.transationService.createTransaction({
       memberId: member.id,
       gymId: gym.id,
       subscriptionId: subscription.id,
       subscriptionType: subscription.type,
+      amount: subscription.price,
     });
 
     member.transactions = [transaction.id];
@@ -77,9 +107,44 @@ export class MemberService {
     };
   }
 
-  async findAll() {
+  async loginMember(loginMemberDto: LoginMemberDto) {
+    console.log('loginMemberDto', loginMemberDto);
+    const member = await this.memberModel.findOne({
+      username: loginMemberDto.username,
+      passCode: loginMemberDto.password,
+    });
+    if (!member) {
+      throw new BadRequestException('Invalid passcode or username');
+    }
+
+    console.log('member', member.id);
+    const token = await this.tokenService.generateTokens({
+      managerId: null,
+      userId: member.id,
+    });
+    console.log('token', token);
+
+    return {
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      phone: member.phone,
+      gym: member.gym,
+      token: token.accessToken,
+    };
+  }
+
+  async findAll(manager: Manager) {
+    const checkGym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
     const getMembers = await this.memberModel
-      .find()
+      .find({
+        gym: checkGym.id,
+      })
       .populate('gym')
       .populate('subscription')
       .populate('transactions');
@@ -156,6 +221,7 @@ export class MemberService {
         gymId: member.gym.id,
         subscriptionId: checkSubscription.id,
         subscriptionType: checkSubscription.type,
+        amount: checkSubscription.price,
       });
 
       member.transactions = [transaction.id];
@@ -232,6 +298,7 @@ export class MemberService {
       gymId: checkGym.id,
       subscriptionId: checkSubscription.id,
       subscriptionType: checkSubscription.type,
+      amount: checkSubscription.price,
     });
 
     member.transactions.push(createTransaction.id);
@@ -264,5 +331,78 @@ export class MemberService {
 
     await this.memberModel.findByIdAndDelete(id);
     return { message: 'Member deleted successfully' };
+  }
+
+  async getExpiredMembers(manager: Manager) {
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+
+    console.log(' this is the gym', gym);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const getMembers = await this.memberModel
+      .find({
+        gym: gym.id,
+      })
+      .populate('transactions')
+      .populate('subscription');
+
+    const expiredMembers = getMembers.filter((member) => {
+      const latestTransaction = member.transactions.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )[0];
+
+      if (new Date(latestTransaction.endDate) < new Date()) {
+        return {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          phone: member.phone,
+          gym: member.gym,
+          subscription: member.subscription,
+          transactions: member.transactions,
+          createdAt: member.createdAt,
+          updatedAt: member.updatedAt,
+          hasActiveSubscription: false,
+          currentActiveSubscription: latestTransaction || null,
+        };
+      }
+    });
+
+    return expiredMembers;
+  }
+
+  async getMe(member: Member) {
+    const checkMember = await this.memberModel
+      .findById(member.id)
+      .populate('gym')
+      .populate('subscription')
+      .populate('transactions');
+
+    const checkActiveSubscription = checkMember.transactions.some(
+      (transaction) => {
+        return new Date(transaction.endDate) > new Date();
+      },
+    );
+
+    const latestTransaction = checkMember.transactions.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+
+    return {
+      id: checkMember.id,
+      name: checkMember.name,
+      email: checkMember.email,
+      phone: checkMember.phone,
+      gym: checkMember.gym,
+      subscription: checkMember.subscription,
+      hasActiveSubscription: checkActiveSubscription,
+      currentActiveSubscription: latestTransaction || null,
+    };
   }
 }

@@ -1,6 +1,6 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
+import { CustomSchema } from '../decorators/custom-schema.decorator';
 
 export type MainDocument = MainEntity & Document;
 

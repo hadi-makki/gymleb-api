@@ -3,17 +3,17 @@ import { MemberService } from './member.service';
 import { MemberController } from './member.controller';
 import { Member, MemberSchema } from './entities/member.entity';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Gym, GymSchema } from 'src/gym/entities/gym.entity';
+import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import {
   Subscription,
   SubscriptionSchema,
-} from 'src/subscription/entities/subscription.entity';
-import { AuthenticationModule } from 'src/common/AuthModule.module';
+} from '../subscription/entities/subscription.entity';
+import { AuthenticationModule } from '../common/AuthModule.module';
 import {
   Transaction,
   TransactionSchema,
-} from 'src/transactions/transaction.entity';
-import { TransactionsModule } from 'src/transactions/transactions.module';
+} from '../transactions/transaction.entity';
+import { TransactionsModule } from '../transactions/transactions.module';
 @Module({
   imports: [
     AuthenticationModule,

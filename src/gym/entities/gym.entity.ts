@@ -1,11 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
-import { GymOwner } from 'src/gym-owner/entities/gym-owner.entity';
-import { MainEntity } from 'src/main-classes/mainEntity';
-import { Manager } from 'src/manager/manager.entity';
-import { PersonalTrainer } from 'src/personal-trainers/entities/personal-trainer.entity';
-import { Subscription } from 'src/subscription/entities/subscription.entity';
+import { CustomSchema } from '../../decorators/custom-schema.decorator';
+import { MainEntity } from '../../main-classes/mainEntity';
+import { Manager } from '../../manager/manager.entity';
+import { PersonalTrainer } from '../../personal-trainers/entities/personal-trainer.entity';
+import { Subscription } from '../../subscription/entities/subscription.entity';
 
 @CustomSchema()
 export class Gym extends MainEntity {
@@ -26,6 +25,24 @@ export class Gym extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Manager' })
   owner: Manager;
+
+  @Prop({
+    type: [
+      {
+        day: String,
+        openingTime: String,
+        closingTime: String,
+        isOpen: Boolean,
+      },
+    ],
+    required: false,
+  })
+  openingDays: {
+    day: string;
+    openingTime: string;
+    closingTime: string;
+    isOpen: boolean;
+  }[];
 }
 
 export const GymSchema = SchemaFactory.createForClass(Gym);

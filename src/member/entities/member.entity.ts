@@ -1,16 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { MainEntity } from 'src/main-classes/mainEntity';
-import { Gym } from 'src/gym/entities/gym.entity';
+import { MainEntity } from '../../main-classes/mainEntity';
+import { Gym } from '../../gym/entities/gym.entity';
 import { Types } from 'mongoose';
-import { Subscription } from 'src/subscription/entities/subscription.entity';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { Subscription } from '../../subscription/entities/subscription.entity';
+import { CustomSchema } from '../../decorators/custom-schema.decorator';
+import { Transaction } from '../../transactions/transaction.entity';
 
 @CustomSchema()
 export class Member extends MainEntity {
   @Prop({ required: true })
   name: string;
 
+  @Prop({ required: true, unique: true })
+  username: string;
   @Prop({ required: true })
   email: string;
 
@@ -25,6 +27,9 @@ export class Member extends MainEntity {
 
   @Prop({ ref: 'Transaction', type: [Types.ObjectId], required: false })
   transactions: Transaction[];
+
+  @Prop({ type: String, required: false })
+  passCode: string;
 }
 
 export const MemberSchema = SchemaFactory.createForClass(Member);

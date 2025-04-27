@@ -7,8 +7,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
 import { Response } from 'express';
 import { Model } from 'mongoose';
-import { S3Service } from 'src/s3/s3.service';
-import { UserService } from 'src/user/user.service';
+import { S3Service } from '../s3/s3.service';
+import { UserService } from '../user/user.service';
 import { v4 as uuidv4, validate as uuidValidate } from 'uuid';
 import { Media } from './media.entity';
 @Injectable()

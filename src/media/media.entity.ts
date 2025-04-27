@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
-import { User } from 'src/user/user.entity';
+import { CustomSchema } from '../decorators/custom-schema.decorator';
+import { User } from '../user/user.entity';
 
 @CustomSchema()
 export class Media extends Document {

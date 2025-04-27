@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Manager } from 'src/manager/manager.entity';
-import { TokenService } from 'src/token/token.service';
+import { Manager } from '../manager/manager.entity';
+import { TokenService } from '../token/token.service';
 import { FastifyRequest } from 'fastify';
-import { Role } from 'src/decorators/roles/role.enum';
-import { ROLES_KEY } from 'src/decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
+import { ROLES_KEY } from '../decorators/roles/Role';
 import { Reflector } from '@nestjs/core';
 @Injectable()
 export class ManagerAuthGuard implements CanActivate {

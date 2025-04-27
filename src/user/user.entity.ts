@@ -1,13 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { MainEntity } from 'src/main-classes/mainEntity';
+import { MainEntity } from '../main-classes/mainEntity';
 import * as bcrypt from 'bcryptjs';
-import Token from 'src/token/token.entity';
-import { Transaction } from 'src/transactions/transaction.entity';
-import { PersonalTrainer } from 'src/personal-trainers/entities/personal-trainer.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { Subscription } from 'src/subscription/entities/subscription.entity';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
+import Token from '../token/token.entity';
+import { Transaction } from '../transactions/transaction.entity';
+import { PersonalTrainer } from '../personal-trainers/entities/personal-trainer.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { Subscription } from '../subscription/entities/subscription.entity';
+import { CustomSchema } from '../decorators/custom-schema.decorator';
 
 export type UserDocument = User & Document;
 

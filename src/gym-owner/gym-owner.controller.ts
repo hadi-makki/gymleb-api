@@ -11,14 +11,14 @@ import {
 import { GymOwnerService } from './gym-owner.service';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { GymOwner } from './entities/gym-owner.entity';
-import { Roles } from 'src/decorators/roles/Role';
-import { Role } from 'src/decorators/roles/role.enum';
-import { Manager } from 'src/manager/manager.entity';
-import { User } from 'src/decorators/users.decorator';
-import { returnManager } from 'src/functions/returnUser';
+import { Roles } from '../decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
+import { Manager } from '../manager/manager.entity';
+import { User } from '../decorators/users.decorator';
+import { returnManager } from '../functions/returnUser';
 @Controller('gym-owner')
 @Roles(Role.GymOwner)
 export class GymOwnerController {

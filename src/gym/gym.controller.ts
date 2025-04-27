@@ -11,13 +11,13 @@ import {
 import { GymService } from './gym.service';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Gym } from './entities/gym.entity';
-import { Roles } from 'src/decorators/roles/Role';
-import { Role } from 'src/decorators/roles/role.enum';
-import { User } from 'src/decorators/users.decorator';
-import { Manager } from 'src/manager/manager.entity';
+import { Roles } from '../decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
+import { Manager } from '../manager/manager.entity';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {
@@ -84,5 +84,26 @@ export class GymController {
   @ApiOperation({ summary: 'Get gym analytics' })
   getGymAnalytics(@User() user: Manager) {
     return this.gymService.getGymAnalytics(user);
+  }
+
+  @Get('by-name/:gymName')
+  @ApiOperation({ summary: 'Get gym by name' })
+  @ApiOkResponse({
+    description: 'The gym has been successfully retrieved.',
+    type: Gym,
+  })
+  getGymByName(@Param('gymName') gymName: string) {
+    return this.gymService.getGymByGymName(gymName);
+  }
+
+  @Patch('day/:day')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update a gym day' })
+  @ApiOkResponse({
+    description: 'The gym day has been successfully updated.',
+    type: Gym,
+  })
+  updateGymDay(@Param('day') day: string, @User() user: Manager) {
+    return this.gymService.updateGymDay(day, user);
   }
 }

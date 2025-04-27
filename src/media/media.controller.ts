@@ -12,7 +12,7 @@ import {
   ApiExcludeEndpoint,
   ApiProperty,
 } from '@nestjs/swagger';
-import { WebpPipe } from 'src/pipes/webp.pipe';
+import { WebpPipe } from '../pipes/webp.pipe';
 import { MediaService } from './media.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 

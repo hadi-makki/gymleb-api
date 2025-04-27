@@ -1,9 +1,23 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Role } from 'src/decorators/roles/role.enum';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { Manager } from 'src/manager/manager.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { Manager } from '../manager/manager.entity';
+
+export const Days = [
+  { day: 'Monday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
+  { day: 'Tuesday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
+  {
+    day: 'Wednesday',
+    isOpen: true,
+    openingTime: '09:00',
+    closingTime: '17:00',
+  },
+  { day: 'Thursday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
+  { day: 'Friday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
+  { day: 'Saturday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
+  { day: 'Sunday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
+];
 
 @Injectable({ scope: Scope.DEFAULT })
 export class GymSeeding implements OnModuleInit {
@@ -36,6 +50,7 @@ export class GymSeeding implements OnModuleInit {
     const exists = await this.gymRepository.findOne({
       name,
     });
+
     if (!exists && getManager) {
       await this.gymRepository.create({
         name,
@@ -43,6 +58,7 @@ export class GymSeeding implements OnModuleInit {
         phone,
         email,
         owner: getManager.id,
+        openingDays: Days,
       });
       console.log('Gym seeded');
     }

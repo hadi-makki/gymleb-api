@@ -14,10 +14,10 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { Roles } from 'src/decorators/roles/Role';
-import { Role } from 'src/decorators/roles/role.enum';
-import { User } from 'src/decorators/users.decorator';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
+import { Roles } from '../decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
 import { CreatePersonalTrainerDto } from './dto/create-personal-trainer.dto';
 import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';

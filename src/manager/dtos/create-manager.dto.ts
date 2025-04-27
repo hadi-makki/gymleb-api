@@ -9,7 +9,7 @@ import {
   IsUUID,
   Matches,
 } from 'class-validator';
-import { Role } from 'src/decorators/roles/role.enum';
+import { Role } from '../../decorators/roles/role.enum';
 
 export class CreateManagerDto {
   @ApiProperty()

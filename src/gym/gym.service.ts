@@ -6,12 +6,12 @@ import {
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
 import { Gym } from './entities/gym.entity';
-import { GymOwner } from 'src/gym-owner/entities/gym-owner.entity';
+import { GymOwner } from '../gym-owner/entities/gym-owner.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Transaction } from 'src/transactions/transaction.entity';
-import { Member } from 'src/member/entities/member.entity';
-import { Manager } from 'src/manager/manager.entity';
+import { Transaction } from '../transactions/transaction.entity';
+import { Member } from '../member/entities/member.entity';
+import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
@@ -131,7 +131,7 @@ export class GymService {
       .find({ gym: new Types.ObjectId(gym.id) })
       .populate('subscription');
     const totalRevenue = transactions.reduce(
-      (total, transaction) => total + transaction.subscription.price,
+      (total, transaction) => total + transaction.paidAmount || 0,
       0,
     );
     const totalMembers = await this.memberModel.countDocuments({ gym: gym.id });
@@ -174,5 +174,38 @@ export class GymService {
       revenueChange,
       memberChange,
     };
+  }
+
+  async getGymByGymName(gymName: string) {
+    console.log(gymName);
+    const decodedGymId = gymName.includes('%20')
+      ? decodeURIComponent(gymName)
+      : gymName;
+
+    const gym = await this.gymModel
+      .findOne({ name: decodedGymId })
+      .populate('openingDays');
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    return gym;
+  }
+
+  async updateGymDay(dayToUpdate: string, manager: Manager) {
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const dayIndex = gym.openingDays.findIndex(
+      (day) => day.day === dayToUpdate,
+    );
+    if (dayIndex === -1) {
+      throw new NotFoundException('Day not found');
+    }
+    gym.openingDays[dayIndex].isOpen = !gym.openingDays[dayIndex].isOpen;
+    return gym.save();
   }
 }

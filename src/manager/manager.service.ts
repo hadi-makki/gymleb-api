@@ -3,23 +3,26 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isMongoId, isUUID } from 'class-validator';
 import { Model } from 'mongoose';
-import { BadRequestException } from 'src/error/bad-request-error';
-import { NotFoundException } from 'src/error/not-found-error';
-import { returnManager } from 'src/functions/returnUser';
-import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
-import { TokenService } from 'src/token/token.service';
+import { BadRequestException } from '../error/bad-request-error';
+import { NotFoundException } from '../error/not-found-error';
+import { returnManager } from '../functions/returnUser';
+import { SuccessMessageReturn } from '../main-classes/success-message-return';
+import { TokenService } from '../token/token.service';
 import { CreateManagerDto } from './dtos/create-manager.dto';
 import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
+import { GymOwner } from '../gym-owner/entities/gym-owner.entity';
 @Injectable()
 export class ManagerService {
   constructor(
     @InjectModel(Manager.name)
     private readonly managerEntity: Model<Manager>,
     private readonly tokenService: TokenService,
+    @InjectModel(GymOwner.name)
+    private readonly gymOwnerEntity: Model<GymOwner>,
   ) {}
 
   async createManager(
@@ -127,5 +130,19 @@ export class ManagerService {
     return {
       message: 'Manager logged out successfully',
     };
+  }
+
+  async getMe(manager: Manager): Promise<ManagerCreatedDto> {
+    console.log('manager', manager);
+    const checkManager = await this.managerEntity
+      .findById(manager.id)
+      .populate('gym');
+
+    console.log('checkManager', checkManager);
+
+    if (!checkManager) {
+      throw new NotFoundException('Manager not found');
+    }
+    return returnManager(checkManager);
   }
 }

@@ -1,7 +1,7 @@
-import { Gym } from 'src/gym/entities/gym.entity';
+import { Gym } from '../../gym/entities/gym.entity';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
-import { Manager } from 'src/manager/manager.entity';
+import { Manager } from '../../manager/manager.entity';
 
 @Schema()
 export class GymOwner extends Manager {

@@ -4,10 +4,10 @@ import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { PersonalTrainer } from './entities/personal-trainer.entity';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Role } from 'src/decorators/roles/role.enum';
-import { User } from 'src/user/user.entity';
+import { Role } from '../decorators/roles/role.enum';
+import { User } from '../user/user.entity';
 import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
-import { NotFoundException } from 'src/error/not-found-error';
+import { NotFoundException } from '../error/not-found-error';
 
 @Injectable()
 export class PersonalTrainersService {

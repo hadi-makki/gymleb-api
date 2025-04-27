@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { NotFoundException } from 'src/error/not-found-error';
-import { Product } from 'src/products/products.entity';
-import { PaymentDetails } from 'src/stripe/stripe.interface';
-import { User } from 'src/user/user.entity';
+import { NotFoundException } from '../error/not-found-error';
+import { Product } from '../products/products.entity';
+import { PaymentDetails } from '../stripe/stripe.interface';
+import { User } from '../user/user.entity';
 import { Transaction } from './transaction.entity';
-import { Member } from 'src/member/entities/member.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
+import { Member } from '../member/entities/member.entity';
+import { Gym } from '../gym/entities/gym.entity';
 import {
   Subscription,
   SubscriptionType,
-} from 'src/subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.entity';
 import { addDays } from 'date-fns';
 @Injectable()
 export class TransactionsService {
@@ -54,6 +54,7 @@ export class TransactionsService {
       gym: getGym,
       subscription: getSubscription,
       endDate: addDays(new Date(), getSubscription.duration).toISOString(),
+      paidAmount: paymentDetails.amount,
     });
     return newTransaction;
   }
@@ -63,6 +64,7 @@ export class TransactionsService {
   async findAllTransactions(memberId: string) {
     return this.transactionRepository
       .find({ member: memberId })
-      .populate('subscription');
+      .populate('subscription')
+      .populate('gym');
   }
 }

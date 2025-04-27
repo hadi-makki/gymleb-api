@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AuthenticationModule } from 'src/common/AuthModule.module';
+import { AuthenticationModule } from '../common/AuthModule.module';
 import {
   PersonalTrainer,
   PersonalTrainerSchema,

@@ -2,11 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { BadRequestException } from 'src/error/bad-request-error';
-import { NotFoundException } from 'src/error/not-found-error';
-import { ProductsService } from 'src/products/products.service';
-import { TransactionsService } from 'src/transactions/transactions.service';
-import { User } from 'src/user/user.entity';
+import { BadRequestException } from '../error/bad-request-error';
+import { NotFoundException } from '../error/not-found-error';
+import { ProductsService } from '../products/products.service';
+import { TransactionsService } from '../transactions/transactions.service';
+import { User } from '../user/user.entity';
 import Stripe from 'stripe';
 import {
   CallWith,

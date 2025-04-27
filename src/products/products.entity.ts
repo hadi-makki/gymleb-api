@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { CustomSchema } from 'src/decorators/custom-schema.decorator';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { CustomSchema } from '../decorators/custom-schema.decorator';
+import { Transaction } from '../transactions/transaction.entity';
 
 export type ProductDocument = Product & Document;
 

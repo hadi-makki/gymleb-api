@@ -24,23 +24,23 @@ import { Manager } from './manager.entity';
 import { ManagerService } from './manager.service';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
-import { Roles } from 'src/decorators/roles/Role';
-import { Role } from 'src/decorators/roles/role.enum';
+import { Roles } from '../decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
 import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiUnauthorizedResponse,
-} from 'src/error/api-responses.decorator';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
-import { User } from 'src/decorators/users.decorator';
-import { returnManager } from 'src/functions/returnUser';
-import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
+} from '../error/api-responses.decorator';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { User } from '../decorators/users.decorator';
+import { returnManager } from '../functions/returnUser';
+import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { RefreshDto } from 'src/auth/dtos/refresh-token.dto';
-import { cookieOptions } from 'src/utils/constants';
-import { RefreshTokenOutDto } from 'src/auth/dtos/out/refresh-token-out.dto';
-import { AuthService } from 'src/auth/auth.service';
+import { RefreshDto } from '../auth/dtos/refresh-token.dto';
+import { cookieOptions } from '../utils/constants';
+import { RefreshTokenOutDto } from '../auth/dtos/out/refresh-token-out.dto';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('manager')
 @ApiTags('Manager')
@@ -115,14 +115,14 @@ export class ManagerController {
 
   @Get('get/me')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.Any)
+  @Roles(Role.GymOwner)
   @ApiBearerAuth()
   @ApiOkResponse({ type: Manager })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   async me(@User() user: Manager) {
     console.log('user', user);
-    return returnManager(user);
+    return this.ManagerService.getMe(user);
   }
 
   @Get()

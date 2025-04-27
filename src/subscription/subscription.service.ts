@@ -4,10 +4,10 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Subscription, SubscriptionType } from './entities/subscription.entity';
 import { Model } from 'mongoose';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { Manager } from 'src/manager/manager.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { Manager } from '../manager/manager.entity';
 import { isMongoId } from 'validator';
-import { BadRequestException } from 'src/error/bad-request-error';
+import { BadRequestException } from '../error/bad-request-error';
 @Injectable()
 export class SubscriptionService {
   constructor(
@@ -26,8 +26,9 @@ export class SubscriptionService {
     return subscription;
   }
 
-  async findAll() {
-    const subscriptions = await this.subscriptionModel.find();
+  async findAll(manager: Manager) {
+    const gym = await this.gymModel.findOne({ owner: manager._id.toString() });
+    const subscriptions = await this.subscriptionModel.find({ gym: gym.id });
     return subscriptions;
   }
 

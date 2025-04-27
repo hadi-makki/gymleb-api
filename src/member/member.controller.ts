@@ -7,49 +7,99 @@ import {
   Param,
   Delete,
   UseGuards,
+  Res,
 } from '@nestjs/common';
 import { MemberService } from './member.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
-import { User } from 'src/decorators/users.decorator';
-import { Manager } from 'src/manager/manager.entity';
-import { Roles } from 'src/decorators/roles/Role';
-import { Role } from 'src/decorators/roles/role.enum';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
-
+import { User } from '../decorators/users.decorator';
+import { Manager } from '../manager/manager.entity';
+import { Roles } from '../decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { AuthGuard } from '../guards/auth.guard';
+import { Member } from './entities/member.entity';
+import { LoginMemberDto } from './dto/login-member.dto';
+import { FastifyReply } from 'fastify';
 @Controller('member')
-@Roles(Role.GymOwner)
-@UseGuards(ManagerAuthGuard)
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
 
   @Post()
-  create(@Body() createMemberDto: CreateMemberDto, @User() manager: Manager) {
-    return this.memberService.create(createMemberDto, manager);
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async create(
+    @Body() createMemberDto: CreateMemberDto,
+    @User() manager: Manager,
+  ) {
+    return await this.memberService.create(createMemberDto, manager);
+  }
+
+  @Post('login')
+  async login(
+    @Body() body: LoginMemberDto,
+    @Res({ passthrough: true }) response: FastifyReply,
+  ) {
+    console.log('body', body);
+    const loginMember = await this.memberService.loginMember(body);
+    response.setCookie('memberToken', loginMember.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    });
+    return loginMember;
   }
 
   @Get()
-  findAll() {
-    return this.memberService.findAll();
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async findAll(@User() manager: Manager) {
+    return await this.memberService.findAll(manager);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.memberService.findOne(id);
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async findOne(@Param('id') id: string) {
+    return await this.memberService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMemberDto: UpdateMemberDto) {
-    return this.memberService.update(id, updateMemberDto);
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async update(
+    @Param('id') id: string,
+    @Body() updateMemberDto: UpdateMemberDto,
+  ) {
+    return await this.memberService.update(id, updateMemberDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.memberService.remove(id);
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async remove(@Param('id') id: string) {
+    return await this.memberService.remove(id);
   }
 
   @Post(':id/renew')
-  renewSubscription(@Param('id') id: string) {
-    return this.memberService.renewSubscription(id);
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async renewSubscription(@Param('id') id: string) {
+    return await this.memberService.renewSubscription(id);
+  }
+
+  @Get('expired')
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async getExpiredMembers(@User() manager: Manager) {
+    return await this.memberService.getExpiredMembers(manager);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async getMe(@User() member: Member) {
+    return await this.memberService.getMe(member);
   }
 }
