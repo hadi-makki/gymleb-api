@@ -30,6 +30,7 @@ async function bootstrap() {
         'http://localhost:3001',
         'http://localhost:3003',
         'https://your-prod-url.com',
+        'http://176.57.188.91:3003',
       ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true); // Allow the origin
