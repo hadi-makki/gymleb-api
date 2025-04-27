@@ -8,10 +8,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Manager } from '../manager/manager.entity';
 import { TokenService } from '../token/token.service';
-import { FastifyRequest } from 'fastify';
 import { Role } from '../decorators/roles/role.enum';
 import { ROLES_KEY } from '../decorators/roles/Role';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 @Injectable()
 export class ManagerAuthGuard implements CanActivate {
   constructor(
@@ -25,7 +25,7 @@ export class ManagerAuthGuard implements CanActivate {
     console.log('this is the manager auth guard');
     const request = context
       .switchToHttp()
-      .getRequest<FastifyRequest & { user: Manager }>();
+      .getRequest<Request & { user: Manager }>();
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),

@@ -1,20 +1,15 @@
 import { ForbiddenException, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import {
-  FastifyAdapter,
-  NestFastifyApplication,
-} from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationError } from 'class-validator';
+import * as dotenv from 'dotenv';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { returnAllRoles } from './decorators/roles/role.enum';
 import { HttpExceptionFilter } from './error';
 import { BadRequestException } from './error/bad-request-error';
 import { loggerMiddleware } from './logger/logger.service';
-import * as dotenv from 'dotenv';
-import fastifyCookie from '@fastify/cookie';
-import { returnAllRoles } from './decorators/roles/role.enum';
 
 dotenv.config({
   path: `.env`,
@@ -22,13 +17,8 @@ dotenv.config({
 async function bootstrap() {
   console.log('roles', returnAllRoles());
   console.log('MONGODB_URI', process.env.MONGODB_URI);
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter({}),
-  );
-  await app.register(fastifyCookie, {
-    secret: 'my-secret', // for cookies signature
-  });
+  const app = await NestFactory.create(AppModule);
+
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
 

@@ -17,15 +17,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { CreateManagerDto } from './dtos/create-manager.dto';
-import { LoginManagerDto } from './dtos/login-manager.dto';
-import { UpdateManagerDto } from './dtos/update-manager.sto';
-import { Manager } from './manager.entity';
-import { ManagerService } from './manager.service';
-import { ManagerCreatedDto } from './dtos/manager-created.dto';
-import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
+import { Request, Response } from 'express';
+import { AuthService } from '../auth/auth.service';
+import { RefreshTokenOutDto } from '../auth/dtos/out/refresh-token-out.dto';
+import { RefreshDto } from '../auth/dtos/refresh-token.dto';
 import { Roles } from '../decorators/roles/Role';
 import { Role } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
 import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
@@ -33,15 +31,15 @@ import {
   ApiUnauthorizedResponse,
 } from '../error/api-responses.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { User } from '../decorators/users.decorator';
-import { returnManager } from '../functions/returnUser';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { FastifyReply, FastifyRequest } from 'fastify';
-import { RefreshDto } from '../auth/dtos/refresh-token.dto';
 import { cookieOptions } from '../utils/constants';
-import { RefreshTokenOutDto } from '../auth/dtos/out/refresh-token-out.dto';
-import { AuthService } from '../auth/auth.service';
-
+import { CreateManagerDto } from './dtos/create-manager.dto';
+import { LoginManagerDto } from './dtos/login-manager.dto';
+import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
+import { ManagerCreatedDto } from './dtos/manager-created.dto';
+import { UpdateManagerDto } from './dtos/update-manager.sto';
+import { Manager } from './manager.entity';
+import { ManagerService } from './manager.service';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -86,10 +84,10 @@ export class ManagerController {
   @ApiNotFoundResponse('Manager not found')
   async login(
     @Body() body: LoginManagerDto,
-    @Res({ passthrough: true }) response: FastifyReply,
+    @Res({ passthrough: true }) response: Response,
   ) {
     const loginManager = await this.ManagerService.login(body);
-    response.setCookie('token', loginManager.token, {
+    response.cookie('token', loginManager.token, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -107,7 +105,7 @@ export class ManagerController {
   @ApiOkResponse({ type: SuccessMessageReturn })
   async logout(
     @User() user: Manager,
-    @Res({ passthrough: true }) response: FastifyReply,
+    @Res({ passthrough: true }) response: Response,
   ) {
     response.clearCookie('token');
     return this.ManagerService.logout(user);
@@ -165,17 +163,17 @@ export class ManagerController {
   })
   async refresh(
     @Body() { deviceId }: RefreshDto,
-    @Req() req: FastifyRequest,
-    @Res({ passthrough: true }) res: FastifyReply,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.headers.token as string;
     const refreshToken = await this.AuthService.refreshToken(token, deviceId);
-    res.setCookie('token', refreshToken.token, cookieOptions);
+    res.cookie('token', refreshToken.token, cookieOptions);
     return refreshToken;
   }
 
   @Get('clear-cookies')
-  clearCookies(@Res({ passthrough: true }) res: FastifyReply) {
+  clearCookies(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('token', {
       httpOnly: true,
       secure: true,

@@ -20,7 +20,7 @@ import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { AuthGuard } from '../guards/auth.guard';
 import { Member } from './entities/member.entity';
 import { LoginMemberDto } from './dto/login-member.dto';
-import { FastifyReply } from 'fastify';
+import { Request, Response } from 'express';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -38,11 +38,11 @@ export class MemberController {
   @Post('login')
   async login(
     @Body() body: LoginMemberDto,
-    @Res({ passthrough: true }) response: FastifyReply,
+    @Res({ passthrough: true }) response: Response,
   ) {
     console.log('body', body);
     const loginMember = await this.memberService.loginMember(body);
-    response.setCookie('memberToken', loginMember.token, {
+    response.cookie('memberToken', loginMember.token, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',

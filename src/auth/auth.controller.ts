@@ -27,8 +27,8 @@ import { User as UserEntity } from '../user/user.entity';
 import { UserCreatedDto } from './dtos/response/user-created.dto';
 import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 import { RefreshDto } from './dtos/refresh-token.dto';
-import { FastifyRequest, FastifyReply } from 'fastify';
 import { cookieOptions } from '../utils/constants';
+import { Request, Response } from 'express';
 @Controller('auth')
 @ApiTags('auth')
 @ApiBadRequestResponse()
@@ -78,14 +78,14 @@ export class AuthController {
   })
   async refresh(
     @Body() { deviceId }: RefreshDto,
-    @Req() req: FastifyRequest,
-    @Res({ passthrough: true }) res: FastifyReply,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.headers.token as string;
     console.log('token', token);
     console.log('headers', req.headers);
     const refreshToken = await this.AuthService.refreshToken(token, deviceId);
-    res.setCookie('token', refreshToken.token, cookieOptions);
+    res.cookie('token', refreshToken.token, cookieOptions);
     return refreshToken;
   }
 

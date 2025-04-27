@@ -7,8 +7,8 @@ import { UnauthorizedException } from '../error/unauthorized-error';
 import { Manager } from '../manager/manager.entity';
 import { TokenService } from '../token/token.service';
 import { User } from '../user/user.entity';
-import { FastifyRequest } from 'fastify';
 import { Member } from '../member/entities/member.entity';
+import { Request } from 'express';
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -21,7 +21,7 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<FastifyRequest & { user: User | Manager | Member }>();
+      .getRequest<Request & { user: User | Manager | Member }>();
 
     const validatedData = await this.tokenService.validateJwt(
       request,

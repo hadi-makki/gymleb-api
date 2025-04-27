@@ -8,11 +8,10 @@ import { Model } from 'mongoose';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { Manager } from '../manager/manager.entity';
-import { User } from '../user/user.entity';
+import { Member } from '../member/entities/member.entity';
 import { GenerateTokenDTO } from './token.dto';
 import TokenEntity from './token.entity';
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { Member } from '../member/entities/member.entity';
+import { User } from '../user/user.entity';
 @Injectable()
 export class TokenService {
   constructor(
@@ -162,8 +161,8 @@ export class TokenService {
   }
 
   async validateJwt(
-    req: FastifyRequest,
-    res: FastifyReply,
+    req: Request & { user: User | Manager | Member },
+    res: Response,
     isMember: boolean = false,
   ): Promise<{
     sub: string;

@@ -1,10 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { IncomingMessage } from 'http';
+import { Request, Response } from 'express';
 
 export function loggerMiddleware(
-  req: FastifyRequest['raw'],
-  res: FastifyReply['raw'],
+  req: Request,
+  res: Response,
   next: () => void,
 ) {
   const { method, url } = req;

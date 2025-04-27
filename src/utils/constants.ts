@@ -1,6 +1,5 @@
-import { CookieSerializeOptions } from '@fastify/cookie';
-
-export const cookieOptions: CookieSerializeOptions = {
+import { CookieOptions } from 'express';
+export const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: true,
   sameSite: 'none',

@@ -5,13 +5,12 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ExceptionDto } from './exception-dto';
-import { FastifyReply, FastifyRequest } from 'fastify';
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: HttpException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<FastifyReply>();
-    const request = ctx.getRequest<FastifyRequest>();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
     const exceptionResponse: any = exception.getResponse();
     const status = exception.getStatus();
 
@@ -30,6 +29,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
     errorResponse.timestamp = new Date();
     errorResponse.path = request.url;
 
-    response.status(status).send(errorResponse);
+    return errorResponse;
   }
 }
