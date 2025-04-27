@@ -1,11 +1,11 @@
 module.exports = {
   apps: [
     {
-      name: 'gym-leb',
-      script: 'yarn',
-      args: 'start:prod', // Start the app in production mode
-      cwd: './saleasy-api', // Ensure this is the correct path to your NestJS app
-      watch: false, // It's common not to watch files in production
+      name: 'gymleb-api',
+      script: 'dist/main.js', // Run the built NestJS project (not src/index.js!)
+      instances: 1, // Or use "max" for cluster mode
+      autorestart: true,
+      watch: false, // In production, no need to watch file changes
       env: {
         NODE_ENV: 'production',
       },
