@@ -138,7 +138,7 @@ let TokenService = class TokenService {
         });
     }
     async validateJwt(req, res, isMember = false) {
-        console.log('req.cookies', req);
+        console.log('req.cookies', req.cookies);
         const token = req.cookies.token;
         const memberToken = req.cookies.memberToken;
         const tokenToUse = isMember ? memberToken : token;

@@ -169,7 +169,7 @@ export class TokenService {
     iat: number;
     exp: number;
   }> {
-    console.log('req.cookies', req);
+    console.log('req.cookies', req.cookies);
     const token = req.cookies.token;
     const memberToken = req.cookies.memberToken;
 
