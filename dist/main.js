@@ -11,6 +11,7 @@ const role_enum_1 = require("./decorators/roles/role.enum");
 const error_1 = require("./error");
 const bad_request_error_1 = require("./error/bad-request-error");
 const logger_service_1 = require("./logger/logger.service");
+const cookieParser = require("cookie-parser");
 dotenv.config({
     path: `.env`,
 });
@@ -18,6 +19,7 @@ async function bootstrap() {
     console.log('roles', (0, role_enum_1.returnAllRoles)());
     console.log('MONGODB_URI', process.env.MONGODB_URI);
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use(cookieParser());
     app.useGlobalFilters(new error_1.HttpExceptionFilter());
     app.use((0, helmet_1.default)());
     app.enableCors({
@@ -28,6 +30,7 @@ async function bootstrap() {
                 'http://localhost:3001',
                 'http://localhost:3003',
                 'https://your-prod-url.com',
+                'http://176.57.188.91:3003',
             ];
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);

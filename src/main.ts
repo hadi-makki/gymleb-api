@@ -10,6 +10,7 @@ import { returnAllRoles } from './decorators/roles/role.enum';
 import { HttpExceptionFilter } from './error';
 import { BadRequestException } from './error/bad-request-error';
 import { loggerMiddleware } from './logger/logger.service';
+import * as cookieParser from 'cookie-parser';
 
 dotenv.config({
   path: `.env`,
@@ -18,6 +19,7 @@ async function bootstrap() {
   console.log('roles', returnAllRoles());
   console.log('MONGODB_URI', process.env.MONGODB_URI);
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
