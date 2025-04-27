@@ -1,0 +1,24 @@
+import { User } from '../user/user.entity';
+export declare const returnUser: (user: User) => {
+    email: string;
+    name: string;
+    personalTrainer: import("../personal-trainers/entities/personal-trainer.entity").PersonalTrainer;
+    gym: import("../gym/entities/gym.entity").Gym;
+    subscription: import("../subscription/entities/subscription.entity").Subscription;
+    tokens: import("../token/token.entity").default[];
+    transactions: import("../transactions/transaction.entity").Transaction[];
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    isDeactivated: boolean;
+    _id: unknown;
+    $locals: Record<string, unknown>;
+    $op: "save" | "validate" | "remove" | null;
+    $where: Record<string, unknown>;
+    baseModelName?: string;
+    collection: import("mongoose").Collection;
+    db: import("mongoose").Connection;
+    errors?: import("mongoose").Error.ValidationError;
+    isNew: boolean;
+    schema: import("mongoose").Schema;
+};
