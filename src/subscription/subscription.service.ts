@@ -33,6 +33,10 @@ export class SubscriptionService {
   }
 
   async findOne(id: string) {
+    console.log('findOne subscription id', id);
+    if (!isMongoId(id)) {
+      throw new BadRequestException('Invalid subscription id');
+    }
     const subscription = await this.subscriptionModel.findById(id);
     return subscription;
   }

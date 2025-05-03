@@ -39,7 +39,7 @@ export class SubscriptionController {
     return await this.subscriptionService.findAll(manager);
   }
 
-  @Get(':id')
+  @Get('/get-one/:id')
   async findOne(@Param('id') id: string) {
     return await this.subscriptionService.findOne(id);
   }
