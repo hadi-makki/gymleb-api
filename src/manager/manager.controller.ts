@@ -87,13 +87,7 @@ export class ManagerController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const loginManager = await this.ManagerService.login(body);
-    response.cookie('token', loginManager.token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
-    });
+    response.cookie('token', loginManager.token, cookieOptions);
 
     return loginManager;
   }
@@ -175,12 +169,7 @@ export class ManagerController {
 
   @Get('clear-cookies')
   clearCookies(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '*',
-    });
+    res.clearCookie('token', cookieOptions);
 
     return { message: 'Cookies cleared' };
   }

@@ -21,6 +21,7 @@ import { AuthGuard } from '../guards/auth.guard';
 import { Member } from './entities/member.entity';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { Request, Response } from 'express';
+import { cookieOptions } from 'src/utils/constants';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -42,13 +43,7 @@ export class MemberController {
   ) {
     console.log('body', body);
     const loginMember = await this.memberService.loginMember(body);
-    response.cookie('memberToken', loginMember.token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
-    });
+    response.cookie('memberToken', loginMember.token, cookieOptions);
     return loginMember;
   }
 
