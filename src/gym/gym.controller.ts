@@ -46,7 +46,7 @@ export class GymController {
     return this.gymService.findAll();
   }
 
-  @Get(':id')
+  @Get('/get-one/:id')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get a gym by id' })
   @ApiOkResponse({

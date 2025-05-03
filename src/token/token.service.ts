@@ -176,26 +176,23 @@ export class TokenService {
     const tokenToUse = isMember ? memberToken : token;
 
     if (!tokenToUse) {
+      console.log('missing token');
       throw new UnauthorizedException('Missing Authorization Header');
     }
 
-    try {
-      const decodedJwt = (await this.jwtService.verifyAsync(tokenToUse, {
-        secret: this.configService.get('JWT_ACCESS_SECRET'),
-      })) as {
-        sub: string;
-        iat: number;
-        exp: number;
-      };
+    const decodedJwt = (await this.jwtService.verifyAsync(tokenToUse, {
+      secret: this.configService.get('JWT_ACCESS_SECRET'),
+    })) as {
+      sub: string;
+      iat: number;
+      exp: number;
+    };
 
-      const checkToken = await this.getTokenByAccessToken(tokenToUse);
+    const checkToken = await this.getTokenByAccessToken(tokenToUse);
 
-      if (!checkToken) {
-        throw new UnauthorizedException('Invalid Token');
-      }
-      return decodedJwt;
-    } catch (error) {
+    if (!checkToken) {
       throw new UnauthorizedException('Invalid Token');
     }
+    return decodedJwt;
   }
 }
