@@ -54,16 +54,6 @@ export class GymService {
     return gym;
   }
 
-  async update(id: string, updateGymDto: UpdateGymDto) {
-    const gym = await this.gymModel.findByIdAndUpdate(id, updateGymDto, {
-      new: true,
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-    return gym;
-  }
-
   async remove(id: string) {
     const gym = await this.gymModel.findByIdAndDelete(id);
     if (!gym) {
@@ -210,5 +200,34 @@ export class GymService {
     }
     gym.openingDays[dayIndex].isOpen = !gym.openingDays[dayIndex].isOpen;
     return gym.save();
+  }
+
+  async getAllGyms() {
+    return await this.gymModel.find().populate('owner');
+  }
+
+  async updateGymName(manager: Manager, gymName: string) {
+    console.log('updating gym name', gymName);
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.name = gymName;
+    await gym.save();
+    return gym;
+  }
+
+  async setGymFinishedPageSetup(manager: Manager) {
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.finishedPageSetup = true;
+    await gym.save();
+    return gym;
   }
 }

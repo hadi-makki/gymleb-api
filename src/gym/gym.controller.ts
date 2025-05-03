@@ -18,6 +18,7 @@ import { Roles } from '../decorators/roles/Role';
 import { Role } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
+import { UpdateGymNameDto } from './dto/update-name.dto';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {
@@ -57,17 +58,6 @@ export class GymController {
     return this.gymService.findOne(id);
   }
 
-  @Patch(':id')
-  @UseGuards(ManagerAuthGuard)
-  @ApiOperation({ summary: 'Update a gym by id' })
-  @ApiOkResponse({
-    description: 'The gym has been successfully updated.',
-    type: Gym,
-  })
-  update(@Param('id') id: string, @Body() updateGymDto: UpdateGymDto) {
-    return this.gymService.update(id, updateGymDto);
-  }
-
   @Delete(':id')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Delete a gym by id' })
@@ -105,5 +95,29 @@ export class GymController {
   })
   updateGymDay(@Param('day') day: string, @User() user: Manager) {
     return this.gymService.updateGymDay(day, user);
+  }
+
+  @Get('admin/get-all-gyms')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.SuperAdmin)
+  getAllGyms() {
+    return this.gymService.getAllGyms();
+  }
+
+  @Patch('update/name')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym name' })
+  updateGymName(
+    @Body() updateGymNameDto: UpdateGymNameDto,
+    @User() user: Manager,
+  ) {
+    return this.gymService.updateGymName(user, updateGymNameDto.name);
+  }
+
+  @Patch('finished-page-setup')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Set gym finished page setup' })
+  async setGymFinishedPageSetup(@User() user: Manager) {
+    return await this.gymService.setGymFinishedPageSetup(user);
   }
 }

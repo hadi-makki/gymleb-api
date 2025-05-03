@@ -54,7 +54,7 @@ export class MemberController {
     return await this.memberService.findAll(manager);
   }
 
-  @Get(':id')
+  @Get('get-member/:id')
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
   async findOne(@Param('id') id: string) {

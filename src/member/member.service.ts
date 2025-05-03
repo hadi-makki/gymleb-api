@@ -192,6 +192,7 @@ export class MemberService {
   }
 
   async findOne(id: string) {
+    console.log('this is the member id', id);
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }

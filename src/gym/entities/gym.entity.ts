@@ -26,6 +26,9 @@ export class Gym extends MainEntity {
   @Prop({ type: Types.ObjectId, ref: 'Manager' })
   owner: Manager;
 
+  @Prop({ type: Boolean, default: false })
+  finishedPageSetup: boolean;
+
   @Prop({
     type: [
       {

@@ -28,13 +28,22 @@ export class GymOwnerService {
     if (checkGymOwner) {
       throw new BadRequestException('Gym owner already exists');
     }
+
+    let username = createGymOwnerDto.name.toLowerCase().split(' ').join('');
+
+    const checkUsername = await this.gymOwnerModel.findOne({
+      username,
+    });
+    if (checkUsername) {
+      username = username + Math.floor(1000 + Math.random() * 9000);
+    }
     const gymOwner = await this.gymOwnerModel.create({
       name: createGymOwnerDto.name,
       email: createGymOwnerDto.email,
       password: await Manager.hashPassword(createGymOwnerDto.password),
       address: createGymOwnerDto.address,
       phone: createGymOwnerDto.phone,
-      username: createGymOwnerDto.name.toLowerCase().split(' ').join(''),
+      username,
       roles: [Role.GymOwner],
     });
     const checkGym = await this.gymModel.create({

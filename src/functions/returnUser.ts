@@ -19,5 +19,6 @@ export function returnManager(manager: Manager) {
     createdAt: manager.createdAt,
     updatedAt: manager.updatedAt,
     gym: manager.gym,
+    roles: manager.roles,
   };
 }

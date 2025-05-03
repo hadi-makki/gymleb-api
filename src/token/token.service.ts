@@ -102,7 +102,7 @@ export class TokenService {
       checkToken.refreshExpirationDate = data.refreshExpirationDate;
       checkToken.accessToken = data.accessToken;
       checkToken.accessExpirationDate = data.accessExpirationDate;
-      if (data.userId && data.userId !== checkToken.member.id) {
+      if (data.userId && data.userId !== checkToken.member?.id) {
         console.log('data.userId', data.userId);
         const member = await this.memberRepository.findById(data.userId);
         if (!member) {
@@ -110,7 +110,7 @@ export class TokenService {
         }
         checkToken.member = member;
       }
-      if (data.managerId && data.managerId !== checkToken.manager.id) {
+      if (data.managerId && data.managerId !== checkToken.manager?.id) {
         console.log('data.managerId', data.managerId);
         const manager = await this.managerRepository.findById(data.managerId);
         if (!manager) {
