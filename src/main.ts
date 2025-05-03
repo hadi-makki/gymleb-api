@@ -33,6 +33,8 @@ async function bootstrap() {
         'http://localhost:3003',
         'https://your-prod-url.com',
         'http://176.57.188.91:3003',
+        'https://gymleb.netlify.app',
+        'https://gym-leb.com',
       ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true); // Allow the origin
@@ -71,6 +73,6 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('swagger', app, document);
-  await app.listen(3003);
+  await app.listen(process.env.PORT);
 }
 bootstrap();
