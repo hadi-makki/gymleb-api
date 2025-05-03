@@ -36,6 +36,7 @@ export class MemberService {
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
+
     const subscription = await this.subscriptionModel.findOne({
       _id: createMemberDto.subscriptionId,
     });
@@ -44,12 +45,23 @@ export class MemberService {
       throw new NotFoundException('Subscription not found');
     }
 
-    let username =
-      createMemberDto.name
-        .split(' ')
-        .map((name) => name[0])
-        .join('')
-        .toLowerCase() + Math.floor(1000 + Math.random() * 9000);
+    const checkIfNameExists = await this.memberModel.findOne({
+      name: createMemberDto.name,
+      gym: gym.id,
+    });
+    if (checkIfNameExists) {
+      throw new BadRequestException('Name already exists');
+    }
+
+    const fullName = createMemberDto.name.split(' ');
+
+    let username = fullName[0].toLowerCase();
+    if (username.length === 1) {
+      username = username + Math.floor(1000 + Math.random() * 9000);
+    }
+    if (fullName.length > 1) {
+      username = username + fullName[1].toLowerCase().substring(0, 3);
+    }
 
     const checkUsername = await this.memberModel.findOne({
       username: username,
@@ -57,13 +69,7 @@ export class MemberService {
 
     if (checkUsername) {
       username =
-        createMemberDto.name
-          .split(' ')
-          .map((name) => {
-            return `${name[0]}${name[1]}`;
-          })
-          .join('')
-          .toLowerCase() + Math.floor(1000 + Math.random() * 9000);
+        username.toLowerCase() + Math.floor(1000 + Math.random() * 9000);
     }
 
     const member = await this.memberModel.create({
@@ -100,6 +106,8 @@ export class MemberService {
       name: newMember.name,
       email: newMember.email,
       phone: newMember.phone,
+      username: newMember.username,
+      passCode: newMember.passCode,
       gym: newMember.gym,
       subscription: newMember.subscription,
       transactions: newMember.transactions,
@@ -129,6 +137,8 @@ export class MemberService {
       name: member.name,
       email: member.email,
       phone: member.phone,
+      username: member.username,
+      passCode: member.passCode,
       gym: member.gym,
       token: token.accessToken,
     };
@@ -166,6 +176,8 @@ export class MemberService {
         name: member.name,
         email: member.email,
         phone: member.phone,
+        username: member.username,
+        passCode: member.passCode,
         gym: member.gym,
         subscription: member.subscription,
         transactions: member.transactions,
@@ -240,6 +252,8 @@ export class MemberService {
       email: member.email,
       phone: member.phone,
       gym: member.gym,
+      username: member.username,
+      passCode: member.passCode,
       subscription: member.subscription,
       transactions: member.transactions,
       createdAt: member.createdAt,
@@ -363,6 +377,8 @@ export class MemberService {
           email: member.email,
           phone: member.phone,
           gym: member.gym,
+          username: member.username,
+          passCode: member.passCode,
           subscription: member.subscription,
           transactions: member.transactions,
           createdAt: member.createdAt,
@@ -400,6 +416,8 @@ export class MemberService {
       email: checkMember.email,
       phone: checkMember.phone,
       gym: checkMember.gym,
+      username: checkMember.username,
+      passCode: checkMember.passCode,
       subscription: checkMember.subscription,
       hasActiveSubscription: checkActiveSubscription,
       currentActiveSubscription: latestTransaction || null,

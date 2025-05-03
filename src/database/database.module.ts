@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { isLocalEnv } from '../config/helper/helper-functions';
 import * as dotenv from 'dotenv';
-import { ManagerSchema } from '../manager/manager.entity';
-import { Manager } from '../manager/manager.entity';
+import { isLocalEnv } from '../config/helper/helper-functions';
 
 dotenv.config({
   path: `.env`,
 });
+
+console.log('this is the env', isLocalEnv());
 
 @Module({
   imports: [
