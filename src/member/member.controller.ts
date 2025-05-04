@@ -47,6 +47,16 @@ export class MemberController {
     return loginMember;
   }
 
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  async logout(
+    @User() member: Member,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.clearCookie('memberToken');
+    return { message: 'Logged out successfully' };
+  }
+
   @Get()
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
