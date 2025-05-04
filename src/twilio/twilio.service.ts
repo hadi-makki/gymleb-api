@@ -56,7 +56,6 @@ export class TwilioService {
     }
 
     await this.memberService.toggleNotified(member.id, true);
-    console.log('member', member, isExpired);
     if (member.phone) {
       // await this.sendWhatsappMessage(member.phone);
     }
@@ -73,7 +72,6 @@ export class TwilioService {
         2: '123456',
       }),
     });
-    console.log('verification', verify);
     return {
       message: 'OTP sent successfully',
     };
@@ -95,27 +93,23 @@ export class TwilioService {
             to: phoneNumber,
             channel: 'whatsapp',
           });
-        console.log('verification', verify);
         return {
           message: 'OTP sent successfully',
         };
       }
-      const verify = await this.client.verify.v2
+      await this.client.verify.v2
         .services(this.configService.get<string>('TWILIO_VERIFICATION_SID'))
         .verifications.create({ to: phoneNumber, channel: 'sms' });
-      console.log('verification', verify);
       return {
         message: 'OTP sent successfully',
       };
     } catch (error) {
-      console.log('error', error);
       throw new BadRequestException(error);
     }
   }
 
   async verifyCode(phoneNumber: string, code: string) {
     try {
-      console.log('code', code);
       if (code === '123456' || code === '1234') {
         return {
           message: 'OTP verified successfully',

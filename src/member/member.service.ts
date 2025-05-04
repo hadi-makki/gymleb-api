@@ -56,11 +56,9 @@ export class MemberService {
   }
 
   async create(createMemberDto: CreateMemberDto, manager: Manager) {
-    console.log(createMemberDto.subscriptionId);
     const gym = await this.gymModel.findOne({
       owner: manager.id,
     });
-    console.log('gym', gym);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -68,7 +66,6 @@ export class MemberService {
     const subscription = await this.subscriptionModel.findOne({
       _id: createMemberDto.subscriptionId,
     });
-    console.log('subscription', subscription);
     if (!subscription) {
       throw new NotFoundException('Subscription not found');
     }
@@ -127,7 +124,6 @@ export class MemberService {
       .populate('subscription')
       .populate('transactions');
 
-    console.log('newMember', newMember);
 
     return await this.returnMember(newMember);
   }
@@ -135,7 +131,6 @@ export class MemberService {
   async loginMember(
     loginMemberDto: LoginMemberDto,
   ): Promise<ReturnUserWithTokenDto> {
-    console.log('loginMemberDto', loginMemberDto);
     const member = await this.memberModel
       .findOne({
         username: loginMemberDto.username,
@@ -148,12 +143,10 @@ export class MemberService {
       throw new BadRequestException('Invalid passcode or username');
     }
 
-    console.log('member', member.id);
     const token = await this.tokenService.generateTokens({
       managerId: null,
       userId: member.id,
     });
-    console.log('token', token);
 
     return {
       ...(await this.returnMember(member)),
@@ -161,7 +154,7 @@ export class MemberService {
     };
   }
 
-  async findAll(manager: Manager) {
+  async findAll(manager: Manager, search: string) {
     const checkGym = await this.gymModel.findOne({
       owner: manager.id,
     });
@@ -171,6 +164,7 @@ export class MemberService {
     const getMembers = await this.memberModel
       .find({
         gym: checkGym.id,
+        ...(search && { name: { $regex: search, $options: 'i' } }),
       })
       .populate('gym')
       .populate('subscription')
@@ -186,7 +180,6 @@ export class MemberService {
   }
 
   async findOne(id: string) {
-    console.log('this is the member id', id);
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
@@ -213,11 +206,9 @@ export class MemberService {
         _id: latestTransaction.subscription,
       });
     } else {
-      console.log(' this is the member', member);
       checkSubscription = await this.subscriptionModel.findOne({
         gym: member.gym.id,
       });
-      console.log(' this is the checkSubscription', checkSubscription);
 
       if (!checkSubscription) {
         throw new NotFoundException('Subscription not found');
@@ -251,7 +242,6 @@ export class MemberService {
 
     const member = await this.memberModel.findById(id).populate('transactions');
 
-    console.log(' this is the member', member);
 
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -265,7 +255,6 @@ export class MemberService {
 
     let checkSubscription;
 
-    console.log(' this is the member', member);
 
     if (member.transactions.length > 0) {
       const getLatestTransaction = member.transactions.sort(
@@ -334,7 +323,6 @@ export class MemberService {
       owner: manager.id,
     });
 
-    console.log(' this is the gym', gym);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }

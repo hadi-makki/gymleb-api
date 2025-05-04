@@ -97,13 +97,11 @@ export class TokenService {
       .populate('manager');
 
     if (checkToken) {
-      console.log('checkToken', checkToken);
       checkToken.refreshToken = data.refreshToken;
       checkToken.refreshExpirationDate = data.refreshExpirationDate;
       checkToken.accessToken = data.accessToken;
       checkToken.accessExpirationDate = data.accessExpirationDate;
       if (data.userId && data.userId !== checkToken.member?.id) {
-        console.log('data.userId', data.userId);
         const member = await this.memberRepository.findById(data.userId);
         if (!member) {
           throw new UnauthorizedException('User not found');
@@ -111,23 +109,19 @@ export class TokenService {
         checkToken.member = member;
       }
       if (data.managerId && data.managerId !== checkToken.manager?.id) {
-        console.log('data.managerId', data.managerId);
         const manager = await this.managerRepository.findById(data.managerId);
         if (!manager) {
           throw new UnauthorizedException('Manager not found');
         }
         checkToken.manager = manager;
       }
-      console.log('checkToken', checkToken);
       return await checkToken.save();
     } else {
-      console.log('data.userId', data.userId);
       const tokenData = {
         ...data,
         ...(data.userId ? { member: data?.userId } : {}),
         ...(data.managerId ? { manager: data?.managerId } : {}),
       };
-      console.log('tokenData', tokenData);
       return await this.tokenRepository.create(tokenData);
     }
   }
@@ -169,14 +163,12 @@ export class TokenService {
     iat: number;
     exp: number;
   }> {
-    console.log('req.cookies', req.cookies);
     const token = req.cookies.token;
     const memberToken = req.cookies.memberToken;
 
     const tokenToUse = isMember ? memberToken : token;
 
     if (!tokenToUse) {
-      console.log('missing token');
       throw new UnauthorizedException('Missing Authorization Header');
     }
 

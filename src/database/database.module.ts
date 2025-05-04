@@ -7,8 +7,6 @@ dotenv.config({
   path: `.env`,
 });
 
-console.log('this is the env', isLocalEnv());
-
 @Module({
   imports: [
     MongooseModule.forRoot(

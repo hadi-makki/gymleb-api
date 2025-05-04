@@ -56,7 +56,6 @@ export class StripeService {
   async createPaymentIntent(product_id: string, customer_id: string) {
     const product = await this.loadProduct(product_id);
     const price = await this.loadPrice(String(product.default_price));
-    console.log('product price:', price);
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount: price.unit_amount,
       payment_method_types: ['card'],
@@ -75,7 +74,6 @@ export class StripeService {
       switch (event.type) {
         case 'payment_intent.succeeded':
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          console.log('we are in the payment intent succeeded:', paymentIntent);
 
           // Handle successful payment
           await this.handlePaymentIntentSucceeded(

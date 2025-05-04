@@ -31,14 +31,11 @@ export class AuthGuard implements CanActivate {
 
     const userId = validatedData?.sub;
 
-    console.log('userId', userId);
-
     if (!userId) {
       throw new UnauthorizedException('Unauthorized');
     }
 
     const member = await this.memberRepository.findById(userId);
-    console.log('member', member);
 
     if (member) {
       request.user = member;

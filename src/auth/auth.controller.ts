@@ -67,7 +67,6 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
   async test(@User() user: UserEntity) {
-    console.log(user);
     return this.AuthService.test();
   }
 
@@ -82,10 +81,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.headers.token as string;
-    console.log('token', token);
-    console.log('headers', req.headers);
     const refreshToken = await this.AuthService.refreshToken(token, deviceId);
-    res.cookie('token', refreshToken.token, cookieOptions);
     return refreshToken;
   }
 

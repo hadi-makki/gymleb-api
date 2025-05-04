@@ -39,9 +39,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
   async login({ email, password }: LoginDto): Promise<UserCreatedDto> {
-    console.log(email, password);
     const getUser = await this.userService.getUserByEmail(email);
-    console.log(getUser);
     if (!getUser) {
       throw new BadRequestException('Wrong Email or Password');
     }
@@ -84,12 +82,10 @@ export class AuthService {
   }
   // Refresh tokens: Validate the refresh token and update tokens.
   async refreshToken(token: string, deviceId: string) {
-    console.log('this is the incomingToken', token);
     const tokenDoc = await this.tokenRepository.findOne({
       deviceId,
       accessToken: token,
     });
-    console.log('this is the foundToken', tokenDoc);
     if (!tokenDoc) {
       throw new UnauthorizedException('Refresh token not found');
     }

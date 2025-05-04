@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Res,
+  Query,
 } from '@nestjs/common';
 import { MemberService } from './member.service';
 import { CreateMemberDto } from './dto/create-member.dto';
@@ -41,7 +42,6 @@ export class MemberController {
     @Body() body: LoginMemberDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    console.log('body', body);
     const loginMember = await this.memberService.loginMember(body);
     response.cookie('memberToken', loginMember.token, cookieOptions);
     return loginMember;
@@ -50,8 +50,8 @@ export class MemberController {
   @Get()
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
-  async findAll(@User() manager: Manager) {
-    return await this.memberService.findAll(manager);
+  async findAll(@User() manager: Manager, @Query('search') search: string) {
+    return await this.memberService.findAll(manager, search);
   }
 
   @Get('get-member/:id')

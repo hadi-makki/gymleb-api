@@ -22,7 +22,6 @@ export class ManagerAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log('this is the manager auth guard');
     const request = context
       .switchToHttp()
       .getRequest<Request & { user: Manager }>();
@@ -41,8 +40,6 @@ export class ManagerAuthGuard implements CanActivate {
     );
 
     const userId = validatedData?.sub;
-
-    console.log('userId', userId);
 
     if (!userId) {
       throw new UnauthorizedException('Unauthorized');

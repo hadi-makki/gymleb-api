@@ -133,12 +133,10 @@ export class ManagerService {
   }
 
   async getMe(manager: Manager): Promise<ManagerCreatedDto> {
-    console.log('manager', manager);
     const checkManager = await this.managerEntity
       .findById(manager.id)
       .populate('gym');
 
-    console.log('checkManager', checkManager);
 
     if (!checkManager) {
       throw new NotFoundException('Manager not found');

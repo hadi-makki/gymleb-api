@@ -17,7 +17,6 @@ export class SubscriptionService {
     private gymModel: Model<Gym>,
   ) {}
   async create(createSubscriptionDto: CreateSubscriptionDto, manager: Manager) {
-    console.log('manager', manager);
     const gym = await this.gymModel.findOne({ owner: manager._id.toString() });
     const subscription = await this.subscriptionModel.create({
       ...createSubscriptionDto,
@@ -33,7 +32,6 @@ export class SubscriptionService {
   }
 
   async findOne(id: string) {
-    console.log('findOne subscription id', id);
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid subscription id');
     }
@@ -46,7 +44,6 @@ export class SubscriptionService {
       throw new BadRequestException('Invalid subscription id');
     }
 
-    console.log('updateSubscriptionDto', updateSubscriptionDto);
     const subscription = await this.subscriptionModel.findByIdAndUpdate(
       id,
       updateSubscriptionDto,

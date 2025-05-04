@@ -16,8 +16,6 @@ dotenv.config({
   path: `.env`,
 });
 async function bootstrap() {
-  console.log('roles', returnAllRoles());
-  console.log('MONGODB_URI', process.env.MONGODB_URI);
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
 

@@ -173,7 +173,6 @@ export class GymService {
   }
 
   async getGymByGymName(gymName: string) {
-    console.log(gymName);
     const decodedGymId = gymName.includes('%20')
       ? decodeURIComponent(gymName)
       : gymName;
@@ -210,7 +209,6 @@ export class GymService {
   }
 
   async updateGymName(manager: Manager, gymName: string) {
-    console.log('updating gym name', gymName);
     const gym = await this.gymModel.findOne({
       owner: manager.id,
     });
