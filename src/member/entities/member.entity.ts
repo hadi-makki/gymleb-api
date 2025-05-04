@@ -30,6 +30,9 @@ export class Member extends MainEntity {
 
   @Prop({ type: String, required: false })
   passCode: string;
+
+  @Prop({ type: Boolean, default: false })
+  isNotified: boolean;
 }
 
 export const MemberSchema = SchemaFactory.createForClass(Member);

@@ -13,6 +13,7 @@ import { isMongoId, isUUID } from 'class-validator';
 import { BadRequestException } from '../error/bad-request-error';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { TokenService } from '../token/token.service';
+import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 
 @Injectable()
 export class MemberService {
@@ -26,6 +27,33 @@ export class MemberService {
     private readonly transationService: TransactionsService,
     private readonly tokenService: TokenService,
   ) {}
+
+  async returnMember(member: Member): Promise<ReturnUserDto> {
+    const checkActiveSubscription = member.transactions?.some((transaction) => {
+      return new Date(transaction.endDate) > new Date();
+    });
+    const currentActiveSubscription = member.transactions?.find(
+      (transaction) => {
+        return new Date(transaction.endDate) > new Date();
+      },
+    );
+    return {
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      phone: member.phone,
+      username: member.username,
+      passCode: member.passCode,
+      gym: member.gym,
+      subscription: member.subscription,
+      transactions: member.transactions,
+      createdAt: member.createdAt,
+      updatedAt: member.updatedAt,
+      hasActiveSubscription: checkActiveSubscription,
+      currentActiveSubscription: currentActiveSubscription,
+      isNotified: member.isNotified,
+    };
+  }
 
   async create(createMemberDto: CreateMemberDto, manager: Manager) {
     console.log(createMemberDto.subscriptionId);
@@ -101,26 +129,21 @@ export class MemberService {
 
     console.log('newMember', newMember);
 
-    return {
-      id: newMember.id,
-      name: newMember.name,
-      email: newMember.email,
-      phone: newMember.phone,
-      username: newMember.username,
-      passCode: newMember.passCode,
-      gym: newMember.gym,
-      subscription: newMember.subscription,
-      transactions: newMember.transactions,
-      hasActiveSubscription: true,
-    };
+    return await this.returnMember(newMember);
   }
 
-  async loginMember(loginMemberDto: LoginMemberDto) {
+  async loginMember(
+    loginMemberDto: LoginMemberDto,
+  ): Promise<ReturnUserWithTokenDto> {
     console.log('loginMemberDto', loginMemberDto);
-    const member = await this.memberModel.findOne({
-      username: loginMemberDto.username,
-      passCode: loginMemberDto.password,
-    });
+    const member = await this.memberModel
+      .findOne({
+        username: loginMemberDto.username,
+        passCode: loginMemberDto.password,
+      })
+      .populate('gym')
+      .populate('subscription')
+      .populate('transactions');
     if (!member) {
       throw new BadRequestException('Invalid passcode or username');
     }
@@ -133,13 +156,7 @@ export class MemberService {
     console.log('token', token);
 
     return {
-      id: member.id,
-      name: member.name,
-      email: member.email,
-      phone: member.phone,
-      username: member.username,
-      passCode: member.passCode,
-      gym: member.gym,
+      ...(await this.returnMember(member)),
       token: token.accessToken,
     };
   }
@@ -159,34 +176,11 @@ export class MemberService {
       .populate('subscription')
       .populate('transactions');
 
-    const checkMembers = getMembers.map((member) => {
-      const checkActiveSubscription = member.transactions.some(
-        (transaction) => {
-          return new Date(transaction.endDate) > new Date();
-        },
-      );
-      const currentActiveSubscription = member.transactions.find(
-        (transaction) => {
-          return new Date(transaction.endDate) > new Date();
-        },
-      );
-
-      return {
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        phone: member.phone,
-        username: member.username,
-        passCode: member.passCode,
-        gym: member.gym,
-        subscription: member.subscription,
-        transactions: member.transactions,
-        createdAt: member.createdAt,
-        updatedAt: member.updatedAt,
-        hasActiveSubscription: checkActiveSubscription,
-        currentActiveSubscription: currentActiveSubscription,
-      };
-    });
+    const checkMembers = await Promise.all(
+      getMembers.map(async (member) => {
+        return await this.returnMember(member);
+      }),
+    );
 
     return checkMembers;
   }
@@ -247,21 +241,7 @@ export class MemberService {
 
     latestTransaction.subscription = checkSubscription;
 
-    return {
-      id: member.id,
-      name: member.name,
-      email: member.email,
-      phone: member.phone,
-      gym: member.gym,
-      username: member.username,
-      passCode: member.passCode,
-      subscription: member.subscription,
-      transactions: member.transactions,
-      createdAt: member.createdAt,
-      updatedAt: member.updatedAt,
-      hasActiveSubscription: checkActiveSubscription,
-      currentActiveSubscription: latestTransaction || null,
-    };
+    return await this.returnMember(member);
   }
 
   async renewSubscription(id: string) {
@@ -317,6 +297,7 @@ export class MemberService {
     });
 
     member.transactions.push(createTransaction.id);
+    member.isNotified = false;
 
     await member.save();
 
@@ -365,30 +346,18 @@ export class MemberService {
       .populate('transactions')
       .populate('subscription');
 
-    const expiredMembers = getMembers.filter((member) => {
-      const latestTransaction = member.transactions.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )[0];
+    const expiredMembers = await Promise.all(
+      getMembers.map(async (member) => {
+        const latestTransaction = member.transactions.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
 
-      if (new Date(latestTransaction.endDate) < new Date()) {
-        return {
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          phone: member.phone,
-          gym: member.gym,
-          username: member.username,
-          passCode: member.passCode,
-          subscription: member.subscription,
-          transactions: member.transactions,
-          createdAt: member.createdAt,
-          updatedAt: member.updatedAt,
-          hasActiveSubscription: false,
-          currentActiveSubscription: latestTransaction || null,
-        };
-      }
-    });
+        if (new Date(latestTransaction.endDate) < new Date()) {
+          return await this.returnMember(member);
+        }
+      }),
+    );
 
     return expiredMembers;
   }
@@ -411,17 +380,57 @@ export class MemberService {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0];
 
-    return {
-      id: checkMember.id,
-      name: checkMember.name,
-      email: checkMember.email,
-      phone: checkMember.phone,
-      gym: checkMember.gym,
-      username: checkMember.username,
-      passCode: checkMember.passCode,
-      subscription: checkMember.subscription,
-      hasActiveSubscription: checkActiveSubscription,
-      currentActiveSubscription: latestTransaction || null,
-    };
+    return await this.returnMember(checkMember);
+  }
+
+  async getMemberByIdAndGym(id: string, manager: Manager) {
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel
+      .findOne({
+        _id: id,
+        gym: gym.id,
+      })
+      .populate('transactions')
+      .populate('gym')
+      .populate('subscription');
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    return await this.returnMember(member);
+  }
+
+  async checkUserSubscriptionExpired(id: string) {
+    const member = await this.memberModel
+      .findById(id)
+      .populate('transactions')
+      .populate('gym')
+      .populate('subscription');
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    const latestTransaction = member.transactions.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+    if (new Date(latestTransaction.endDate) < new Date()) {
+      return true;
+    }
+    return false;
+  }
+
+  async toggleNotified(id: string, isNotified: boolean) {
+    const member = await this.memberModel.findById(id);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    member.isNotified = isNotified;
+    await member.save();
   }
 }

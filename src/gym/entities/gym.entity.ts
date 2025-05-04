@@ -46,6 +46,9 @@ export class Gym extends MainEntity {
     closingTime: string;
     isOpen: boolean;
   }[];
+
+  @Prop({ type: Number, default: 0 })
+  membersNotified: number;
 }
 
 export const GymSchema = SchemaFactory.createForClass(Gym);

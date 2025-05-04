@@ -26,5 +26,6 @@ import { Member, MemberSchema } from '../member/entities/member.entity';
   ],
   controllers: [GymController],
   providers: [GymService],
+  exports: [GymService],
 })
 export class GymModule {}

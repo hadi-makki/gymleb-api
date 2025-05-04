@@ -21,6 +21,7 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
 import { MemberModule } from './member/member.module';
 import { GymSeeding } from './seeder/gym.seeding';
 import { Gym, GymSchema } from './gym/entities/gym.entity';
+import { TwilioModule } from './twilio/twilio.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { Gym, GymSchema } from './gym/entities/gym.entity';
     GymModule,
     GymOwnerModule,
     MemberModule,
+    TwilioModule,
   ],
   controllers: [AppController],
   providers: [AppService, ManagerSeeding, GymSeeding],

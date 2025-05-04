@@ -166,6 +166,9 @@ export class GymService {
       totalTransactions: transactions.length,
       revenueChange,
       memberChange,
+      currentMonthMembers,
+      currentMonthRevenue,
+      currentMonthTransactions: currentMonthTransactions.length,
     };
   }
 
@@ -228,6 +231,23 @@ export class GymService {
     }
     gym.finishedPageSetup = true;
     await gym.save();
+    return gym;
+  }
+
+  async addGymMembersNotified(gymId: string, number: number) {
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.membersNotified += number;
+    await gym.save();
+    return gym;
+  }
+
+  async getGymByManager(manager: Manager) {
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
     return gym;
   }
 }

@@ -58,7 +58,9 @@ export class GymOwnerService {
     gymOwner.gym = checkGym.id;
     await gymOwner.save();
 
-    return gymOwner;
+    const gym = await this.gymModel.findById(checkGym.id).populate('owner');
+
+    return gym;
   }
 
   async findAll() {

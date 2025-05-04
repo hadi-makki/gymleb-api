@@ -26,5 +26,6 @@ import { TransactionsModule } from '../transactions/transactions.module';
   ],
   controllers: [MemberController],
   providers: [MemberService],
+  exports: [MemberService],
 })
 export class MemberModule {}
