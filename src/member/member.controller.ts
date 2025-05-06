@@ -53,7 +53,11 @@ export class MemberController {
     @User() member: Member,
     @Res({ passthrough: true }) response: Response,
   ) {
-    response.clearCookie('memberToken');
+    response.setHeader(
+      'Set-Cookie',
+      'memberToken=; HttpOnly; Path=/; Max-Age=0',
+    );
+    this.memberService.logout(member);
     return { message: 'Logged out successfully' };
   }
 

@@ -5,11 +5,15 @@ import { MainEntity } from '../../main-classes/mainEntity';
 import { Manager } from '../../manager/manager.entity';
 import { PersonalTrainer } from '../../personal-trainers/entities/personal-trainer.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
+import { Transaction } from 'typeorm';
 
 @CustomSchema()
 export class Gym extends MainEntity {
   @Prop({ type: String })
   name: string;
+
+  @Prop({ type: String })
+  gymDashedName: string;
 
   @Prop({ type: String })
   address: string;
@@ -25,6 +29,9 @@ export class Gym extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Manager' })
   owner: Manager;
+
+  @Prop({ type: [Types.ObjectId], ref: 'Transaction', required: false })
+  transactions: Transaction[];
 
   @Prop({ type: Boolean, default: false })
   finishedPageSetup: boolean;

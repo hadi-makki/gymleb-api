@@ -173,12 +173,8 @@ export class GymService {
   }
 
   async getGymByGymName(gymName: string) {
-    const decodedGymId = gymName.includes('%20')
-      ? decodeURIComponent(gymName)
-      : gymName;
-
     const gym = await this.gymModel
-      .findOne({ name: decodedGymId })
+      .findOne({ gymDashedName: gymName })
       .populate('openingDays');
 
     if (!gym) {
@@ -216,6 +212,7 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
     gym.name = gymName;
+    gym.gymDashedName = gymName.toLowerCase().split(' ').join('-');
     await gym.save();
     return gym;
   }
@@ -247,5 +244,26 @@ export class GymService {
       owner: manager.id,
     });
     return gym;
+  }
+
+  async getTransactionHistory(manager: Manager) {
+    console.log('getting transaction history');
+    const gym = await this.gymModel.findOne({
+      owner: manager.id,
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    console.log('gym found', gym.id);
+    const transactions = await this.transactionModel
+      .find({
+        gym: new Types.ObjectId(gym.id),
+      })
+      .populate('subscription')
+      .populate('member')
+      .populate('gym');
+    console.log('transactions found', transactions);
+
+    return transactions;
   }
 }

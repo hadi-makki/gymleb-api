@@ -126,6 +126,7 @@ export class ManagerService {
   }
 
   async logout(user: Manager): Promise<SuccessMessageReturn> {
+    console.log('logging out a manager');
     await this.tokenService.deleteTokensByUserId(user.id);
     return {
       message: 'Manager logged out successfully',
@@ -136,7 +137,6 @@ export class ManagerService {
     const checkManager = await this.managerEntity
       .findById(manager.id)
       .populate('gym');
-
 
     if (!checkManager) {
       throw new NotFoundException('Manager not found');

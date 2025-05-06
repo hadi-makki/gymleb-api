@@ -19,6 +19,7 @@ import { Role } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { UpdateGymNameDto } from './dto/update-name.dto';
+import { Transaction } from 'src/transactions/transaction.entity';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {
@@ -119,5 +120,16 @@ export class GymController {
   @ApiOperation({ summary: 'Set gym finished page setup' })
   async setGymFinishedPageSetup(@User() user: Manager) {
     return await this.gymService.setGymFinishedPageSetup(user);
+  }
+
+  @Get('get-transaction-history')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Get transaction history' })
+  @ApiOkResponse({
+    description: 'The transaction history has been successfully retrieved.',
+    type: [Transaction],
+  })
+  getTransactionHistory(@User() user: Manager) {
+    return this.gymService.getTransactionHistory(user);
   }
 }

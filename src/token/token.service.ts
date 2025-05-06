@@ -134,12 +134,12 @@ export class TokenService {
 
   async deleteTokensByUserId(userId: string): Promise<SuccessMessageReturn> {
     const tokenToDelete = await this.tokenRepository.find({
-      member: {
-        id: userId,
-      },
+      $or: [{ member: userId }, { manager: userId }],
     });
-    if (tokenToDelete) {
-      await this.tokenRepository.deleteMany({ member: { id: userId } });
+    if (tokenToDelete.length > 0) {
+      await this.tokenRepository.deleteMany({
+        $or: [{ member: userId }, { manager: userId }],
+      });
     }
     return {
       message: 'Tokens deleted successfully',

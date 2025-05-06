@@ -94,6 +94,7 @@ export class ManagerController {
 
   @Post('logout')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Role.GymOwner, Role.SuperAdmin)
   @ApiBearerAuth()
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()

@@ -118,12 +118,14 @@ export class MemberService {
 
     await member.save();
 
+    gym.transactions.push(transaction.id);
+    await gym.save();
+
     const newMember = await this.memberModel
       .findById(member.id)
       .populate('gym')
       .populate('subscription')
       .populate('transactions');
-
 
     return await this.returnMember(newMember);
   }
@@ -226,8 +228,20 @@ export class MemberService {
       member.subscription = checkSubscription.id;
       await member.save();
 
+      const gym = await this.gymModel.findById(member.gym.id);
+
+      gym.transactions.push(transaction.id);
+      await gym.save();
+
       latestTransaction = transaction;
       checkSubscription = checkSubscription;
+      const getMember = await this.memberModel
+        .findById(member.id)
+        .populate('transactions')
+        .populate('gym')
+        .populate('subscription');
+
+      return await this.returnMember(getMember);
     }
 
     latestTransaction.subscription = checkSubscription;
@@ -242,7 +256,6 @@ export class MemberService {
 
     const member = await this.memberModel.findById(id).populate('transactions');
 
-
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -254,7 +267,6 @@ export class MemberService {
     }
 
     let checkSubscription;
-
 
     if (member.transactions.length > 0) {
       const getLatestTransaction = member.transactions.sort(
@@ -289,6 +301,9 @@ export class MemberService {
     member.isNotified = false;
 
     await member.save();
+
+    checkGym.transactions.push(createTransaction.id);
+    await checkGym.save();
 
     return {
       message: 'Subscription renewed successfully',
@@ -347,7 +362,7 @@ export class MemberService {
       }),
     );
 
-    return expiredMembers;
+    return expiredMembers.filter((member) => member !== undefined);
   }
 
   async getMe(member: Member) {
@@ -356,17 +371,6 @@ export class MemberService {
       .populate('gym')
       .populate('subscription')
       .populate('transactions');
-
-    const checkActiveSubscription = checkMember.transactions.some(
-      (transaction) => {
-        return new Date(transaction.endDate) > new Date();
-      },
-    );
-
-    const latestTransaction = checkMember.transactions.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )[0];
 
     return await this.returnMember(checkMember);
   }
@@ -420,5 +424,9 @@ export class MemberService {
     }
     member.isNotified = isNotified;
     await member.save();
+  }
+
+  async logout(member: Member) {
+    await this.tokenService.deleteTokensByUserId(member.id);
   }
 }

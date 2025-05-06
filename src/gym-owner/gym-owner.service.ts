@@ -54,6 +54,7 @@ export class GymOwnerService {
       password: createGymOwnerDto.password,
       openingDays: Days,
       owner: gymOwner.id,
+      gymDashedName: createGymOwnerDto.name.toLowerCase().split(' ').join('-'),
     });
     gymOwner.gym = checkGym.id;
     await gymOwner.save();

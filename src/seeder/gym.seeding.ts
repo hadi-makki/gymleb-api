@@ -31,10 +31,19 @@ export class GymSeeding implements OnModuleInit {
   async onModuleInit() {
     // await this.removeData();
     await this.seedGyms();
+    // await this.addDashedGymName();
   }
 
   private async removeData() {
     await this.gymRepository.deleteMany({});
+  }
+
+  async addDashedGymName() {
+    const gyms = await this.gymRepository.find({});
+    for (const gym of gyms) {
+      gym.gymDashedName = gym.name.toLowerCase().split(' ').join('-');
+      await gym.save();
+    }
   }
 
   private async seedGyms() {
