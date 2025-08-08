@@ -23,10 +23,13 @@ async function bootstrap() {
   app.use(helmet());
 
   app.enableCors({
-    origin: (origin, callback) => {
-      callback(null, true); // Allow the origin
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://gym-leb.com',
+      'https://gymleb.netlify.app',
+    ], // Allow all origins
+    methods: '*', // Allow all methods
     credentials: true,
   });
 
