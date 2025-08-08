@@ -26,20 +26,8 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       console.log('origin', origin);
-      const allowedOrigins = [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:3003',
-        'https://your-prod-url.com',
-        'http://176.57.188.91:3003',
-        'https://gymleb.netlify.app',
-        'https://gym-leb.com',
-      ];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true); // Allow the origin
-      } else {
-        callback(new ForbiddenException('Not allowed by CORS'), false); // Deny the origin
-      }
+
+      callback(null, true); // Allow the origin
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
