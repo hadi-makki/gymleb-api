@@ -68,7 +68,7 @@ export class ManagerService {
 
   async login(body: LoginManagerDto): Promise<ManagerCreatedWithTokenDto> {
     const manager = await this.managerEntity.findOne({
-      username: body.username,
+      $or: [{ username: body.username }, { email: body.username }],
     });
     if (!manager) {
       throw new NotFoundException('User not found');
