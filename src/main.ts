@@ -22,16 +22,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
 
-  app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://gym-leb.com',
-      'https://gymleb.netlify.app',
-    ], // Allow all origins
-    methods: '*', // Allow all methods
-    credentials: true,
-  });
+  app.enableCors();
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
