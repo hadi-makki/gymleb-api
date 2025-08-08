@@ -10,7 +10,7 @@ import { returnAllRoles } from './decorators/roles/role.enum';
 import { HttpExceptionFilter } from './error';
 import { BadRequestException } from './error/bad-request-error';
 import { loggerMiddleware } from './logger/logger.service';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 
 dotenv.config({
   path: `.env`,

@@ -103,7 +103,7 @@ export class ManagerController {
     @User() user: Manager,
     @Res({ passthrough: true }) response: Response,
   ) {
-    response.clearCookie('token');
+    response.clearCookie('token', cookieOptions);
     return this.ManagerService.logout(user);
   }
 
