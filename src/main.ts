@@ -22,7 +22,13 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
 
-  app.enableCors();
+  app.enableCors({
+    origin: (origin, callback) => {
+      callback(null, true); // Allow the origin
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+  });
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
