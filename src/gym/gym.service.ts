@@ -14,6 +14,7 @@ import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { Expense } from '../expenses/expense.entity';
 
 @Injectable()
 export class GymService {
@@ -22,6 +23,7 @@ export class GymService {
     @InjectModel(GymOwner.name) private gymOwnerModel: Model<GymOwner>,
     @InjectModel(Transaction.name) private transactionModel: Model<Transaction>,
     @InjectModel(Member.name) private memberModel: Model<Member>,
+    @InjectModel(Expense.name) private expenseModel: Model<Expense>,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
@@ -62,7 +64,7 @@ export class GymService {
     return gym;
   }
 
-  async getGymAnalytics(manager: Manager) {
+  async getGymAnalytics(manager: Manager, start?: string, end?: string) {
     const gym = await this.gymModel.findOne({ owner: manager.id });
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -121,12 +123,35 @@ export class GymService {
 
     // Fetch all transactions and members for current analytics
     const transactions = await this.transactionModel
-      .find({ gym: new Types.ObjectId(gym.id) })
+      .find({
+        gym: new Types.ObjectId(gym.id),
+        ...(start || end
+          ? {
+              createdAt: {
+                ...(start ? { $gte: new Date(start) } : {}),
+                ...(end ? { $lte: new Date(end) } : {}),
+              },
+            }
+          : {}),
+      })
       .populate('subscription');
-    const totalRevenue = transactions.reduce(
-      (total, transaction) => total + transaction.paidAmount || 0,
-      0,
-    );
+    const totalRevenue = transactions.reduce((total, transaction) => {
+      const amount =
+        typeof transaction.paidAmount === 'number'
+          ? transaction.paidAmount
+          : transaction.subscription?.price || 0;
+      return total + amount;
+    }, 0);
+
+    // Expenses in range
+    const expenseFilter: any = { gym: new Types.ObjectId(gym.id) };
+    if (start || end) {
+      expenseFilter.date = {};
+      if (start) expenseFilter.date.$gte = new Date(start);
+      if (end) expenseFilter.date.$lte = new Date(end);
+    }
+    const expenses = await this.expenseModel.find(expenseFilter);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     const totalMembers = await this.memberModel.countDocuments({ gym: gym.id });
     const members = await this.memberModel
       .find({ gym: gym.id })
@@ -161,6 +186,8 @@ export class GymService {
 
     return {
       totalRevenue,
+      totalExpenses,
+      netRevenue: totalRevenue - totalExpenses,
       totalMembers,
       members: membersWithActiveSubscription,
       totalTransactions: transactions.length,

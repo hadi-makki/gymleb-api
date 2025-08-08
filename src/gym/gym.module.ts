@@ -14,6 +14,7 @@ import {
   TransactionSchema,
 } from '../transactions/transaction.entity';
 import { Member, MemberSchema } from '../member/entities/member.entity';
+import { Expense, ExpenseSchema } from '../expenses/expense.entity';
 @Module({
   imports: [
     AuthenticationModule,
@@ -22,6 +23,7 @@ import { Member, MemberSchema } from '../member/entities/member.entity';
       { name: GymOwner.name, schema: GymOwnerSchema },
       { name: Transaction.name, schema: TransactionSchema },
       { name: Member.name, schema: MemberSchema },
+      { name: Expense.name, schema: ExpenseSchema },
     ]),
   ],
   controllers: [GymController],

@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { GymService } from './gym.service';
 import { CreateGymDto } from './dto/create-gym.dto';
@@ -73,8 +74,12 @@ export class GymController {
   @Get('analytics')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get gym analytics' })
-  getGymAnalytics(@User() user: Manager) {
-    return this.gymService.getGymAnalytics(user);
+  getGymAnalytics(
+    @User() user: Manager,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getGymAnalytics(user, start, end);
   }
 
   @Get('by-name/:gymName')
