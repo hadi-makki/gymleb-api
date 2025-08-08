@@ -21,12 +21,9 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
-  console.log('dev');
 
   app.enableCors({
     origin: (origin, callback) => {
-      console.log('origin', origin);
-
       callback(null, true); // Allow the origin
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
