@@ -26,7 +26,7 @@ async function bootstrap() {
     origin: (origin, callback) => {
       callback(null, true); // Allow the origin
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   });
 
