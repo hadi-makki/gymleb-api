@@ -15,6 +15,7 @@ import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Expense } from '../expenses/expense.entity';
 import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
+import { paginateModel } from '../utils/pagination';
 
 @Injectable()
 export class GymService {
@@ -187,6 +188,12 @@ export class GymService {
       };
     });
 
+    // Determine the actual date range used
+    const analyticsStartDate = start
+      ? new Date(start)
+      : startOfMonth(subMonths(now, 1));
+    const analyticsEndDate = end ? new Date(end) : now;
+
     return {
       totalRevenue,
       totalExpenses,
@@ -199,6 +206,10 @@ export class GymService {
       currentMonthMembers,
       currentMonthRevenue,
       currentMonthTransactions: currentMonthTransactions.length,
+      dateRange: {
+        startDate: analyticsStartDate,
+        endDate: analyticsEndDate,
+      },
     };
   }
 
@@ -235,7 +246,7 @@ export class GymService {
     const data = await Promise.all(
       gyms.map(async (gym) => {
         const ownerSubscriptions = await this.ownerSubscriptionModel.find({
-          owner: gym.owner._id,
+          owner: gym.owner?._id,
         });
         const gymHasActiveSubscription = ownerSubscriptions.find(
           (subscription) =>
@@ -247,7 +258,8 @@ export class GymService {
         };
       }),
     );
-    return data;
+    const filterDataWithoutOwners = data.filter((gym) => gym.owner);
+    return filterDataWithoutOwners;
   }
 
   async updateGymName(manager: Manager, gymName: string) {
@@ -305,23 +317,40 @@ export class GymService {
     return gym;
   }
 
-  async getTransactionHistory(manager: Manager) {
-    console.log('getting transaction history');
+  async getTransactionHistory(
+    manager: Manager,
+    limit: number,
+    page: number,
+    search: string,
+  ) {
     const gym = await this.gymModel.findOne({
       owner: manager.id,
     });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    console.log('gym found', gym.id);
-    const subscriptionInstances = await this.subscriptionInstanceModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-      })
-      .populate('subscription')
-      .populate('member')
-      .populate('gym');
 
-    return subscriptionInstances;
+    // First get member IDs that match the search
+    let memberIds = [];
+    if (search) {
+      const matchingMembers = await this.memberModel.find({
+        gym: gym.id,
+        name: { $regex: search, $options: 'i' },
+      });
+      memberIds = matchingMembers.map((m) => m._id);
+    }
+
+    const result = await paginateModel(this.subscriptionInstanceModel, {
+      filter: {
+        gym: new Types.ObjectId(gym.id),
+        ...(search ? { member: { $in: memberIds } } : {}),
+      },
+      populate: [{ path: 'subscription' }, { path: 'member' }, { path: 'gym' }],
+      page,
+      limit,
+      sort: { createdAt: -1 }, // Sort by most recent first
+    });
+
+    return result;
   }
 }

@@ -59,19 +59,39 @@ export class SubscriptionInstanceService {
       throw new NotFoundException('Subscription not found');
     }
 
-    const computedEndDate =
-      paymentDetails.subscriptionType === SubscriptionType.DAILY_GYM
-        ? paymentDetails.giveFullDay
-          ? addHours(new Date(), 24).toISOString()
-          : endOfDay(new Date()).toISOString()
-        : addDays(new Date(), getSubscription.duration).toISOString();
+    console.log('paymentDetails', paymentDetails);
+    console.log('startDate', paymentDetails.startDate);
+    console.log('endDate', paymentDetails.endDate);
+
+    // Use custom dates if provided, otherwise calculate based on subscription type
+    let startDate = paymentDetails.startDate
+      ? new Date(paymentDetails.startDate)
+      : new Date();
+    let endDate: Date;
+
+    console.log('startDate', startDate);
+
+    if (paymentDetails.endDate) {
+      // Use custom end date if provided
+      endDate = new Date(paymentDetails.endDate);
+    } else {
+      // Calculate end date based on subscription type and start date
+      if (paymentDetails.subscriptionType === SubscriptionType.DAILY_GYM) {
+        endDate = paymentDetails.giveFullDay
+          ? addHours(startDate, 24)
+          : endOfDay(startDate);
+      } else {
+        endDate = addDays(startDate, getSubscription.duration);
+      }
+    }
 
     const newTransaction = this.subscriptionInstanceRepository.create({
       member: getMember,
       gym: getGym,
       subscription: getSubscription,
-      endDate: computedEndDate,
+      endDate: endDate.toISOString(),
       paidAmount: paymentDetails.amount,
+      startDate: startDate.toISOString(),
     });
     return newTransaction;
   }
@@ -101,6 +121,7 @@ export class SubscriptionInstanceService {
       paidAmount: params.paidAmount,
       endDate,
       isOwnerSubscriptionAssignment: true,
+      startDate: new Date().toISOString(),
     });
 
     await this.ownerSubscriptionRepository.updateOne(

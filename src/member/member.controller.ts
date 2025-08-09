@@ -62,8 +62,18 @@ export class MemberController {
   @Get()
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
-  async findAll(@User() manager: Manager, @Query('search') search: string) {
-    return await this.memberService.findAll(manager, search);
+  async findAll(
+    @User() manager: Manager,
+    @Query('search') search: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '5',
+  ) {
+    return await this.memberService.findAll(
+      manager,
+      search,
+      Number(limit),
+      Number(page),
+    );
   }
 
   @Get('get-member/:id')
@@ -107,8 +117,18 @@ export class MemberController {
   @Get('expired')
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
-  async getExpiredMembers(@User() manager: Manager) {
-    return await this.memberService.getExpiredMembers(manager);
+  async getExpiredMembers(
+    @User() manager: Manager,
+    @Query('page') page = '1',
+    @Query('limit') limit = '5',
+    @Query('search') search: string,
+  ) {
+    return await this.memberService.getExpiredMembers(
+      manager,
+      Number(limit),
+      Number(page),
+      search,
+    );
   }
 
   @Get('me')

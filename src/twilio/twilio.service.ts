@@ -26,9 +26,14 @@ export class TwilioService {
   );
 
   async notifyExpiredMembers(manager: Manager) {
-    const members = await this.memberService.getExpiredMembers(manager);
+    const members = await this.memberService.getExpiredMembers(
+      manager,
+      100,
+      1,
+      '',
+    );
     let notifiedNumber = 0;
-    for (const member of members) {
+    for (const member of members.items) {
       if (member.phone && !member.isNotified) {
         // await this.sendWhatsappMessage(member.phone);
         await this.memberService.toggleNotified(member.id, true);

@@ -12,13 +12,6 @@ export function returnUser(user: User) {
 }
 
 export function returnManager(manager: Manager) {
-  return {
-    id: manager.id,
-    username: manager.username,
-    email: manager.email,
-    createdAt: manager.createdAt,
-    updatedAt: manager.updatedAt,
-    gym: manager.gym,
-    roles: manager.roles,
-  };
+  delete manager.password;
+  return manager;
 }

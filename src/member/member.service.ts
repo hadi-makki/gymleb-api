@@ -14,6 +14,7 @@ import { BadRequestException } from '../error/bad-request-error';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { TokenService } from '../token/token.service';
 import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
+import { paginateModel } from '../utils/pagination';
 
 @Injectable()
 export class MemberService {
@@ -134,6 +135,8 @@ export class MemberService {
         subscriptionType: subscription.type,
         amount: subscription.price,
         giveFullDay: createMemberDto.giveFullDay,
+        startDate: createMemberDto.startDate,
+        endDate: createMemberDto.endDate,
       });
 
     member.subscriptionInstances = [subscriptionInstance.id];
@@ -178,29 +181,34 @@ export class MemberService {
     };
   }
 
-  async findAll(manager: Manager, search: string) {
-    const checkGym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+  async findAll(manager: Manager, search: string, limit: number, page: number) {
+    const checkGym = await this.gymModel.findOne({ owner: manager.id });
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-    const getMembers = await this.memberModel
-      .find({
-        gym: checkGym.id,
-        ...(search && { name: { $regex: search, $options: 'i' } }),
-      })
-      .populate('gym')
-      .populate('subscription')
-      .populate('subscriptionInstances');
 
-    const checkMembers = await Promise.all(
-      getMembers.map(async (member) => {
-        return await this.returnMember(member);
-      }),
+    const result = await paginateModel(this.memberModel, {
+      filter: {
+        gym: checkGym.id,
+        ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+      },
+      populate: [
+        { path: 'gym' },
+        { path: 'subscription' },
+        { path: 'subscriptionInstances' },
+      ],
+      page,
+      limit,
+    });
+
+    const items = await Promise.all(
+      result.items.map(async (m: any) => this.returnMember(m as Member)),
     );
 
-    return checkMembers;
+    return {
+      ...result,
+      items,
+    };
   }
 
   async findOne(id: string) {
@@ -349,7 +357,12 @@ export class MemberService {
     return { message: 'Member deleted successfully' };
   }
 
-  async getExpiredMembers(manager: Manager) {
+  async getExpiredMembers(
+    manager: Manager,
+    limit: number,
+    page: number,
+    search: string,
+  ) {
     const gym = await this.gymModel.findOne({
       owner: manager.id,
     });
@@ -358,27 +371,44 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
 
-    const getMembers = await this.memberModel
+    // First get all members to check expiration
+    const allMembers = await this.memberModel
       .find({
         gym: gym.id,
+        ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
       })
       .populate('subscriptionInstances')
-      .populate('subscription');
+      .populate('subscription')
+      .lean();
 
-    const expiredMembers = await Promise.all(
-      getMembers.map(async (member) => {
+    // Filter expired members
+    const expiredMemberIds = allMembers
+      .filter((member) => {
         const latestSubscriptionInstance = member.subscriptionInstances.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
+        return new Date(latestSubscriptionInstance.endDate) < new Date();
+      })
+      .map((member) => member._id);
 
-        if (new Date(latestSubscriptionInstance.endDate) < new Date()) {
-          return await this.returnMember(member);
-        }
-      }),
-    );
+    // Use pagination utility with the filtered IDs
+    const result = await paginateModel(this.memberModel, {
+      filter: {
+        _id: { $in: expiredMemberIds },
+        ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+      },
+      populate: [
+        { path: 'gym' },
+        { path: 'subscription' },
+        { path: 'subscriptionInstances' },
+      ],
+      page,
+      limit,
+      transform: async (member) => await this.returnMember(member as Member),
+    });
 
-    return expiredMembers.filter((member) => member !== undefined);
+    return result;
   }
 
   async getMe(member: Member) {

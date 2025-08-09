@@ -16,6 +16,9 @@ export class SubscriptionInstance extends MainEntity {
   @Prop({ type: String, required: false })
   endDate: string;
 
+  @Prop({ type: String, required: false })
+  startDate: string;
+
   @Prop({ type: Number, required: false })
   paidAmount: number;
 

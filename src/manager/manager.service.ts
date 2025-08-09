@@ -1,8 +1,15 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isMongoId, isUUID } from 'class-validator';
-import { Model } from 'mongoose';
+import { isMongoId } from 'class-validator';
+import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
+import { Model, Types } from 'mongoose';
+import { Expense } from 'src/expenses/expense.entity';
+import { Gym } from 'src/gym/entities/gym.entity';
+import { GymService } from 'src/gym/gym.service';
+import { Member } from 'src/member/entities/member.entity';
+import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
+import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { returnManager } from '../functions/returnUser';
@@ -14,11 +21,6 @@ import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dt
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
-import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
-import { GymService } from 'src/gym/gym.service';
-import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
-import { Types } from 'mongoose';
-import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 @Injectable()
 export class ManagerService {
   constructor(
@@ -28,6 +30,14 @@ export class ManagerService {
     private readonly GymService: GymService,
     @InjectModel(SubscriptionInstance.name)
     private readonly subscriptionInstanceModel: Model<SubscriptionInstance>,
+    @InjectModel(Gym.name)
+    private readonly gymModel: Model<Gym>,
+    @InjectModel(OwnerSubscription.name)
+    private readonly ownerSubscriptionModel: Model<OwnerSubscription>,
+    @InjectModel(Member.name)
+    private readonly memberModel: Model<Member>,
+    @InjectModel(Expense.name)
+    private readonly expenseModel: Model<Expense>,
   ) {}
 
   async createManager(
@@ -108,7 +118,17 @@ export class ManagerService {
     if (!manager) {
       throw new NotFoundException('Manager not found');
     }
-    await this.managerEntity.deleteOne({ id });
+    await this.managerEntity.deleteOne({ _id: new Types.ObjectId(id) });
+
+    await this.gymModel.deleteOne({ owner: id });
+    await this.ownerSubscriptionModel.updateMany(
+      { owner: id },
+      { owner: null },
+    );
+    await this.subscriptionInstanceModel.deleteMany({ owner: id });
+    await this.memberModel.deleteMany({ owner: id });
+    await this.expenseModel.deleteMany({ owner: id });
+    await this.tokenService.deleteTokensByUserId(id);
 
     return {
       message: 'Manager deleted successfully',
@@ -124,11 +144,14 @@ export class ManagerService {
       throw new NotFoundException('Manager not found');
     }
 
-    if (body.email !== undefined) manager.email = body.email;
-    if (body.username !== undefined) manager.username = body.username;
+    if (body.email) manager.email = body.email;
+    if (body.firstName) manager.firstName = body.firstName;
+    if (body.lastName) manager.lastName = body.lastName;
+    if (body.username) manager.username = body.username;
     if (body.password) {
       manager.password = await Manager.hashPassword(body.password);
     }
+    console.log('manager', manager);
     await manager.save();
     return returnManager(manager);
   }

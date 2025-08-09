@@ -148,7 +148,17 @@ export class GymController {
     description: 'The transaction history has been successfully retrieved.',
     type: [SubscriptionInstance],
   })
-  getTransactionHistory(@User() user: Manager) {
-    return this.gymService.getTransactionHistory(user);
+  getTransactionHistory(
+    @User() user: Manager,
+    @Query('page') page = '1',
+    @Query('limit') limit = '5',
+    @Query('search') search: string,
+  ) {
+    return this.gymService.getTransactionHistory(
+      user,
+      Number(limit),
+      Number(page),
+      search,
+    );
   }
 }

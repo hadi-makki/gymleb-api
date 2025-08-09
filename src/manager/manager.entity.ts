@@ -13,6 +13,12 @@ export class Manager extends MainEntity {
   @Prop({ required: true, unique: true })
   username: string;
 
+  @Prop({ required: true, default: 'John' })
+  firstName: string;
+
+  @Prop({ required: true, default: 'Doe' })
+  lastName: string;
+
   @Prop({ required: true })
   password: string;
 

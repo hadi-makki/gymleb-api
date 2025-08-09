@@ -29,7 +29,9 @@ export class GymOwnerService {
       throw new BadRequestException('Gym owner already exists');
     }
 
-    let username = createGymOwnerDto.name.toLowerCase().split(' ').join('');
+    let username =
+      createGymOwnerDto.firstName.toLowerCase() +
+      createGymOwnerDto.lastName.toLowerCase();
 
     const checkUsername = await this.gymOwnerModel.findOne({
       username,
@@ -38,7 +40,8 @@ export class GymOwnerService {
       username = username + Math.floor(1000 + Math.random() * 9000);
     }
     const gymOwner = await this.gymOwnerModel.create({
-      name: createGymOwnerDto.name,
+      firstName: createGymOwnerDto.firstName,
+      lastName: createGymOwnerDto.lastName,
       email: createGymOwnerDto.email,
       password: await Manager.hashPassword(createGymOwnerDto.password),
       address: createGymOwnerDto.address,
@@ -46,15 +49,24 @@ export class GymOwnerService {
       username,
       roles: [Role.GymOwner],
     });
+    let gymName =
+      createGymOwnerDto.firstName + ' ' + createGymOwnerDto.lastName;
+    const checkGymName = await this.gymModel.findOne({
+      name: gymName,
+    });
+    if (checkGymName) {
+      gymName = gymName + Math.floor(1000 + Math.random() * 9000);
+    }
+
     const checkGym = await this.gymModel.create({
-      name: createGymOwnerDto.name,
+      name: gymName,
       address: createGymOwnerDto.address,
       phone: createGymOwnerDto.phone,
       email: createGymOwnerDto.email,
       password: createGymOwnerDto.password,
       openingDays: Days,
       owner: gymOwner.id,
-      gymDashedName: createGymOwnerDto.name.toLowerCase().split(' ').join('-'),
+      gymDashedName: gymName.toLowerCase().split(' ').join('-'),
     });
     gymOwner.gym = checkGym.id;
     await gymOwner.save();

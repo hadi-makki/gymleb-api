@@ -151,8 +151,8 @@ export class ManagerController {
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
   @Roles()
-  deleteManager(@Param('id') id: string) {
-    return this.ManagerService.deleteManager(id);
+  async deleteManager(@Param('id') id: string) {
+    return await this.ManagerService.deleteManager(id);
   }
 
   @Patch('/update/:id')

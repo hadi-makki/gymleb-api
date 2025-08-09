@@ -1,4 +1,10 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateMemberDto {
   @IsNotEmpty()
@@ -21,4 +27,14 @@ export class CreateMemberDto {
   @IsOptional()
   @IsBoolean()
   giveFullDay?: boolean;
+
+  // Optional custom start date for subscription instance
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  // Optional custom end date for subscription instance
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }
