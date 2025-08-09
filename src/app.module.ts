@@ -10,19 +10,20 @@ import { MediaModule } from './media/media.module';
 import { S3Module } from './s3/s3.module';
 import { ManagerSeeding } from './seeder/managers.seeding';
 import { TokenModule } from './token/token.module';
-import { TransactionsModule } from './transactions/transactions.module';
+import { SubscriptionInstanceModule } from './transactions/subscription-instance.module';
 import { UserModule } from './user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Manager, ManagerSchema } from './manager/manager.entity';
 import { PersonalTrainersModule } from './personal-trainers/personal-trainers.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { GymModule } from './gym/gym.module';
-import { GymOwnerModule } from './gym-owner/gym-owner.module';
 import { MemberModule } from './member/member.module';
 import { GymSeeding } from './seeder/gym.seeding';
 import { Gym, GymSchema } from './gym/entities/gym.entity';
 import { TwilioModule } from './twilio/twilio.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { OwnerSubscriptionsModule } from './owner-subscriptions/owner-subscriptions.module';
+import { GymOwnerModule } from './gym-owner/gym-owner.module';
 
 @Module({
   imports: [
@@ -39,14 +40,15 @@ import { ExpensesModule } from './expenses/expenses.module';
     TokenModule,
     ManagerModule,
     // StripeModule,
-    TransactionsModule,
+    SubscriptionInstanceModule,
     PersonalTrainersModule,
     SubscriptionModule,
     GymModule,
-    GymOwnerModule,
     MemberModule,
     TwilioModule,
     ExpensesModule,
+    OwnerSubscriptionsModule,
+    GymOwnerModule,
   ],
   controllers: [AppController],
   providers: [AppService, ManagerSeeding, GymSeeding],

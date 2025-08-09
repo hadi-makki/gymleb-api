@@ -7,10 +7,12 @@ import { User } from '../user/user.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { Subscription } from '../subscription/entities/subscription.entity';
 import { Member } from '../member/entities/member.entity';
-export type TransactionDocument = Transaction & Document;
+import { Manager } from '../manager/manager.entity';
+import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.entity';
+export type SubscriptionInstanceDocument = SubscriptionInstance & Document;
 
 @CustomSchema()
-export class Transaction extends MainEntity {
+export class SubscriptionInstance extends MainEntity {
   @Prop({ type: String, required: false })
   endDate: string;
 
@@ -25,6 +27,21 @@ export class Transaction extends MainEntity {
 
   @Prop({ type: Types.ObjectId, required: false, ref: 'Member' })
   member: Member;
+
+  // Owner subscription assignment transaction
+  @Prop({ type: Types.ObjectId, required: false, ref: 'Manager' })
+  owner: Manager;
+
+  @Prop({
+    type: Types.ObjectId,
+    required: false,
+    ref: 'OwnerSubscriptionType',
+  })
+  ownerSubscriptionType: OwnerSubscriptionType;
+
+  @Prop({ type: Boolean, required: false, default: false })
+  isOwnerSubscriptionAssignment: boolean;
 }
 
-export const TransactionSchema = SchemaFactory.createForClass(Transaction);
+export const SubscriptionInstanceSchema =
+  SchemaFactory.createForClass(SubscriptionInstance);

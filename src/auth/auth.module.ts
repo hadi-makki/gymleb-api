@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Manager, ManagerSchema } from '../manager/manager.entity';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Member, MemberSchema } from '../member/entities/member.entity';
+import { GymService } from 'src/gym/gym.service';
 @Module({
   imports: [
     MongooseModule.forFeature([

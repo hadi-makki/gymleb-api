@@ -13,7 +13,6 @@ import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { GymOwner } from './entities/gym-owner.entity';
 import { Roles } from '../decorators/roles/Role';
 import { Role } from '../decorators/roles/role.enum';
 import { Manager } from '../manager/manager.entity';
@@ -29,11 +28,11 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Create a gym owner' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully created.',
-    type: GymOwner,
+    type: Manager,
   })
   @Roles(Role.SuperAdmin)
-  create(@Body() createGymOwnerDto: CreateGymOwnerDto) {
-    return this.gymOwnerService.create(createGymOwnerDto);
+  async create(@Body() createGymOwnerDto: CreateGymOwnerDto) {
+    return await this.gymOwnerService.create(createGymOwnerDto);
   }
 
   @Get()
@@ -41,7 +40,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get all gym owners' })
   @ApiOkResponse({
     description: 'The gym owners have been successfully retrieved.',
-    type: [GymOwner],
+    type: [Manager],
   })
   @Roles(Role.GymOwner)
   findAll() {
@@ -53,7 +52,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get a gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully retrieved.',
-    type: GymOwner,
+    type: Manager,
   })
   @Roles(Role.GymOwner)
   findOne(@Param('id') id: string) {
@@ -65,7 +64,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Update a gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully updated.',
-    type: GymOwner,
+    type: Manager,
   })
   @Roles(Role.GymOwner)
   update(
@@ -80,7 +79,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Delete a gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully deleted.',
-    type: GymOwner,
+    type: Manager,
   })
   @Roles(Role.GymOwner)
   remove(@Param('id') id: string) {
@@ -92,7 +91,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get the gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully retrieved.',
-    type: GymOwner,
+    type: Manager,
   })
   @Roles(Role.GymOwner)
   getGymOwner(@User() user: Manager) {

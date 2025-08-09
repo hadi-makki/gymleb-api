@@ -9,6 +9,7 @@ import {
   Req,
   Res,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -40,6 +41,10 @@ import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
 import { ManagerService } from './manager.service';
+import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
+import { SubscriptionInstanceService } from 'src/transactions/subscription-instance.service';
+import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
+import { GymService } from 'src/gym/gym.service';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -47,6 +52,8 @@ export class ManagerController {
   constructor(
     private readonly ManagerService: ManagerService,
     private readonly AuthService: AuthService,
+    private readonly SubscriptionInstanceService: SubscriptionInstanceService,
+    private readonly GymService: GymService,
   ) {}
 
   @Post('/create')
@@ -118,6 +125,15 @@ export class ManagerController {
     return this.ManagerService.getMe(user);
   }
 
+  @Patch('update/me')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.GymOwner)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: Manager })
+  updateMe(@User() user: Manager, @Body() body: UpdateManagerDto) {
+    return this.ManagerService.updateManager(user.id, body);
+  }
+
   @Get()
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()
@@ -172,5 +188,28 @@ export class ManagerController {
     res.clearCookie('token', cookieOptions);
 
     return { message: 'Cookies cleared' };
+  }
+
+  @Get('get/transactions')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.GymOwner)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: [SubscriptionInstance] })
+  async getTransactions(@User() user: Manager) {
+    return await this.SubscriptionInstanceService.findAllSubscriptionInstances(
+      user.id,
+    );
+  }
+
+  @Get('get/analytics')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Admin analytics', type: Object })
+  async getAdminAnalytics(
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return await this.ManagerService.getAdminAnalytics(start, end);
   }
 }

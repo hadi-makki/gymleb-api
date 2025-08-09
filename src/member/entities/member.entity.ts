@@ -4,7 +4,7 @@ import { Gym } from '../../gym/entities/gym.entity';
 import { Types } from 'mongoose';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
-import { Transaction } from '../../transactions/transaction.entity';
+import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 
 @CustomSchema()
 export class Member extends MainEntity {
@@ -26,8 +26,12 @@ export class Member extends MainEntity {
   @Prop({ required: true, type: Types.ObjectId, ref: 'Subscription' })
   subscription: Subscription;
 
-  @Prop({ ref: 'Transaction', type: [Types.ObjectId], required: false })
-  transactions: Transaction[];
+  @Prop({
+    ref: 'SubscriptionInstance',
+    type: [Types.ObjectId],
+    required: false,
+  })
+  subscriptionInstances: SubscriptionInstance[];
 
   @Prop({ type: String, required: false })
   passCode: string;

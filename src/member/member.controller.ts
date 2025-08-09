@@ -13,6 +13,7 @@ import {
 import { MemberService } from './member.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { Roles } from '../decorators/roles/Role';
@@ -92,8 +93,15 @@ export class MemberController {
   @Post(':id/renew')
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
-  async renewSubscription(@Param('id') id: string) {
-    return await this.memberService.renewSubscription(id);
+  async renewSubscription(
+    @Param('id') id: string,
+    @Body() renewSubscriptionDto: RenewSubscriptionDto,
+  ) {
+    return await this.memberService.renewSubscription(
+      id,
+      renewSubscriptionDto.subscriptionId,
+      renewSubscriptionDto.giveFullDay,
+    );
   }
 
   @Get('expired')
@@ -107,5 +115,12 @@ export class MemberController {
   @UseGuards(AuthGuard)
   async getMe(@User() member: Member) {
     return await this.memberService.getMe(member);
+  }
+
+  @Post(':id/invalidate')
+  @Roles(Role.GymOwner)
+  @UseGuards(ManagerAuthGuard)
+  async invalidateMemberSubscription(@Param('id') id: string) {
+    return await this.memberService.invalidateMemberSubscription(id);
   }
 }

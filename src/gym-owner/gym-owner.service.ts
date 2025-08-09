@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
-import { GymOwner } from './entities/gym-owner.entity';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Manager } from '../manager/manager.entity';
@@ -22,6 +21,7 @@ export class GymOwnerService {
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto) {
+    console.log('createGymOwnerDto', createGymOwnerDto);
     const checkGymOwner = await this.gymOwnerModel.findOne({
       email: createGymOwnerDto.email,
     });

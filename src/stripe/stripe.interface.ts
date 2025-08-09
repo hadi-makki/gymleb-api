@@ -6,6 +6,8 @@ export interface PaymentDetails {
   gymId: string;
   subscriptionType: SubscriptionType;
   amount: number;
+  // If true for daily subscriptions, grant a full 24 hours. If false/undefined, expire at end of day
+  giveFullDay?: boolean;
 }
 
 export interface GooglePaymentsDetails {

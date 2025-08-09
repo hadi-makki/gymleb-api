@@ -14,15 +14,20 @@ import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dt
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
-import { GymOwner } from '../gym-owner/entities/gym-owner.entity';
+import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
+import { GymService } from 'src/gym/gym.service';
+import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
+import { Types } from 'mongoose';
+import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 @Injectable()
 export class ManagerService {
   constructor(
     @InjectModel(Manager.name)
     private readonly managerEntity: Model<Manager>,
     private readonly tokenService: TokenService,
-    @InjectModel(GymOwner.name)
-    private readonly gymOwnerEntity: Model<GymOwner>,
+    private readonly GymService: GymService,
+    @InjectModel(SubscriptionInstance.name)
+    private readonly subscriptionInstanceModel: Model<SubscriptionInstance>,
   ) {}
 
   async createManager(
@@ -133,6 +138,76 @@ export class ManagerService {
     await this.tokenService.deleteTokensByUserId(user.id);
     return {
       message: 'Manager logged out successfully',
+    };
+  }
+
+  async getAdminAnalytics(start?: string, end?: string) {
+    const now = new Date();
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    const currentMonthStart = startOfMonth(now);
+
+    const baseFilter: any = { isOwnerSubscriptionAssignment: true };
+
+    const subscriptionInstances = await this.subscriptionInstanceModel
+      .find({
+        ...baseFilter,
+        ...(start || end
+          ? {
+              createdAt: {
+                ...(start ? { $gte: new Date(start) } : {}),
+                ...(end ? { $lte: new Date(end) } : {}),
+              },
+            }
+          : {}),
+      })
+      .populate('owner')
+      .populate('ownerSubscriptionType');
+
+    const totalRevenue = subscriptionInstances.reduce(
+      (sum, t) => sum + (t.paidAmount || 0),
+      0,
+    );
+    const totalTransactions = subscriptionInstances.length;
+    const ownersSet = new Set(
+      subscriptionInstances
+        .map(
+          (t) => t.owner?.toString?.() || (t.owner as any)?._id?.toString?.(),
+        )
+        .filter(Boolean),
+    );
+    const ownersCount = ownersSet.size;
+
+    const lastMonthSubscriptionInstances =
+      await this.subscriptionInstanceModel.find({
+        ...baseFilter,
+        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+      });
+    const currentMonthSubscriptionInstances =
+      await this.subscriptionInstanceModel.find({
+        ...baseFilter,
+        createdAt: { $gte: currentMonthStart },
+      });
+
+    const lastMonthRevenue = lastMonthSubscriptionInstances.reduce(
+      (sum, t) => sum + (t.paidAmount || 0),
+      0,
+    );
+    const currentMonthRevenue = currentMonthSubscriptionInstances.reduce(
+      (sum, t) => sum + (t.paidAmount || 0),
+      0,
+    );
+    const revenueChange = lastMonthRevenue
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+      : 0;
+
+    return {
+      totalRevenue,
+      totalTransactions,
+      ownersCount,
+      revenueChange,
+      currentMonthRevenue,
+      currentMonthTransactions: currentMonthSubscriptionInstances.length,
     };
   }
 

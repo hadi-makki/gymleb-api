@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 import { MainEntity } from '../main-classes/mainEntity';
 import * as bcrypt from 'bcryptjs';
 import Token from '../token/token.entity';
-import { Transaction } from '../transactions/transaction.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { PersonalTrainer } from '../personal-trainers/entities/personal-trainer.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { Subscription } from '../subscription/entities/subscription.entity';
@@ -34,8 +34,12 @@ export class User extends MainEntity {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Token' }], default: [] })
   tokens: Token[];
 
-  @Prop({ type: [Transaction], default: [], ref: 'Transaction' })
-  transactions: Transaction[];
+  @Prop({
+    type: [SubscriptionInstance],
+    default: [],
+    ref: 'SubscriptionInstance',
+  })
+  subscriptionInstances: SubscriptionInstance[];
 
   async comparePassword(oldPassword: string) {
     return await bcrypt.compare(oldPassword, this.password);

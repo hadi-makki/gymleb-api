@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { Transaction } from '../transactions/transaction.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 
 export type ProductDocument = Product & Document;
 
@@ -17,10 +17,10 @@ export class Product {
   price: number;
 
   @Prop({
-    type: [{ type: Types.ObjectId, ref: 'Transaction' }],
+    type: [{ type: Types.ObjectId, ref: 'SubscriptionInstance' }],
     default: [],
   })
-  transactions: Transaction[];
+  subscriptionInstances: SubscriptionInstance[];
 
   @Prop({ type: Number, default: 600 })
   maxDurationSeconds: number;

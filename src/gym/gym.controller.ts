@@ -20,7 +20,7 @@ import { Role } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { UpdateGymNameDto } from './dto/update-name.dto';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {
@@ -127,12 +127,26 @@ export class GymController {
     return await this.gymService.setGymFinishedPageSetup(user);
   }
 
+  @Patch('womens-times')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.GymOwner)
+  @ApiOperation({ summary: "Update women's-only times" })
+  async setWomensTimes(
+    @User() user: Manager,
+    @Body()
+    body: {
+      womensTimes: { day: string; from: string; to: string }[];
+    },
+  ) {
+    return await this.gymService.setWomensTimes(user, body.womensTimes || []);
+  }
+
   @Get('get-transaction-history')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get transaction history' })
   @ApiOkResponse({
     description: 'The transaction history has been successfully retrieved.',
-    type: [Transaction],
+    type: [SubscriptionInstance],
   })
   getTransactionHistory(@User() user: Manager) {
     return this.gymService.getTransactionHistory(user);

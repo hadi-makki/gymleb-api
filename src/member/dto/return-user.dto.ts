@@ -7,12 +7,13 @@ export class ReturnUserDto {
   passCode: string;
   gym: any;
   subscription: any;
-  transactions: any[];
+  subscriptionInstances: any[];
   createdAt: Date;
   updatedAt: Date;
   hasActiveSubscription: boolean;
   currentActiveSubscription: any;
   isNotified: boolean;
+  lastSubscription: any;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

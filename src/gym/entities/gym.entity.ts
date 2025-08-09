@@ -5,7 +5,7 @@ import { MainEntity } from '../../main-classes/mainEntity';
 import { Manager } from '../../manager/manager.entity';
 import { PersonalTrainer } from '../../personal-trainers/entities/personal-trainer.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
-import { Transaction } from 'typeorm';
+import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 
 @CustomSchema()
 export class Gym extends MainEntity {
@@ -30,8 +30,12 @@ export class Gym extends MainEntity {
   @Prop({ type: Types.ObjectId, ref: 'Manager' })
   owner: Manager;
 
-  @Prop({ type: [Types.ObjectId], ref: 'Transaction', required: false })
-  transactions: Transaction[];
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'SubscriptionInstance',
+    required: false,
+  })
+  subscriptionInstances: SubscriptionInstance[];
 
   @Prop({ type: Boolean, default: false })
   finishedPageSetup: boolean;
@@ -56,6 +60,23 @@ export class Gym extends MainEntity {
 
   @Prop({ type: Number, default: 0 })
   membersNotified: number;
+
+  @Prop({
+    type: [
+      {
+        day: String,
+        from: String,
+        to: String,
+      },
+    ],
+    required: false,
+    default: [],
+  })
+  womensTimes: {
+    day: string;
+    from: string;
+    to: string;
+  }[];
 }
 
 export const GymSchema = SchemaFactory.createForClass(Gym);

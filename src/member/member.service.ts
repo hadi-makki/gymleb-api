@@ -8,7 +8,7 @@ import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { NotFoundException } from '../error/not-found-error';
 import { Subscription } from '../subscription/entities/subscription.entity';
-import { TransactionsService } from '../transactions/transactions.service';
+import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
 import { isMongoId, isUUID } from 'class-validator';
 import { BadRequestException } from '../error/bad-request-error';
 import { LoginMemberDto } from './dto/login-member.dto';
@@ -24,19 +24,36 @@ export class MemberService {
     private gymModel: Model<Gym>,
     @InjectModel(Subscription.name)
     private subscriptionModel: Model<Subscription>,
-    private readonly transationService: TransactionsService,
+    private readonly subscriptionInstanceService: SubscriptionInstanceService,
     private readonly tokenService: TokenService,
   ) {}
 
   async returnMember(member: Member): Promise<ReturnUserDto> {
-    const checkActiveSubscription = member.transactions?.some((transaction) => {
-      return new Date(transaction.endDate) > new Date();
-    });
-    const currentActiveSubscription = member.transactions?.find(
-      (transaction) => {
-        return new Date(transaction.endDate) > new Date();
+    if (!member) {
+      throw new BadRequestException('Member data is required');
+    }
+
+    // Ensure subscriptionInstances is an array
+    const subscriptionInstances = member.subscriptionInstances || [];
+
+    const checkActiveSubscription = subscriptionInstances.some(
+      (subscriptionInstance) => {
+        return (
+          subscriptionInstance?.endDate &&
+          new Date(subscriptionInstance.endDate) > new Date()
+        );
       },
     );
+    const currentActiveSubscription = subscriptionInstances.find(
+      (subscriptionInstance) => {
+        return (
+          subscriptionInstance?.endDate &&
+          new Date(subscriptionInstance.endDate) > new Date()
+        );
+      },
+    );
+    const lastSubscription =
+      subscriptionInstances[subscriptionInstances.length - 1];
     return {
       id: member.id,
       name: member.name,
@@ -46,11 +63,12 @@ export class MemberService {
       passCode: member.passCode,
       gym: member.gym,
       subscription: member.subscription,
-      transactions: member.transactions,
+      subscriptionInstances: member.subscriptionInstances,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
       hasActiveSubscription: checkActiveSubscription,
       currentActiveSubscription: currentActiveSubscription,
+      lastSubscription: lastSubscription,
       isNotified: member.isNotified,
     };
   }
@@ -108,26 +126,28 @@ export class MemberService {
         1000 + Math.random() * 9000,
       )}`,
     });
-    const transaction = await this.transationService.createTransaction({
-      memberId: member.id,
-      gymId: gym.id,
-      subscriptionId: subscription.id,
-      subscriptionType: subscription.type,
-      amount: subscription.price,
-    });
+    const subscriptionInstance =
+      await this.subscriptionInstanceService.createSubscriptionInstance({
+        memberId: member.id,
+        gymId: gym.id,
+        subscriptionId: subscription.id,
+        subscriptionType: subscription.type,
+        amount: subscription.price,
+        giveFullDay: createMemberDto.giveFullDay,
+      });
 
-    member.transactions = [transaction.id];
+    member.subscriptionInstances = [subscriptionInstance.id];
 
     await member.save();
 
-    gym.transactions.push(transaction.id);
+    gym.subscriptionInstances.push(subscriptionInstance.id);
     await gym.save();
 
     const newMember = await this.memberModel
       .findById(member.id)
       .populate('gym')
       .populate('subscription')
-      .populate('transactions');
+      .populate('subscriptionInstances');
 
     return await this.returnMember(newMember);
   }
@@ -142,7 +162,7 @@ export class MemberService {
       })
       .populate('gym')
       .populate('subscription')
-      .populate('transactions');
+      .populate('subscriptionInstances');
     if (!member) {
       throw new BadRequestException('Invalid passcode or username');
     }
@@ -172,7 +192,7 @@ export class MemberService {
       })
       .populate('gym')
       .populate('subscription')
-      .populate('transactions');
+      .populate('subscriptionInstances');
 
     const checkMembers = await Promise.all(
       getMembers.map(async (member) => {
@@ -191,72 +211,32 @@ export class MemberService {
       .findById(id)
       .populate('gym')
       .populate('subscription')
-      .populate('transactions');
-
-    const checkActiveSubscription = member.transactions.some((transaction) => {
-      return new Date(transaction.endDate) > new Date();
-    });
-
-    let latestTransaction;
-    let checkSubscription;
-
-    if (member.transactions.length > 0) {
-      latestTransaction = member.transactions.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )[0];
-
-      checkSubscription = await this.subscriptionModel.findOne({
-        _id: latestTransaction.subscription,
-      });
-    } else {
-      checkSubscription = await this.subscriptionModel.findOne({
-        gym: member.gym.id,
+      .populate({
+        path: 'subscriptionInstances',
+        populate: { path: 'subscription' },
+        options: { sort: { createdAt: -1 } },
       });
 
-      if (!checkSubscription) {
-        throw new NotFoundException('Subscription not found');
-      }
-
-      const transaction = await this.transationService.createTransaction({
-        memberId: member.id,
-        gymId: member.gym.id,
-        subscriptionId: checkSubscription.id,
-        subscriptionType: checkSubscription.type,
-        amount: checkSubscription.price,
-      });
-
-      member.transactions = [transaction.id];
-      member.subscription = checkSubscription.id;
-      await member.save();
-
-      const gym = await this.gymModel.findById(member.gym.id);
-
-      gym.transactions.push(transaction.id);
-      await gym.save();
-
-      latestTransaction = transaction;
-      checkSubscription = checkSubscription;
-      const getMember = await this.memberModel
-        .findById(member.id)
-        .populate('transactions')
-        .populate('gym')
-        .populate('subscription');
-
-      return await this.returnMember(getMember);
+    if (!member) {
+      throw new NotFoundException('Member not found');
     }
-
-    latestTransaction.subscription = checkSubscription;
 
     return await this.returnMember(member);
   }
 
-  async renewSubscription(id: string) {
+  async renewSubscription(
+    id: string,
+    subscriptionId: string,
+    giveFullDay?: boolean,
+  ) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
 
-    const member = await this.memberModel.findById(id).populate('transactions');
+    const member = await this.memberModel
+      .findById(id)
+      .populate('subscriptionInstances')
+      .populate('subscription');
 
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -270,41 +250,69 @@ export class MemberService {
 
     let checkSubscription;
 
-    if (member.transactions.length > 0) {
-      const getLatestTransaction = member.transactions.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )[0];
+    // If subscriptionId is provided, use it; otherwise use existing subscription
+    if (subscriptionId) {
+      // Validate the provided subscriptionId
+      if (!isMongoId(subscriptionId)) {
+        throw new BadRequestException('Invalid subscription id');
+      }
 
-      checkSubscription = await this.subscriptionModel.findById(
-        getLatestTransaction.subscription,
-      );
-    } else {
-      checkSubscription = await this.subscriptionModel.findOne({
-        gym: checkGym.id,
-      });
+      checkSubscription = await this.subscriptionModel.findById(subscriptionId);
 
       if (!checkSubscription) {
         throw new NotFoundException('Subscription not found');
       }
+
+      // Verify the subscription belongs to the same gym
+      if (checkSubscription.gym.toString() !== checkGym.id.toString()) {
+        throw new BadRequestException(
+          'Subscription does not belong to this gym',
+        );
+      }
+
+      // Update member's subscription if it's different
       member.subscription = checkSubscription.id;
       await member.save();
+    } else {
+      // Use existing subscription logic
+      if (member.subscriptionInstances.length > 0) {
+        const getLatestSubscriptionInstance = member.subscriptionInstances.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
+
+        checkSubscription = await this.subscriptionModel.findById(
+          getLatestSubscriptionInstance.subscription,
+        );
+      } else {
+        checkSubscription = await this.subscriptionModel.findOne({
+          gym: checkGym.id,
+        });
+
+        if (!checkSubscription) {
+          throw new NotFoundException('Subscription not found');
+        }
+        member.subscription = checkSubscription.id;
+        await member.save();
+      }
     }
 
-    const createTransaction = await this.transationService.createTransaction({
-      memberId: member.id,
-      gymId: checkGym.id,
-      subscriptionId: checkSubscription.id,
-      subscriptionType: checkSubscription.type,
-      amount: checkSubscription.price,
-    });
+    const createSubscriptionInstance =
+      await this.subscriptionInstanceService.createSubscriptionInstance({
+        memberId: member.id,
+        gymId: checkGym.id,
+        subscriptionId: checkSubscription.id,
+        subscriptionType: checkSubscription.type,
+        amount: checkSubscription.price,
+        giveFullDay,
+      });
 
-    member.transactions.push(createTransaction.id);
+    member.subscriptionInstances.push(createSubscriptionInstance.id);
     member.isNotified = false;
 
     await member.save();
 
-    checkGym.transactions.push(createTransaction.id);
+    checkGym.subscriptionInstances.push(createSubscriptionInstance.id);
     await checkGym.save();
 
     return {
@@ -320,6 +328,12 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+
+    member.name = updateMemberDto.name;
+    member.email = updateMemberDto.email;
+    member.phone = updateMemberDto.phone;
+    await member.save();
+    return await this.returnMember(member);
   }
 
   async remove(id: string) {
@@ -348,17 +362,17 @@ export class MemberService {
       .find({
         gym: gym.id,
       })
-      .populate('transactions')
+      .populate('subscriptionInstances')
       .populate('subscription');
 
     const expiredMembers = await Promise.all(
       getMembers.map(async (member) => {
-        const latestTransaction = member.transactions.sort(
+        const latestSubscriptionInstance = member.subscriptionInstances.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
 
-        if (new Date(latestTransaction.endDate) < new Date()) {
+        if (new Date(latestSubscriptionInstance.endDate) < new Date()) {
           return await this.returnMember(member);
         }
       }),
@@ -372,7 +386,7 @@ export class MemberService {
       .findById(member.id)
       .populate('gym')
       .populate('subscription')
-      .populate('transactions');
+      .populate('subscriptionInstances');
 
     return await this.returnMember(checkMember);
   }
@@ -391,7 +405,7 @@ export class MemberService {
         _id: id,
         gym: gym.id,
       })
-      .populate('transactions')
+      .populate('subscriptionInstances')
       .populate('gym')
       .populate('subscription');
     if (!member) {
@@ -403,17 +417,17 @@ export class MemberService {
   async checkUserSubscriptionExpired(id: string) {
     const member = await this.memberModel
       .findById(id)
-      .populate('transactions')
+      .populate('subscriptionInstances')
       .populate('gym')
       .populate('subscription');
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    const latestTransaction = member.transactions.sort(
+    const latestSubscriptionInstance = member.subscriptionInstances.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0];
-    if (new Date(latestTransaction.endDate) < new Date()) {
+    if (new Date(latestSubscriptionInstance.endDate) < new Date()) {
       return true;
     }
     return false;
@@ -430,5 +444,16 @@ export class MemberService {
 
   async logout(member: Member) {
     await this.tokenService.deleteTokensByUserId(member.id);
+  }
+
+  async invalidateMemberSubscription(id: string) {
+    const member = await this.memberModel.findById(id);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    await this.subscriptionInstanceService.invalidateSubscriptionInstance(
+      member.id,
+    );
+    await member.save();
   }
 }

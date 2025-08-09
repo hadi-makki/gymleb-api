@@ -6,6 +6,7 @@ import { Role } from '../decorators/roles/role.enum';
 import { Gym } from '../gym/entities/gym.entity';
 import { MainEntity } from '../main-classes/mainEntity';
 import Token from '../token/token.entity';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
 
 @CustomSchema()
 export class Manager extends MainEntity {
@@ -26,6 +27,9 @@ export class Manager extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
   gym: Gym;
+
+  @Prop({ type: Types.ObjectId, ref: 'OwnerSubscription', required: false })
+  ownerSubscription?: OwnerSubscription;
 
   static async isPasswordMatch(
     password: string,

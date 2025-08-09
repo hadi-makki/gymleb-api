@@ -6,24 +6,27 @@ import {
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
 import { Gym } from './entities/gym.entity';
-import { GymOwner } from '../gym-owner/entities/gym-owner.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
-import { Transaction } from '../transactions/transaction.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Expense } from '../expenses/expense.entity';
+import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
 
 @Injectable()
 export class GymService {
   constructor(
     @InjectModel(Gym.name) private gymModel: Model<Gym>,
-    @InjectModel(GymOwner.name) private gymOwnerModel: Model<GymOwner>,
-    @InjectModel(Transaction.name) private transactionModel: Model<Transaction>,
+    @InjectModel(Manager.name) private gymOwnerModel: Model<Manager>,
+    @InjectModel(SubscriptionInstance.name)
+    private subscriptionInstanceModel: Model<SubscriptionInstance>,
     @InjectModel(Member.name) private memberModel: Model<Member>,
     @InjectModel(Expense.name) private expenseModel: Model<Expense>,
+    @InjectModel(OwnerSubscription.name)
+    private ownerSubscriptionModel: Model<OwnerSubscription>,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
@@ -42,7 +45,7 @@ export class GymService {
   }
 
   async findAll() {
-    return await this.gymModel.find();
+    return await this.gymModel.find().populate('owner');
   }
 
   async findOne(id: string) {
@@ -76,7 +79,7 @@ export class GymService {
     const currentMonthStart = startOfMonth(now);
 
     // Fetch transactions for last month
-    const lastMonthTransactions = await this.transactionModel
+    const lastMonthTransactions = await this.subscriptionInstanceModel
       .find({
         gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
@@ -84,7 +87,7 @@ export class GymService {
       .populate('subscription');
 
     // Fetch transactions for current month
-    const currentMonthTransactions = await this.transactionModel
+    const currentMonthTransactions = await this.subscriptionInstanceModel
       .find({
         gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: currentMonthStart },
@@ -122,7 +125,7 @@ export class GymService {
       : 0;
 
     // Fetch all transactions and members for current analytics
-    const transactions = await this.transactionModel
+    const transactions = await this.subscriptionInstanceModel
       .find({
         gym: new Types.ObjectId(gym.id),
         ...(start || end
@@ -156,16 +159,16 @@ export class GymService {
     const members = await this.memberModel
       .find({ gym: gym.id })
       .populate('subscription')
-      .populate('transactions')
+      .populate('subscriptionInstances')
       .populate('gym');
 
     const membersWithActiveSubscription = members.map((member) => {
-      const checkActiveSubscription = member.transactions.some(
-        (transaction) => {
-          return new Date(transaction.endDate) > new Date();
+      const checkActiveSubscription = member.subscriptionInstances.some(
+        (subscriptionInstance) => {
+          return new Date(subscriptionInstance.endDate) > new Date();
         },
       );
-      const latestTransaction = member.transactions.sort(
+      const latestSubscriptionInstance = member.subscriptionInstances.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )[0];
@@ -177,10 +180,10 @@ export class GymService {
         createdAt: member.createdAt,
         updatedAt: member.updatedAt,
         subscription: member.subscription,
-        transactions: member.transactions,
+        subscriptionInstances: member.subscriptionInstances,
         gym: member.gym,
         hasActiveSubscription: checkActiveSubscription,
-        currentActiveSubscription: latestTransaction || null,
+        currentActiveSubscription: latestSubscriptionInstance || null,
       };
     });
 
@@ -228,7 +231,23 @@ export class GymService {
   }
 
   async getAllGyms() {
-    return await this.gymModel.find().populate('owner');
+    const gyms = await this.gymModel.find().populate('owner');
+    const data = await Promise.all(
+      gyms.map(async (gym) => {
+        const ownerSubscriptions = await this.ownerSubscriptionModel.find({
+          owner: gym.owner._id,
+        });
+        const gymHasActiveSubscription = ownerSubscriptions.find(
+          (subscription) =>
+            subscription.active && new Date(subscription.endDate) > new Date(),
+        );
+        return {
+          ...gym.toJSON(),
+          activeSubscription: gymHasActiveSubscription,
+        };
+      }),
+    );
+    return data;
   }
 
   async updateGymName(manager: Manager, gymName: string) {
@@ -252,6 +271,19 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
     gym.finishedPageSetup = true;
+    await gym.save();
+    return gym;
+  }
+
+  async setWomensTimes(
+    manager: Manager,
+    womensTimes: { day: string; from: string; to: string }[],
+  ) {
+    const gym = await this.gymModel.findOne({ owner: manager.id });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.womensTimes = womensTimes;
     await gym.save();
     return gym;
   }
@@ -282,15 +314,14 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
     console.log('gym found', gym.id);
-    const transactions = await this.transactionModel
+    const subscriptionInstances = await this.subscriptionInstanceModel
       .find({
         gym: new Types.ObjectId(gym.id),
       })
       .populate('subscription')
       .populate('member')
       .populate('gym');
-    console.log('transactions found', transactions);
 
-    return transactions;
+    return subscriptionInstances;
   }
 }

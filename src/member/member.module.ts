@@ -1,19 +1,15 @@
 import { Module } from '@nestjs/common';
-import { MemberService } from './member.service';
-import { MemberController } from './member.controller';
-import { Member, MemberSchema } from './entities/member.entity';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthenticationModule } from '../common/AuthModule.module';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import {
   Subscription,
   SubscriptionSchema,
 } from '../subscription/entities/subscription.entity';
-import { AuthenticationModule } from '../common/AuthModule.module';
-import {
-  Transaction,
-  TransactionSchema,
-} from '../transactions/transaction.entity';
-import { TransactionsModule } from '../transactions/transactions.module';
+import { SubscriptionInstanceModule } from '../transactions/subscription-instance.module';
+import { Member, MemberSchema } from './entities/member.entity';
+import { MemberController } from './member.controller';
+import { MemberService } from './member.service';
 @Module({
   imports: [
     AuthenticationModule,
@@ -22,7 +18,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
       { name: Gym.name, schema: GymSchema },
       { name: Subscription.name, schema: SubscriptionSchema },
     ]),
-    TransactionsModule,
+    SubscriptionInstanceModule,
   ],
   controllers: [MemberController],
   providers: [MemberService],
