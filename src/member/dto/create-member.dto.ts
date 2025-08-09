@@ -5,18 +5,15 @@ export class CreateMemberDto {
   @IsString()
   name: string;
 
-  @IsNotEmpty()
   @IsString()
   @IsOptional()
-  email: string;
+  email?: string;
 
   @IsNotEmpty()
   @IsString()
-  @IsOptional()
   phone: string;
 
   @IsNotEmpty()
   @IsString()
-  @IsOptional()
   subscriptionId: string;
 }

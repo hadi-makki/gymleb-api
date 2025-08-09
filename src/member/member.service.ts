@@ -98,7 +98,9 @@ export class MemberService {
     }
 
     const member = await this.memberModel.create({
-      ...createMemberDto,
+      name: createMemberDto.name,
+      ...(createMemberDto.email && { email: createMemberDto.email }),
+      phone: createMemberDto.phone,
       gym: gym.id,
       subscription: subscription.id,
       username: username,

@@ -13,7 +13,8 @@ export class Member extends MainEntity {
 
   @Prop({ required: true, unique: true })
   username: string;
-  @Prop({ required: true })
+
+  @Prop({ required: false })
   email: string;
 
   @Prop({ required: true })

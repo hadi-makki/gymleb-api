@@ -119,8 +119,11 @@ export class ManagerService {
       throw new NotFoundException('Manager not found');
     }
 
-    manager.email = body.email;
-    manager.username = body.username;
+    if (body.email !== undefined) manager.email = body.email;
+    if (body.username !== undefined) manager.username = body.username;
+    if (body.password) {
+      manager.password = await Manager.hashPassword(body.password);
+    }
     await manager.save();
     return returnManager(manager);
   }

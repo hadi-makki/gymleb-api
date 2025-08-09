@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class UpdateManagerDto {
   @IsOptional()
@@ -9,4 +9,9 @@ export class UpdateManagerDto {
   @IsOptional()
   @IsString()
   username: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
 }

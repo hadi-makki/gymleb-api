@@ -146,7 +146,7 @@ export class ManagerController {
   @ApiUnauthorizedResponse()
   @ApiNotFoundResponse('Manager not found')
   @ApiOkResponse({ type: Manager })
-  @Roles()
+  @Roles(Role.SuperAdmin)
   updateManager(@Param('id') id: string, @Body() body: UpdateManagerDto) {
     return this.ManagerService.updateManager(id, body);
   }
