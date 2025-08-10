@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SubscriptionInstanceService } from './subscription-instance.service';
+import { SubscriptionInstanceController } from './subscription-instance.controller';
 import {
   SubscriptionInstance,
   SubscriptionInstanceSchema,
@@ -22,6 +23,7 @@ import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
 } from 'src/owner-subscriptions/owner-subscription.entity';
+import { AuthenticationModule } from 'src/common/AuthModule.module';
 
 @Module({
   imports: [
@@ -42,8 +44,10 @@ import {
         schema: OwnerSubscriptionSchema,
       },
     ]),
+    AuthenticationModule,
   ],
   providers: [SubscriptionInstanceService],
+  controllers: [SubscriptionInstanceController],
   exports: [SubscriptionInstanceService, MongooseModule],
 })
 export class SubscriptionInstanceModule {}

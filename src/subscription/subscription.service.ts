@@ -78,9 +78,10 @@ export class SubscriptionService {
     return subscription;
   }
 
-  async deleteSubscriptionInstance(subscriptionId: string) {
+  async deleteSubscriptionInstance(subscriptionId: string, manager: Manager) {
     return await this.subscriptionInstanceService.deleteSubscriptionInstance(
       subscriptionId,
+      manager,
     );
   }
 }

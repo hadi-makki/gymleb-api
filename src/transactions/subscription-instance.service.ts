@@ -17,6 +17,8 @@ import { addDays, addHours, endOfDay } from 'date-fns';
 import { Manager } from '../manager/manager.entity';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.entity';
 import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
+import { UnauthorizedException } from 'src/error/unauthorized-error';
+import { Role } from 'src/decorators/roles/role.enum';
 @Injectable()
 export class SubscriptionInstanceService {
   constructor(
@@ -184,12 +186,26 @@ export class SubscriptionInstanceService {
     await activeSubscriptionInstance.save();
   }
 
-  async deleteSubscriptionInstance(subscriptionId: string) {
-    const subscriptionInstance =
-      await this.subscriptionInstanceRepository.findById(subscriptionId);
+  async deleteSubscriptionInstance(subscriptionId: string, manager: Manager) {
+    const subscriptionInstance = await this.subscriptionInstanceRepository
+      .findById(subscriptionId)
+      .populate('gym');
     if (!subscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }
+    const getManagerGym = await this.gymRepository
+      .findById(subscriptionInstance.gym._id)
+      .populate('owner');
+
+    if (
+      getManagerGym.owner.toString() !== manager._id.toString() &&
+      manager.roles.includes(Role.SuperAdmin)
+    ) {
+      throw new UnauthorizedException(
+        'You do not have permission to delete this subscription instance',
+      );
+    }
+
     await this.subscriptionInstanceRepository.deleteOne({
       _id: subscriptionInstance._id,
     });

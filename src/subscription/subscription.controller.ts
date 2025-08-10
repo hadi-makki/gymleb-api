@@ -63,7 +63,13 @@ export class SubscriptionController {
   }
 
   @Delete('delete/subscription-instance/:id')
-  async deleteSubscriptionInstance(@Param('id') id: string) {
-    return await this.subscriptionService.deleteSubscriptionInstance(id);
+  async deleteSubscriptionInstance(
+    @Param('id') id: string,
+    @User() manager: Manager,
+  ) {
+    return await this.subscriptionService.deleteSubscriptionInstance(
+      id,
+      manager,
+    );
   }
 }
