@@ -421,6 +421,21 @@ export class MemberService {
     return await this.returnMember(checkMember);
   }
 
+  async getMember(id: string) {
+    if (!isMongoId(id)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    const checkMember = await this.memberModel
+      .findById(id)
+      .populate('gym')
+      .populate('subscription')
+      .populate('subscriptionInstances');
+    if (!checkMember) {
+      throw new NotFoundException('Member not found');
+    }
+    return await this.returnMember(checkMember);
+  }
+
   async getMemberByIdAndGym(id: string, manager: Manager) {
     const gym = await this.gymModel.findOne({
       owner: manager.id,

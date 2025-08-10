@@ -17,7 +17,7 @@ dotenv.config({
 });
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(cookieParser());
+  // app.use(cookieParser());
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
@@ -27,7 +27,6 @@ async function bootstrap() {
       callback(null, true); // Allow the origin
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    credentials: true,
   });
 
   app.setGlobalPrefix('api');

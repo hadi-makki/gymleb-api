@@ -137,6 +137,11 @@ export class MemberController {
     return await this.memberService.getMe(member);
   }
 
+  @Get(':id')
+  async getMember(@Param('id') id: string) {
+    return await this.memberService.getMember(id);
+  }
+
   @Post(':id/invalidate')
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
