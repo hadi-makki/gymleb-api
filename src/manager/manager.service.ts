@@ -149,9 +149,10 @@ export class ManagerService {
     if (body.lastName) manager.lastName = body.lastName;
     if (body.username) manager.username = body.username;
     if (body.password) {
-      manager.password = await Manager.hashPassword(body.password);
+      const hashedPassword = await Manager.hashPassword(body.password);
+      console.log('this is the hashed password', hashedPassword);
+      manager.password = hashedPassword;
     }
-    console.log('manager', manager);
     await manager.save();
     return returnManager(manager);
   }

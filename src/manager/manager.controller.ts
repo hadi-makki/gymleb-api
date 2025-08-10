@@ -163,8 +163,8 @@ export class ManagerController {
   @ApiNotFoundResponse('Manager not found')
   @ApiOkResponse({ type: Manager })
   @Roles(Role.SuperAdmin)
-  updateManager(@Param('id') id: string, @Body() body: UpdateManagerDto) {
-    return this.ManagerService.updateManager(id, body);
+  async updateManager(@Param('id') id: string, @Body() body: UpdateManagerDto) {
+    return await this.ManagerService.updateManager(id, body);
   }
 
   @Post('refresh')

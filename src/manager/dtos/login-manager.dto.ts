@@ -8,7 +8,6 @@ export class LoginManagerDto {
   username: string;
   @ApiProperty()
   @IsString()
-  @IsStrongPassword({}, { message: 'Wrong Credentials' })
   @IsNotEmpty()
   password: string;
 
