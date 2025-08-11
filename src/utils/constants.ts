@@ -3,6 +3,7 @@ import { CookieOptions } from 'express';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Allow overriding via env for maximum compatibility
+// COOKIE_SAMESITE=none
 const envSameSite = (process.env.COOKIE_SAMESITE || '').toLowerCase();
 const resolvedSameSite: CookieOptions['sameSite'] =
   envSameSite === 'strict' ? 'strict' : envSameSite === 'none' ? 'none' : 'lax'; // default to lax for widest browser support
@@ -22,6 +23,4 @@ export const cookieOptions: CookieOptions = {
   sameSite: resolvedSameSite,
   path: '/',
   maxAge: 1000 * 60 * 60 * 24 * 30,
-  // cookie domain should look like this: .gymleb.com
-  ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
 };
