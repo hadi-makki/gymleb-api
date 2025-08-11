@@ -1,6 +1,6 @@
 import { CookieOptions } from 'express';
 
-const isProduction = process.env.NODE_ENV === 'prod';
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Allow overriding via env for maximum compatibility
 const envSameSite = (process.env.COOKIE_SAMESITE || '').toLowerCase();
