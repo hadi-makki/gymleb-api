@@ -301,6 +301,16 @@ export class GymService {
     return gym;
   }
 
+  async updateGymNote(manager: Manager, note: string) {
+    const gym = await this.gymModel.findOne({ owner: manager.id });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.note = note;
+    await gym.save();
+    return gym;
+  }
+
   async addGymMembersNotified(gymId: string, number: number) {
     const gym = await this.gymModel.findById(gymId);
     if (!gym) {

@@ -20,6 +20,7 @@ import { Role } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { UpdateGymNameDto } from './dto/update-name.dto';
+import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
 @Controller('gym')
 @Roles(Role.GymOwner)
@@ -192,6 +193,16 @@ export class GymController {
     },
   ) {
     return await this.gymService.setWomensTimes(user, body.womensTimes || []);
+  }
+
+  @Patch('update/note')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym note' })
+  updateGymNote(
+    @Body() updateGymNoteDto: UpdateGymNoteDto,
+    @User() user: Manager,
+  ) {
+    return this.gymService.updateGymNote(user, updateGymNoteDto.note);
   }
 
   @Get('get-transaction-history')
