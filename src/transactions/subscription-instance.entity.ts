@@ -44,6 +44,9 @@ export class SubscriptionInstance extends MainEntity {
 
   @Prop({ type: Boolean, required: false, default: false })
   isOwnerSubscriptionAssignment: boolean;
+
+  @Prop({ type: String, required: false })
+  paidBy: string;
 }
 
 export const SubscriptionInstanceSchema =

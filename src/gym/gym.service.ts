@@ -28,6 +28,7 @@ export class GymService {
     @InjectModel(Expense.name) private expenseModel: Model<Expense>,
     @InjectModel(OwnerSubscription.name)
     private ownerSubscriptionModel: Model<OwnerSubscription>,
+    @InjectModel(Manager.name) private managerModel: Model<Manager>,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
@@ -352,5 +353,222 @@ export class GymService {
     });
 
     return result;
+  }
+
+  async getGymAnalyticsByOwnerId(
+    ownerId: string,
+    start?: string,
+    end?: string,
+  ) {
+    const gym = await this.gymModel.findOne({
+      owner: ownerId,
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const now = new Date();
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    const currentMonthStart = startOfMonth(now);
+
+    const lastMonthTransactions = await this.subscriptionInstanceModel
+      .find({
+        gym: gym._id,
+        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+      })
+      .populate('subscription');
+    const currentMonthTransactions = await this.subscriptionInstanceModel
+      .find({
+        gym: gym._id,
+        createdAt: { $gte: currentMonthStart },
+      })
+      .populate('subscription');
+
+    const lastMonthRevenue = lastMonthTransactions.reduce(
+      (total, t) => total + (t.subscription?.price || 0),
+      0,
+    );
+    const currentMonthRevenue = currentMonthTransactions.reduce(
+      (total, t) => total + (t.subscription?.price || 0),
+      0,
+    );
+    const revenueChange = lastMonthRevenue
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+      : 0;
+
+    const lastMonthMembers = await this.memberModel.countDocuments({
+      gym: gym._id,
+      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+    });
+    const currentMonthMembers = await this.memberModel.countDocuments({
+      gym: gym._id,
+      createdAt: { $gte: currentMonthStart },
+    });
+    const memberChange = lastMonthMembers
+      ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
+      : 0;
+
+    const transactions = await this.subscriptionInstanceModel
+      .find({
+        gym: gym._id,
+        ...(start || end
+          ? {
+              createdAt: {
+                ...(start ? { $gte: new Date(start) } : {}),
+                ...(end ? { $lte: new Date(end) } : {}),
+              },
+            }
+          : {}),
+      })
+      .populate('subscription');
+    const totalRevenue = transactions.reduce((total, t) => {
+      const amount =
+        typeof t.paidAmount === 'number'
+          ? t.paidAmount
+          : t.subscription?.price || 0;
+      return total + amount;
+    }, 0);
+
+    const expenseFilter: any = { gym: gym._id };
+    if (start || end) {
+      expenseFilter.date = {};
+      if (start) expenseFilter.date.$gte = new Date(start);
+      if (end) expenseFilter.date.$lte = new Date(end);
+    }
+    const expenses = await this.expenseModel.find(expenseFilter);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalMembers = await this.memberModel.countDocuments({
+      gym: gym._id,
+    });
+    const members = await this.memberModel
+      .find({ gym: gym._id })
+      .populate('subscription')
+      .populate('subscriptionInstances')
+      .populate('gym');
+
+    const membersWithActiveSubscription = members.map((member) => {
+      const checkActiveSubscription = member.subscriptionInstances.some(
+        (instance) => new Date(instance.endDate) > new Date(),
+      );
+      const latestSubscriptionInstance = member.subscriptionInstances.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )[0];
+      return {
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        createdAt: member.createdAt,
+        updatedAt: member.updatedAt,
+        subscription: member.subscription,
+        subscriptionInstances: member.subscriptionInstances,
+        gym: member.gym,
+        hasActiveSubscription: checkActiveSubscription,
+        currentActiveSubscription: latestSubscriptionInstance || null,
+      };
+    });
+
+    const analyticsStartDate = start
+      ? new Date(start)
+      : startOfMonth(subMonths(now, 1));
+    const analyticsEndDate = end ? new Date(end) : now;
+
+    return {
+      totalRevenue,
+      totalExpenses,
+      netRevenue: totalRevenue - totalExpenses,
+      totalMembers,
+      members: membersWithActiveSubscription,
+      totalTransactions: transactions.length,
+      revenueChange,
+      memberChange,
+      currentMonthMembers,
+      currentMonthRevenue,
+      currentMonthTransactions: currentMonthTransactions.length,
+      dateRange: { startDate: analyticsStartDate, endDate: analyticsEndDate },
+      gym,
+    };
+  }
+
+  async getTransactionHistoryByOwnerId(
+    ownerId: string,
+    limit: number,
+    page: number,
+    search: string,
+  ) {
+    console.log(ownerId);
+    const gym = await this.gymModel.findOne({
+      owner: ownerId,
+    });
+    console.log(gym._id);
+    if (!gym) {
+      throw new NotFoundException('Owner subscription not found');
+    }
+
+    let memberIds: Types.ObjectId[] = [] as any;
+    if (search) {
+      const matchingMembers = await this.memberModel.find({
+        gym: gym._id,
+        name: { $regex: search, $options: 'i' },
+      });
+      memberIds = matchingMembers.map((m) => m._id as Types.ObjectId);
+    }
+
+    const result = await paginateModel(this.subscriptionInstanceModel, {
+      filter: {
+        gym: gym._id,
+        ...(search ? { member: { $in: memberIds } } : {}),
+      },
+      populate: [{ path: 'subscription' }, { path: 'member' }, { path: 'gym' }],
+      page,
+      limit,
+      sort: { createdAt: -1 },
+    });
+
+    return result;
+  }
+
+  async getMembersByOwnerId(
+    ownerId: string,
+    limit: number,
+    page: number,
+    search?: string,
+  ) {
+    const gym = await this.gymModel.findOne({
+      owner: ownerId,
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const filter: any = { gym: gym.id };
+    if (search) {
+      filter.name = { $regex: search, $options: 'i' };
+    }
+
+    const result = await paginateModel(this.memberModel as any, {
+      filter,
+      populate: [{ path: 'subscription' }, { path: 'subscriptionInstances' }],
+      page,
+      limit,
+      sort: { createdAt: -1 },
+    });
+
+    return result;
+  }
+
+  async getGymOwnerSummary(ownerId: string) {
+    const owner = await this.gymOwnerModel
+      .findById(ownerId)
+      .populate('gym')
+      .populate('ownerSubscription');
+    if (!owner) {
+      throw new NotFoundException('Owner not found');
+    }
+    const gym = owner.gym;
+    const activeOwnerSub = owner.ownerSubscription;
+    return { owner, gym, activeOwnerSub };
   }
 }

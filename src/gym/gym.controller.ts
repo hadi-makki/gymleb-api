@@ -82,6 +82,59 @@ export class GymController {
     return this.gymService.getGymAnalytics(user, start, end);
   }
 
+  // Admin endpoints to query by owner id
+  @Get('admin/:ownerId/analytics')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.SuperAdmin)
+  async getGymAnalyticsByOwnerId(
+    @Param('ownerId') ownerId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return await this.gymService.getGymAnalyticsByOwnerId(ownerId, start, end);
+  }
+
+  @Get('admin/:ownerId/transactions')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.SuperAdmin)
+  getTransactionsByOwnerId(
+    @Param('ownerId') ownerId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+  ) {
+    return this.gymService.getTransactionHistoryByOwnerId(
+      ownerId,
+      Number(limit),
+      Number(page),
+      search || '',
+    );
+  }
+
+  @Get('admin/:ownerId/members')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.SuperAdmin)
+  getMembersByOwnerId(
+    @Param('ownerId') ownerId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+  ) {
+    return this.gymService.getMembersByOwnerId(
+      ownerId,
+      Number(limit),
+      Number(page),
+      search,
+    );
+  }
+
+  @Get('admin/:ownerId/summary')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Role.SuperAdmin)
+  getOwnerSummary(@Param('ownerId') ownerId: string) {
+    return this.gymService.getGymOwnerSummary(ownerId);
+  }
+
   @Get('by-name/:gymName')
   @ApiOperation({ summary: 'Get gym by name' })
   @ApiOkResponse({

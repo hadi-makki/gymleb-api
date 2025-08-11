@@ -1,6 +1,9 @@
 import { CookieOptions } from 'express';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const cookieDomain = isProduction
+  ? process.env.COOKIE_DOMAIN
+  : process.env.LOCAL_COOKIE_DOMAIN;
 
 // Allow overriding via env for maximum compatibility
 // COOKIE_SAMESITE=none
@@ -24,5 +27,5 @@ export const cookieOptions: CookieOptions = {
   path: '/',
   maxAge: 1000 * 60 * 60 * 24 * 30,
   // cookie domain should look like this: .gymleb.com
-  ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
+  ...(cookieDomain ? { domain: cookieDomain } : {}),
 };

@@ -94,6 +94,7 @@ export class SubscriptionInstanceService {
       endDate: endDate.toISOString(),
       paidAmount: paymentDetails.amount,
       startDate: startDate.toISOString(),
+      paidBy: getMember.name,
     });
     return newTransaction;
   }
@@ -124,6 +125,7 @@ export class SubscriptionInstanceService {
       endDate,
       isOwnerSubscriptionAssignment: true,
       startDate: new Date().toISOString(),
+      paidBy: owner.firstName + ' ' + owner.lastName,
     });
 
     await this.ownerSubscriptionRepository.updateOne(
