@@ -19,8 +19,10 @@ const resolvedSecure =
 
 export const cookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: resolvedSecure,
-  sameSite: resolvedSameSite,
+  secure: true,
+  sameSite: 'none',
   path: '/',
   maxAge: 1000 * 60 * 60 * 24 * 30,
+  // cookie domain should look like this: .gymleb.com
+  ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
 };
