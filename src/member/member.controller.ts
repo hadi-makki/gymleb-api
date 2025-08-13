@@ -147,4 +147,9 @@ export class MemberController {
   async invalidateMemberSubscription(@Param('id') id: string) {
     return await this.memberService.invalidateMemberSubscription(id);
   }
+
+  @Post('fix-usernames-and-passcodes')
+  async fixMemberUsernamesAndPasscodes() {
+    return await this.memberService.fixMemberUsernamesAndPasscodes();
+  }
 }

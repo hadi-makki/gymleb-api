@@ -93,19 +93,30 @@ export class MemberService {
       name: createMemberDto.name,
       gym: gym.id,
     });
+    const checkIfPhoneExists = await this.memberModel.exists({
+      phone: createMemberDto.phone,
+      gym: gym.id,
+    });
+    const checkIfEmailExists = await this.memberModel.exists({
+      email: createMemberDto.email,
+      gym: gym.id,
+    });
+
     if (checkIfNameExists) {
       throw new BadRequestException('Name already exists');
     }
 
-    const fullName = createMemberDto.name.split(' ');
+    if (checkIfPhoneExists) {
+      throw new BadRequestException('Phone already exists');
+    }
 
-    let username = fullName[0].toLowerCase();
-    if (username.length === 1) {
-      username = username + Math.floor(1000 + Math.random() * 9000);
+    if (checkIfEmailExists) {
+      throw new BadRequestException('Email already exists');
     }
-    if (fullName.length > 1) {
-      username = username + fullName[1].toLowerCase().substring(0, 3);
-    }
+
+    let username = createMemberDto.phone;
+
+    username = username.replace(/\s+/g, '').toLowerCase();
 
     const checkUsername = await this.memberModel.findOne({
       username: username,
@@ -123,9 +134,7 @@ export class MemberService {
       gym: gym.id,
       subscription: subscription.id,
       username: username,
-      passCode: `${createMemberDto.name.slice(0, 3).toLowerCase()}-${Math.floor(
-        1000 + Math.random() * 9000,
-      )}`,
+      passCode: `${createMemberDto.phone}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
     });
     const subscriptionInstance =
       await this.subscriptionInstanceService.createSubscriptionInstance({
@@ -500,5 +509,19 @@ export class MemberService {
       member.id,
     );
     await member.save();
+  }
+
+  async fixMemberUsernamesAndPasscodes() {
+    const members = await this.memberModel.find();
+    for (const member of members) {
+      const checkIfPhoneExists = await this.memberModel.exists({
+        username: member.phone,
+      });
+      member.username = checkIfPhoneExists
+        ? `${member.phone}-${Math.floor(1000 + Math.random() * 9000)}`
+        : member.phone;
+      member.passCode = `${member.phone}${member.name.slice(0, 1).toLowerCase()}`;
+      await member.save();
+    }
   }
 }
