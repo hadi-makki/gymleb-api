@@ -411,9 +411,9 @@ export class MemberService {
     return result;
   }
 
-  async getMe(member: Member) {
+  async getMe(id: string) {
     const checkMember = await this.memberModel
-      .findById(member.id)
+      .findById(id)
       .populate('gym')
       .populate('subscription')
       .populate('subscriptionInstances');

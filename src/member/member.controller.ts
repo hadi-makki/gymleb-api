@@ -131,10 +131,9 @@ export class MemberController {
     );
   }
 
-  @Get('me')
-  @UseGuards(AuthGuard)
-  async getMe(@User() member: Member) {
-    return await this.memberService.getMe(member);
+  @Get('me/:id')
+  async getMe(@Param('id') id: string) {
+    return await this.memberService.getMe(id);
   }
 
   @Get(':id')
