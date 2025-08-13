@@ -80,6 +80,17 @@ export class Gym extends MainEntity {
 
   @Prop({ type: String, required: false, default: '' })
   note: string;
+
+  @Prop({
+    type: [
+      {
+        description: String,
+      },
+    ],
+    required: false,
+    default: [],
+  })
+  offers: { description: string }[];
 }
 
 export const GymSchema = SchemaFactory.createForClass(Gym);

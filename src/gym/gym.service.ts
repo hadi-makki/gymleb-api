@@ -16,6 +16,7 @@ import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Expense } from '../expenses/expense.entity';
 import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
 import { paginateModel } from '../utils/pagination';
+import { AddOfferDto } from './dto/add-offer.dto';
 
 @Injectable()
 export class GymService {
@@ -580,5 +581,15 @@ export class GymService {
     const gym = owner.gym;
     const activeOwnerSub = owner.ownerSubscription;
     return { owner, gym, activeOwnerSub };
+  }
+
+  async addGymOffer(manager: Manager, { offers }: AddOfferDto) {
+    const gym = await this.gymModel.findOne({ owner: manager.id });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.offers = offers.map((offer) => ({ description: offer.description }));
+    await gym.save();
+    return gym;
   }
 }

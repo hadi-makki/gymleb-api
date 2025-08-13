@@ -22,6 +22,7 @@ import { Manager } from '../manager/manager.entity';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
+import { AddOfferDto } from './dto/add-offer.dto';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {
@@ -224,5 +225,16 @@ export class GymController {
       Number(page),
       search,
     );
+  }
+
+  @Post('add-offer')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Add a gym offer' })
+  @ApiOkResponse({
+    description: 'The gym offer has been successfully added.',
+    type: Gym,
+  })
+  addGymOffer(@User() user: Manager, @Body() addOfferDto: AddOfferDto) {
+    return this.gymService.addGymOffer(user, addOfferDto);
   }
 }
