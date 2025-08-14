@@ -24,7 +24,7 @@ import { Member } from './entities/member.entity';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { Request, Response } from 'express';
 import { cookieOptions } from 'src/utils/constants';
-import { GetDeviceId } from 'src/decorators/get-device-id.decorator';
+import { GetDeviceId } from '../decorators/get-device-id.decorator';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}

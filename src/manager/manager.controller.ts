@@ -45,7 +45,7 @@ import { SubscriptionInstance } from 'src/transactions/subscription-instance.ent
 import { SubscriptionInstanceService } from 'src/transactions/subscription-instance.service';
 import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
 import { GymService } from 'src/gym/gym.service';
-import { GetDeviceId } from 'src/decorators/get-device-id.decorator';
+import { GetDeviceId } from '../decorators/get-device-id.decorator';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()

@@ -27,9 +27,9 @@ import { User as UserEntity } from '../user/user.entity';
 import { UserCreatedDto } from './dtos/response/user-created.dto';
 import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 import { RefreshDto } from './dtos/refresh-token.dto';
-import { cookieOptions } from '../utils/constants';
 import { Request, Response } from 'express';
-import { GetDeviceId } from 'src/decorators/get-device-id.decorator';
+import { GetDeviceId } from '../decorators/get-device-id.decorator';
+
 @Controller('auth')
 @ApiTags('auth')
 @ApiBadRequestResponse()
