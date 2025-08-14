@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { loggerMiddleware } from './logger/logger.service';
+import { DeviceIdMiddleware } from './middleware/device-id.middleware';
 import { ManagerModule } from './manager/manager.module';
 import { MediaModule } from './media/media.module';
 import { S3Module } from './s3/s3.module';
@@ -55,6 +56,10 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(loggerMiddleware).forRoutes('*'); // Apply to all routes
+    consumer
+      .apply(DeviceIdMiddleware)
+      .forRoutes('*') // Apply device ID middleware to all routes first
+      .apply(loggerMiddleware)
+      .forRoutes('*'); // Then apply logger middleware
   }
 }

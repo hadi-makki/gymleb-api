@@ -46,6 +46,7 @@ import { SubscriptionInstanceService } from 'src/transactions/subscription-insta
 import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
 import { GymService } from 'src/gym/gym.service';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
+import { v4 as uuidv4 } from 'uuid';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -98,7 +99,12 @@ export class ManagerController {
     @Res({ passthrough: true }) response: Response,
     @GetDeviceId() deviceId: string,
   ) {
-    const loginManager = await this.ManagerService.login(body, deviceId);
+    let checkDeviceId = deviceId;
+    if (!checkDeviceId) {
+      checkDeviceId = uuidv4();
+      response.cookie('deviceId', checkDeviceId, cookieOptions);
+    }
+    const loginManager = await this.ManagerService.login(body, checkDeviceId);
     response.cookie('token', loginManager.token, cookieOptions);
 
     return loginManager;
