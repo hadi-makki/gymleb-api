@@ -18,4 +18,7 @@ export class GenerateTokenDTO {
 
   @IsDate()
   accessExpirationDate: Date;
+
+  @IsString()
+  deviceId: string;
 }

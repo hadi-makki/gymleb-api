@@ -42,6 +42,7 @@ export class ManagerService {
 
   async createManager(
     body: CreateManagerDto,
+    deviceId: string,
   ): Promise<ManagerCreatedWithTokenDto> {
     const manager = await this.managerEntity.findOne({
       $or: [{ email: body.email }, { username: body.username }],
@@ -63,6 +64,7 @@ export class ManagerService {
     const token = await this.tokenService.generateTokens({
       managerId: savedManager.id,
       userId: null,
+      deviceId,
     });
     return {
       ...returnManager(savedManager),
@@ -81,7 +83,10 @@ export class ManagerService {
     return returnManager(manager);
   }
 
-  async login(body: LoginManagerDto): Promise<ManagerCreatedWithTokenDto> {
+  async login(
+    body: LoginManagerDto,
+    deviceId: string,
+  ): Promise<ManagerCreatedWithTokenDto> {
     const manager = await this.managerEntity.findOne({
       $or: [{ username: body.username }, { email: body.username }],
     });
@@ -99,6 +104,7 @@ export class ManagerService {
     const token = await this.tokenService.generateTokens({
       managerId: manager.id,
       userId: null,
+      deviceId,
     });
     //   ?.token;
 
@@ -113,7 +119,10 @@ export class ManagerService {
     return managers.map((manager) => returnManager(manager));
   }
 
-  async deleteManager(id: string): Promise<SuccessMessageReturn> {
+  async deleteManager(
+    id: string,
+    deviceId: string,
+  ): Promise<SuccessMessageReturn> {
     const manager = await this.managerEntity.findById(id);
     if (!manager) {
       throw new NotFoundException('Manager not found');
@@ -128,7 +137,7 @@ export class ManagerService {
     await this.subscriptionInstanceModel.deleteMany({ owner: id });
     await this.memberModel.deleteMany({ owner: id });
     await this.expenseModel.deleteMany({ owner: id });
-    await this.tokenService.deleteTokensByUserId(id);
+    await this.tokenService.deleteTokensByUserId(id, deviceId);
 
     return {
       message: 'Manager deleted successfully',
@@ -157,9 +166,9 @@ export class ManagerService {
     return returnManager(manager);
   }
 
-  async logout(user: Manager): Promise<SuccessMessageReturn> {
+  async logout(user: Manager, deviceId: string): Promise<SuccessMessageReturn> {
     console.log('logging out a manager');
-    await this.tokenService.deleteTokensByUserId(user.id);
+    await this.tokenService.deleteTokensByUserId(user.id, deviceId);
     return {
       message: 'Manager logged out successfully',
     };

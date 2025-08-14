@@ -29,6 +29,7 @@ import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 import { RefreshDto } from './dtos/refresh-token.dto';
 import { cookieOptions } from '../utils/constants';
 import { Request, Response } from 'express';
+import { GetDeviceId } from 'src/decorators/get-device-id.decorator';
 @Controller('auth')
 @ApiTags('auth')
 @ApiBadRequestResponse()
@@ -45,8 +46,11 @@ export class AuthController {
     description: 'User logged in',
     type: UserCreatedDto,
   })
-  async register(@Body() registerDto: RegisterDto) {
-    return this.AuthService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @GetDeviceId() deviceId: string,
+  ) {
+    return this.AuthService.register(registerDto, deviceId);
   }
 
   @Post('login')
@@ -59,8 +63,8 @@ export class AuthController {
   })
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  async login(@Body() loginDto) {
-    return await this.AuthService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @GetDeviceId() deviceId: string) {
+    return await this.AuthService.login(loginDto, deviceId);
   }
 
   @Get('test')

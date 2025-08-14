@@ -45,6 +45,7 @@ import { SubscriptionInstance } from 'src/transactions/subscription-instance.ent
 import { SubscriptionInstanceService } from 'src/transactions/subscription-instance.service';
 import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
 import { GymService } from 'src/gym/gym.service';
+import { GetDeviceId } from 'src/decorators/get-device-id.decorator';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -66,8 +67,11 @@ export class ManagerController {
     type: ManagerCreatedDto,
   })
   @Roles()
-  createManager(@Body() body: CreateManagerDto) {
-    return this.ManagerService.createManager(body);
+  createManager(
+    @Body() body: CreateManagerDto,
+    @GetDeviceId() deviceId: string,
+  ) {
+    return this.ManagerService.createManager(body, deviceId);
   }
 
   @Get(':id')
@@ -92,8 +96,9 @@ export class ManagerController {
   async login(
     @Body() body: LoginManagerDto,
     @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
   ) {
-    const loginManager = await this.ManagerService.login(body);
+    const loginManager = await this.ManagerService.login(body, deviceId);
     response.cookie('token', loginManager.token, cookieOptions);
 
     return loginManager;
@@ -109,9 +114,10 @@ export class ManagerController {
   async logout(
     @User() user: Manager,
     @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
   ) {
     response.clearCookie('token', cookieOptions);
-    return this.ManagerService.logout(user);
+    return this.ManagerService.logout(user, deviceId);
   }
 
   @Get('get/me')
@@ -151,8 +157,11 @@ export class ManagerController {
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
   @Roles()
-  async deleteManager(@Param('id') id: string) {
-    return await this.ManagerService.deleteManager(id);
+  async deleteManager(
+    @Param('id') id: string,
+    @GetDeviceId() deviceId: string,
+  ) {
+    return await this.ManagerService.deleteManager(id, deviceId);
   }
 
   @Patch('/update/:id')

@@ -24,6 +24,7 @@ import { Member } from './entities/member.entity';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { Request, Response } from 'express';
 import { cookieOptions } from 'src/utils/constants';
+import { GetDeviceId } from 'src/decorators/get-device-id.decorator';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -42,8 +43,9 @@ export class MemberController {
   async login(
     @Body() body: LoginMemberDto,
     @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
   ) {
-    const loginMember = await this.memberService.loginMember(body);
+    const loginMember = await this.memberService.loginMember(body, deviceId);
     response.cookie('memberToken', loginMember.token, cookieOptions);
     return loginMember;
   }
@@ -53,9 +55,10 @@ export class MemberController {
   async logout(
     @User() member: Member,
     @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
   ) {
     response.clearCookie('memberToken', cookieOptions);
-    this.memberService.logout(member);
+    this.memberService.logout(member, deviceId);
     return { message: 'Logged out successfully' };
   }
 

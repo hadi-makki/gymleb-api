@@ -11,6 +11,7 @@ import { HttpExceptionFilter } from './error';
 import { BadRequestException } from './error/bad-request-error';
 import { loggerMiddleware } from './logger/logger.service';
 import cookieParser from 'cookie-parser';
+import { DeviceIdInterceptor } from './interceptors/device-id.interceptor';
 
 dotenv.config({
   path: `.env`,
@@ -42,6 +43,8 @@ async function bootstrap() {
   );
 
   app.use(loggerMiddleware);
+
+  app.useGlobalInterceptors(new DeviceIdInterceptor());
 
   const configService = app.get<ConfigService>(ConfigService);
   const options = new DocumentBuilder()

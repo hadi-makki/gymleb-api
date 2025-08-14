@@ -38,7 +38,10 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-  async login({ email, password }: LoginDto): Promise<UserCreatedDto> {
+  async login(
+    { email, password }: LoginDto,
+    deviceId: string,
+  ): Promise<UserCreatedDto> {
     const getUser = await this.userService.getUserByEmail(email);
     if (!getUser) {
       throw new BadRequestException('Wrong Email or Password');
@@ -50,15 +53,15 @@ export class AuthService {
     const generateTokens = await this.tokenService.generateTokens({
       userId: getUser.id,
       managerId: null,
+      deviceId,
     });
     return { ...returnUser(getUser), token: generateTokens.accessToken };
   }
 
-  async register({
-    email,
-    name,
-    password,
-  }: RegisterDto): Promise<UserCreatedDto> {
+  async register(
+    { email, name, password }: RegisterDto,
+    deviceId: string,
+  ): Promise<UserCreatedDto> {
     const checkEmail = await this.userService.getUserByEmail(email);
     if (checkEmail) {
       throw new BadRequestException('Email already exists');
@@ -72,6 +75,7 @@ export class AuthService {
     const generateTokens = await this.tokenService.generateTokens({
       userId: newUser.id,
       managerId: null,
+      deviceId,
     });
     return { ...returnUser(newUser), token: generateTokens.accessToken };
   }

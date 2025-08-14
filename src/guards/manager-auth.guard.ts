@@ -25,6 +25,7 @@ export class ManagerAuthGuard implements CanActivate {
     const request = context
       .switchToHttp()
       .getRequest<Request & { user: Manager }>();
+    const response = context.switchToHttp().getResponse();
     const requiredRoles =
       this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
         context.getHandler(),
@@ -37,7 +38,7 @@ export class ManagerAuthGuard implements CanActivate {
 
     const validatedData = await this.tokenService.validateJwt(
       request,
-      context.switchToHttp().getResponse(),
+      response,
     );
 
     const userId = validatedData?.sub;

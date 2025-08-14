@@ -166,6 +166,7 @@ export class MemberService {
 
   async loginMember(
     loginMemberDto: LoginMemberDto,
+    deviceId: string,
   ): Promise<ReturnUserWithTokenDto> {
     const member = await this.memberModel
       .findOne({
@@ -182,6 +183,7 @@ export class MemberService {
     const token = await this.tokenService.generateTokens({
       managerId: null,
       userId: member.id,
+      deviceId,
     });
 
     return {
@@ -496,8 +498,8 @@ export class MemberService {
     await member.save();
   }
 
-  async logout(member: Member) {
-    await this.tokenService.deleteTokensByUserId(member.id);
+  async logout(member: Member, deviceId: string) {
+    await this.tokenService.deleteTokensByUserId(member.id, deviceId);
   }
 
   async invalidateMemberSubscription(id: string) {
