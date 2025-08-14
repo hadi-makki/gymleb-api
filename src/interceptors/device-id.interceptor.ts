@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { Observable } from 'rxjs';
+import { cookieOptions } from 'src/utils/constants';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -20,11 +21,7 @@ export class DeviceIdInterceptor implements NestInterceptor {
     const deviceId = request.cookies['deviceId'];
     if (!deviceId) {
       const newDeviceId = uuidv4();
-      response.cookie('deviceId', newDeviceId, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
+      response.cookie('deviceId', newDeviceId, cookieOptions);
     }
     return next.handle();
   }
