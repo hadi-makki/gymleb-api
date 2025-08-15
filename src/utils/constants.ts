@@ -1,9 +1,7 @@
 import { CookieOptions } from 'express';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const cookieDomain = isProduction
-  ? 'https://api.gym-leb.com'
-  : 'http://localhost:3000';
+const cookieDomain = isProduction ? '.gym-leb.com' : '.localhost';
 
 export const cookieOptions: CookieOptions = {
   httpOnly: true, // not accessible from JS
