@@ -256,6 +256,7 @@ export class TokenService {
           exp: number;
         };
       } else {
+        console.log('unable to refresh token');
         throw new UnauthorizedException('Unable to refresh token');
       }
     }
