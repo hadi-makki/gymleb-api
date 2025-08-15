@@ -115,8 +115,9 @@ export class MemberService {
     }
 
     let username = createMemberDto.phone;
+    const phoneNumber = username.replace(/^\+961/, '').replace(/\s+/g, '');
 
-    username = username.replace(/\s+/g, '').toLowerCase();
+    username = phoneNumber.toLowerCase();
 
     const checkUsername = await this.memberModel.findOne({
       username: username,
@@ -134,7 +135,7 @@ export class MemberService {
       gym: gym.id,
       subscription: subscription.id,
       username: username,
-      passCode: `${createMemberDto.phone}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
+      passCode: `${phoneNumber}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
     });
     const subscriptionInstance =
       await this.subscriptionInstanceService.createSubscriptionInstance({

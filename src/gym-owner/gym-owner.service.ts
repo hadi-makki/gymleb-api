@@ -130,17 +130,17 @@ export class GymOwnerService {
         {
           name: 'Ali Haddad',
           email: 'ali.haddad@example.com',
-          phone: '+96170123456',
+          phone: `+96170${Math.floor(100000 + Math.random() * 900000)}`,
         },
         {
           name: 'Nour El-Khoury',
           email: 'nour.elkhoury@example.com',
-          phone: '+96170123457',
+          phone: `+96171${Math.floor(100000 + Math.random() * 900000)}`,
         },
         {
           name: 'Jad Chami',
           email: 'jad.chami@example.com',
-          phone: '+96170123458',
+          phone: `+96176${Math.floor(100000 + Math.random() * 900000)}`,
         },
       ];
 
