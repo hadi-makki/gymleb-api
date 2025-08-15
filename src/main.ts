@@ -22,6 +22,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
 
+  // Rate limiting is configured globally in AppModule with ThrottlerModule
+  // Current configuration: 100 requests per minute per IP
+
   app.enableCors({
     origin: (origin, callback) => {
       callback(null, true); // Allow the origin

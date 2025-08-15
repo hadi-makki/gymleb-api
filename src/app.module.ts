@@ -1,5 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -29,6 +31,12 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // Time window in milliseconds (1 minute)
+        limit: 100, // Maximum number of requests per ttl window
+      },
+    ]),
     MongooseModule.forFeature([
       { name: Manager.name, schema: ManagerSchema },
       { name: Gym.name, schema: GymSchema },
@@ -54,7 +62,15 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
     GymOwnerModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ManagerSeeding, GymSeeding],
+  providers: [
+    AppService,
+    ManagerSeeding,
+    GymSeeding,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
