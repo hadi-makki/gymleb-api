@@ -14,6 +14,7 @@ import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Expense } from '../expenses/expense.entity';
+import { Revenue } from '../revenue/revenue.entity';
 import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
 import { paginateModel } from '../utils/pagination';
 import { AddOfferDto } from './dto/add-offer.dto';
@@ -27,6 +28,7 @@ export class GymService {
     private subscriptionInstanceModel: Model<SubscriptionInstance>,
     @InjectModel(Member.name) private memberModel: Model<Member>,
     @InjectModel(Expense.name) private expenseModel: Model<Expense>,
+    @InjectModel(Revenue.name) private revenueModel: Model<Revenue>,
     @InjectModel(OwnerSubscription.name)
     private ownerSubscriptionModel: Model<OwnerSubscription>,
     @InjectModel(Manager.name) private managerModel: Model<Manager>,
@@ -158,6 +160,19 @@ export class GymService {
     }
     const expenses = await this.expenseModel.find(expenseFilter);
     const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    // Additional Revenue in range (non-subscription revenue)
+    const revenueFilter: any = { gym: new Types.ObjectId(gym.id) };
+    if (start || end) {
+      revenueFilter.date = {};
+      if (start) revenueFilter.date.$gte = new Date(start);
+      if (end) revenueFilter.date.$lte = new Date(end);
+    }
+    const additionalRevenues = await this.revenueModel.find(revenueFilter);
+    const totalAdditionalRevenue = additionalRevenues.reduce(
+      (sum, r) => sum + (r.amount || 0),
+      0,
+    );
     const totalMembers = await this.memberModel.countDocuments({ gym: gym.id });
     const members = await this.memberModel
       .find({ gym: gym.id })
@@ -196,10 +211,15 @@ export class GymService {
       : startOfMonth(subMonths(now, 1));
     const analyticsEndDate = end ? new Date(end) : now;
 
+    // Calculate combined revenue (subscriptions + additional revenue)
+    const combinedTotalRevenue = totalRevenue + totalAdditionalRevenue;
+
     return {
-      totalRevenue,
+      totalRevenue: combinedTotalRevenue,
+      subscriptionRevenue: totalRevenue,
+      additionalRevenue: totalAdditionalRevenue,
       totalExpenses,
-      netRevenue: totalRevenue - totalExpenses,
+      netRevenue: combinedTotalRevenue - totalExpenses,
       totalMembers,
       members: membersWithActiveSubscription,
       totalTransactions: transactions.length,
@@ -449,6 +469,19 @@ export class GymService {
     }
     const expenses = await this.expenseModel.find(expenseFilter);
     const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    // Additional Revenue in range (non-subscription revenue)
+    const revenueFilter: any = { gym: gym._id };
+    if (start || end) {
+      revenueFilter.date = {};
+      if (start) revenueFilter.date.$gte = new Date(start);
+      if (end) revenueFilter.date.$lte = new Date(end);
+    }
+    const additionalRevenues = await this.revenueModel.find(revenueFilter);
+    const totalAdditionalRevenue = additionalRevenues.reduce(
+      (sum, r) => sum + (r.amount || 0),
+      0,
+    );
     const totalMembers = await this.memberModel.countDocuments({
       gym: gym._id,
     });
@@ -486,10 +519,15 @@ export class GymService {
       : startOfMonth(subMonths(now, 1));
     const analyticsEndDate = end ? new Date(end) : now;
 
+    // Calculate combined revenue (subscriptions + additional revenue)
+    const combinedTotalRevenue = totalRevenue + totalAdditionalRevenue;
+
     return {
-      totalRevenue,
+      totalRevenue: combinedTotalRevenue,
+      subscriptionRevenue: totalRevenue,
+      additionalRevenue: totalAdditionalRevenue,
       totalExpenses,
-      netRevenue: totalRevenue - totalExpenses,
+      netRevenue: combinedTotalRevenue - totalExpenses,
       totalMembers,
       members: membersWithActiveSubscription,
       totalTransactions: transactions.length,

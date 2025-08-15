@@ -22,6 +22,7 @@ import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
 } from 'src/owner-subscriptions/owner-subscription.entity';
+import { Revenue, RevenueSchema } from 'src/revenue/revenue.entity';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -32,6 +33,7 @@ import {
       { name: Gym.name, schema: GymSchema },
       { name: SubscriptionInstance.name, schema: SubscriptionInstanceSchema },
       { name: Expense.name, schema: ExpenseSchema },
+      { name: Revenue.name, schema: RevenueSchema },
       { name: OwnerSubscription.name, schema: OwnerSubscriptionSchema },
     ]),
   ],

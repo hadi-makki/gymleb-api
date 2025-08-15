@@ -11,6 +11,7 @@ import {
 } from '../transactions/subscription-instance.entity';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 import { Expense, ExpenseSchema } from '../expenses/expense.entity';
+import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
@@ -24,6 +25,7 @@ import {
       { name: SubscriptionInstance.name, schema: SubscriptionInstanceSchema },
       { name: Member.name, schema: MemberSchema },
       { name: Expense.name, schema: ExpenseSchema },
+      { name: Revenue.name, schema: RevenueSchema },
       { name: OwnerSubscription.name, schema: OwnerSubscriptionSchema },
     ]),
   ],

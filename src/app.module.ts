@@ -23,6 +23,7 @@ import { GymSeeding } from './seeder/gym.seeding';
 import { Gym, GymSchema } from './gym/entities/gym.entity';
 import { TwilioModule } from './twilio/twilio.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { RevenueModule } from './revenue/revenue.module';
 import { OwnerSubscriptionsModule } from './owner-subscriptions/owner-subscriptions.module';
 import { GymOwnerModule } from './gym-owner/gym-owner.module';
 
@@ -48,6 +49,7 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
     MemberModule,
     TwilioModule,
     ExpensesModule,
+    RevenueModule,
     OwnerSubscriptionsModule,
     GymOwnerModule,
   ],
