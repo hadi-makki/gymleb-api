@@ -228,14 +228,17 @@ export class TokenService {
 
     // Check if token exists in database and is not expired
     const checkToken = await this.getTokenByAccessToken(tokenToUse);
+    console.log('this is the checkToken', checkToken);
 
     if (!checkToken) {
       // Token not found in database
+      console.log('token not found in database');
       isTokenExpired = true;
     } else if (
       differenceInHours(new Date(), checkToken.accessExpirationDate) > 0
     ) {
       // Check if token is expired by date
+      console.log('token is expired by date');
       isTokenExpired = true;
     }
 
@@ -246,8 +249,10 @@ export class TokenService {
         req.cookies.deviceId,
         res,
       );
+      console.log('this is the newToken', newToken);
       if (newToken) {
         // Return the new decoded JWT
+        console.log('this is the newToken', newToken);
         return (await this.jwtService.verifyAsync(newToken, {
           secret: this.configService.get('JWT_ACCESS_SECRET'),
         })) as {
@@ -272,8 +277,10 @@ export class TokenService {
     try {
       console.log('refreshing token');
       const checkToken = await this.getTokenByAccessToken(token);
+      console.log('this is the checkToken', checkToken);
 
       if (!checkToken) {
+        console.log('token not found in database');
         return null;
       }
 
@@ -288,14 +295,14 @@ export class TokenService {
         iat: number;
         exp: number;
       };
-
+      console.log('this is the decodedJwt', decodedJwt);
       if (decodedJwt) {
         // check if the token is expired
 
         if (
           differenceInHours(new Date(), checkToken.refreshExpirationDate) > 0
         ) {
-          console.log('token is expired');
+          console.log('token is expired by date');
           return null;
         }
         const { accessToken, accessExpirationDate } =
