@@ -311,6 +311,7 @@ export class TokenService {
       }
       return null;
     } catch (error) {
+      console.log('this is the error', error);
       // Refresh token is also expired or invalid
       return null;
     }
