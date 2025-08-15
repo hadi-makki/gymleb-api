@@ -4,12 +4,29 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import { GymOwnerController } from './gym-owner.controller';
 import { GymOwnerService } from './gym-owner.service';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Member, MemberSchema } from '../member/entities/member.entity';
+import { Expense, ExpenseSchema } from '../expenses/expense.entity';
+import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
+import {
+  Subscription,
+  SubscriptionSchema,
+} from '../subscription/entities/subscription.entity';
+import { SubscriptionInstanceModule } from '../transactions/subscription-instance.module';
+import { SubscriptionService } from 'src/subscription/subscription.service';
+import { MemberService } from 'src/member/member.service';
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Gym.name, schema: GymSchema }]),
+    MongooseModule.forFeature([
+      { name: Gym.name, schema: GymSchema },
+      { name: Member.name, schema: MemberSchema },
+      { name: Expense.name, schema: ExpenseSchema },
+      { name: Revenue.name, schema: RevenueSchema },
+      { name: Subscription.name, schema: SubscriptionSchema },
+    ]),
     AuthenticationModule,
+    SubscriptionInstanceModule,
   ],
   controllers: [GymOwnerController],
-  providers: [GymOwnerService],
+  providers: [GymOwnerService, SubscriptionService, MemberService],
 })
 export class GymOwnerModule {}

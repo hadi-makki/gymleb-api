@@ -11,6 +11,17 @@ import { Manager } from '../manager/manager.entity';
 import { Role } from '../decorators/roles/role.enum';
 import { Gym } from '../gym/entities/gym.entity';
 import { Days } from '../seeder/gym.seeding';
+import { Member } from '../member/entities/member.entity';
+import { Expense } from '../expenses/expense.entity';
+import { Revenue } from '../revenue/revenue.entity';
+import {
+  Subscription,
+  SubscriptionType,
+} from '../subscription/entities/subscription.entity';
+import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
+import { Types } from 'mongoose';
+import { SubscriptionService } from 'src/subscription/subscription.service';
+import { MemberService } from 'src/member/member.service';
 @Injectable()
 export class GymOwnerService {
   constructor(
@@ -18,9 +29,20 @@ export class GymOwnerService {
     private readonly gymOwnerModel: Model<Manager>,
     @InjectModel(Gym.name)
     private readonly gymModel: Model<Gym>,
+    @InjectModel(Member.name)
+    private readonly memberModel: Model<Member>,
+    @InjectModel(Expense.name)
+    private readonly expenseModel: Model<Expense>,
+    @InjectModel(Revenue.name)
+    private readonly revenueModel: Model<Revenue>,
+    @InjectModel(Subscription.name)
+    private readonly subscriptionModel: Model<Subscription>,
+    private readonly subscriptionInstanceService: SubscriptionInstanceService,
+    private readonly subscriptionService: SubscriptionService,
+    private readonly memberService: MemberService,
   ) {}
 
-  async create(createGymOwnerDto: CreateGymOwnerDto) {
+  async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
     console.log('createGymOwnerDto', createGymOwnerDto);
     const checkGymOwner = await this.gymOwnerModel.findOne({
       email: createGymOwnerDto.email,
@@ -73,7 +95,183 @@ export class GymOwnerService {
 
     const gym = await this.gymModel.findById(checkGym.id).populate('owner');
 
+    await this.subscriptionService.create(
+      {
+        title: 'Monthly Membership',
+        type: SubscriptionType.MONTHLY_GYM,
+        price: 50.0,
+        duration: 30,
+      },
+      gymOwner,
+    );
+
+    // Generate mock data if requested
+    if (createGymOwnerDto.generateMockData) {
+      await this.generateMockDataForGym(gymOwner, gym);
+    }
+
     return gym;
+  }
+
+  async generateMockDataForGym(gymOwner: Manager, gym: Gym) {
+    try {
+      // Get available subscriptions from the database
+      const subscriptions = await this.subscriptionModel.find().limit(10);
+
+      if (subscriptions.length === 0) {
+        console.log(
+          'No subscriptions found in database, skipping mock member creation',
+        );
+        return;
+      }
+
+      // Generate 3 mock members
+      const mockMembers = [
+        {
+          name: 'Ali Haddad',
+          email: 'ali.haddad@example.com',
+          phone: '+96170123456',
+        },
+        {
+          name: 'Nour El-Khoury',
+          email: 'nour.elkhoury@example.com',
+          phone: '+96170123457',
+        },
+        {
+          name: 'Jad Chami',
+          email: 'jad.chami@example.com',
+          phone: '+96170123458',
+        },
+      ];
+
+      // Create members with random subscriptions
+      for (const memberData of mockMembers) {
+        const randomSubscription =
+          subscriptions[Math.floor(Math.random() * subscriptions.length)];
+
+        await this.memberService.create(
+          {
+            name: memberData.name,
+            email: memberData.email,
+            phone: memberData.phone,
+            subscriptionId: randomSubscription.id,
+          },
+          gymOwner,
+        );
+      }
+
+      // Generate random gym note
+      const gymNotes = [
+        'Welcome to our state-of-the-art fitness facility! We offer premium equipment and expert guidance.',
+      ];
+
+      const randomNote = gymNotes[Math.floor(Math.random() * gymNotes.length)];
+      gym.note = randomNote;
+      await gym.save();
+
+      // Generate mock expenses
+      const mockExpenses = [
+        {
+          title: 'Equipment Maintenance',
+          amount: 250.0,
+          category: 'Maintenance',
+          notes: 'Monthly equipment servicing and repairs',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+          ),
+        },
+        {
+          title: 'Electricity Bill',
+          amount: 200.0,
+          category: 'Utilities',
+          notes: 'Monthly electricity charges for gym operations',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 25) * 24 * 60 * 60 * 1000,
+          ),
+        },
+      ];
+
+      for (const expenseData of mockExpenses) {
+        await this.expenseModel.create({
+          ...expenseData,
+          gym: new Types.ObjectId(gym.id),
+        });
+      }
+
+      // Generate mock revenues (additional income sources)
+      const mockRevenues = [
+        {
+          title: 'Personal Training Sessions',
+          amount: 180.0,
+          category: 'Training',
+          notes: 'Individual training sessions with certified trainers',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+          ),
+        },
+        {
+          title: 'Protein Shake Sales',
+          amount: 85.0,
+          category: 'Retail',
+          notes: 'Sales of protein shakes and supplements',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 25) * 24 * 60 * 60 * 1000,
+          ),
+        },
+        {
+          title: 'Yoga Class Fees',
+          amount: 150.0,
+          category: 'Classes',
+          notes: 'Additional fees for specialized yoga classes',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 20) * 24 * 60 * 60 * 1000,
+          ),
+        },
+        {
+          title: 'Equipment Rental',
+          amount: 75.0,
+          category: 'Rental',
+          notes: 'Rental of specialized fitness equipment',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 15) * 24 * 60 * 60 * 1000,
+          ),
+        },
+        {
+          title: 'Nutrition Consultation',
+          amount: 120.0,
+          category: 'Consultation',
+          notes: 'Professional nutrition and diet planning services',
+          date: new Date(
+            Date.now() - Math.floor(Math.random() * 10) * 24 * 60 * 60 * 1000,
+          ),
+        },
+      ];
+
+      for (const revenueData of mockRevenues) {
+        await this.revenueModel.create({
+          ...revenueData,
+          gym: new Types.ObjectId(gym.id),
+        });
+      }
+
+      console.log(`Mock data generated successfully for gym: ${gym.name}`);
+      console.log(`- Created ${mockMembers.length} members`);
+      console.log(`- Created ${mockExpenses.length} expenses`);
+      console.log(`- Created ${mockRevenues.length} revenue entries`);
+      console.log(`- Updated gym note`);
+    } catch (error) {
+      console.error('Error generating mock data:', error);
+      throw error;
+    }
+  }
+
+  async generateMockData() {
+    const gymOwners = await this.gymOwnerModel.find();
+    for (const gymOwner of gymOwners) {
+      const gym = await this.gymModel.create({
+        name: gymOwner.firstName + ' ' + gymOwner.lastName,
+      });
+    }
   }
 
   async findAll() {

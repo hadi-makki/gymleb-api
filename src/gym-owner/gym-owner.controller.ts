@@ -31,8 +31,11 @@ export class GymOwnerController {
     type: Manager,
   })
   @Roles(Role.SuperAdmin)
-  async create(@Body() createGymOwnerDto: CreateGymOwnerDto) {
-    return await this.gymOwnerService.create(createGymOwnerDto);
+  async create(
+    @Body() createGymOwnerDto: CreateGymOwnerDto,
+    @User() user: Manager,
+  ) {
+    return await this.gymOwnerService.create(createGymOwnerDto, user);
   }
 
   @Get()

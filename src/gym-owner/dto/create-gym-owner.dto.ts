@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateGymOwnerDto {
   @ApiProperty()
@@ -31,4 +31,9 @@ export class CreateGymOwnerDto {
   @IsString()
   @IsNotEmpty()
   phone: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  generateMockData?: boolean;
 }
