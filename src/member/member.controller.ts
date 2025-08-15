@@ -43,10 +43,10 @@ export class MemberController {
   async login(
     @Body() body: LoginMemberDto,
     @Res({ passthrough: true }) response: Response,
-    @GetDeviceId() deviceId: string,
+    // @GetDeviceId() deviceId: string,
   ) {
-    const loginMember = await this.memberService.loginMember(body, deviceId);
-    response.cookie('memberToken', loginMember.token, cookieOptions);
+    const loginMember = await this.memberService.loginMember(body);
+    // response.cookie('memberToken', loginMember.token, cookieOptions);
     return loginMember;
   }
 

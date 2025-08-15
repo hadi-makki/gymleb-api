@@ -167,8 +167,8 @@ export class MemberService {
 
   async loginMember(
     loginMemberDto: LoginMemberDto,
-    deviceId: string,
-  ): Promise<ReturnUserWithTokenDto> {
+    // deviceId: string,
+  ): Promise<ReturnUserDto> {
     const member = await this.memberModel
       .findOne({
         username: loginMemberDto.username,
@@ -181,15 +181,15 @@ export class MemberService {
       throw new BadRequestException('Invalid passcode or username');
     }
 
-    const token = await this.tokenService.generateTokens({
-      managerId: null,
-      userId: member.id,
-      deviceId,
-    });
+    // const token = await this.tokenService.generateTokens({
+    //   managerId: null,
+    //   userId: member.id,
+    //   deviceId,
+    // });
 
     return {
       ...(await this.returnMember(member)),
-      token: token.accessToken,
+      // token: token.accessToken,
     };
   }
 
