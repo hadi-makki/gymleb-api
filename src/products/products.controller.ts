@@ -40,6 +40,8 @@ import { Roles } from 'src/decorators/roles/Role';
 import { Manager } from 'src/manager/manager.entity';
 import { WebpPipe } from 'src/pipes/webp.pipe';
 import { imageTypes } from 'src/utils/constants';
+import { validateImage } from 'src/utils/helprt-functions';
+import { BadRequestException } from 'src/error/bad-request-error';
 
 @ApiTags('Products')
 @Controller('products')
@@ -110,6 +112,9 @@ export class ProductsController {
     @User() user: Manager,
     @Body() body: CreateProductDto,
   ) {
+    if (!validateImage(file)) {
+      throw new BadRequestException('Invalid image type');
+    }
     return await this.productsService.createProduct(file, user, body);
   }
 
@@ -138,9 +143,9 @@ export class ProductsController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({
-            fileType: imageTypes,
-          }), // Specific image types
+          // new FileTypeValidator({
+          //   fileType: imageTypes,
+          // }), // Specific image types
         ],
         fileIsRequired: false,
       }),
@@ -150,6 +155,9 @@ export class ProductsController {
     @User() user: UserEntity,
     @Body() body: UpdateProductDto,
   ) {
+    if (!validateImage(file)) {
+      throw new BadRequestException('Invalid image type');
+    }
     return await this.productsService.updateProduct(id, file, user, body);
   }
 
