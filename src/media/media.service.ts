@@ -5,11 +5,12 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
+import { isMongoId } from 'class-validator';
 import { Response } from 'express';
 import { Model } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 import { S3Service } from '../s3/s3.service';
 import { UserService } from '../user/user.service';
-import { v4 as uuidv4, validate as uuidValidate } from 'uuid';
 import { Media } from './media.entity';
 @Injectable()
 export class MediaService {
@@ -22,10 +23,10 @@ export class MediaService {
   ) {}
 
   async upload(file: any, userId: string = null) {
-    const checkUser = await this.usersService.checkUserExists(userId);
-    if (!checkUser) {
-      throw new NotFoundException('User not found in media service');
-    }
+    // const checkUser = await this.usersService.checkUserExists(userId);
+    // if (!checkUser) {
+    //   throw new NotFoundException('User not found in media service');
+    // }
     const bufferLength = file.buffer.length || file.buffer.data.length;
     if (!bufferLength) {
       throw new BadRequestException('File buffer is empty');
@@ -34,20 +35,19 @@ export class MediaService {
     const extension = file.originalname.split('.').pop();
     const key = uuidv4() + '.' + extension;
 
-    const media = this.mediaRepository.create({
+    const media = await this.mediaRepository.create({
       s3Key: key,
       originalName: file.originalname,
       fileName: file.filename,
       mimeType: file.mimetype,
       size: file.size,
-      userId: userId,
+      // userId: userId,
     });
 
-    const newMedia = await this.mediaRepository.create(media);
     await this.s3Service.uploadFile(file, key);
 
     return {
-      id: newMedia.id,
+      id: media._id.toString(),
     };
   }
   async delete(id: string) {
@@ -55,12 +55,12 @@ export class MediaService {
       console.log(`Deleting media with ID: ${id}`); // Log the ID
 
       // Validate if the input id is a valid UUID
-      if (!uuidValidate(id)) {
+      if (!isMongoId(id)) {
         throw new BadRequestException('Invalid UUID format');
       }
 
       // Find the media entity
-      const media = await this.mediaRepository.findOne({ id });
+      const media = await this.mediaRepository.findById(id);
       if (!media) {
         throw new NotFoundException('Media not found');
       }
@@ -82,7 +82,7 @@ export class MediaService {
   }
 
   async getFileById(id: string) {
-    const media = await this.mediaRepository.findOne({ id });
+    const media = await this.mediaRepository.findById(id);
     if (!media) {
       throw new NotFoundException('Media not found');
     }
@@ -91,7 +91,7 @@ export class MediaService {
   }
 
   async getFileStreamById(id: string, res: Response) {
-    const media = await this.mediaRepository.findOne({ id });
+    const media = await this.mediaRepository.findById(id);
     if (!media) {
       throw new NotFoundException('Media not found');
     }
@@ -134,11 +134,11 @@ export class MediaService {
     id: string,
     userId: string | null = null,
   ): Promise<{ url: string }> {
-    const media = await this.mediaRepository.findOne({ id: id.toString() });
+    const media = await this.mediaRepository.findById(id);
 
-    if (!media || (userId && media.user.id !== userId)) {
-      throw new NotFoundException('Media not found');
-    }
+    // if (!media || (userId && media.user.id !== userId)) {
+    //   throw new NotFoundException('Media not found');
+    // }
 
     return { url: await this.s3Service.getS3Url(media.s3Key) };
   }

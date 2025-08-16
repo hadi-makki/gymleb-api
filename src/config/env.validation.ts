@@ -58,6 +58,9 @@ class EnvironmentVariables {
 
   @IsString()
   SWAGGER_SERVER_ENVIRONMENT: string;
+
+  @IsString()
+  UPLOADTHING_TOKEN: string;
 }
 
 export function validate(config: Record<string, unknown>) {

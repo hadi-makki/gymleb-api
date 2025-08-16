@@ -20,12 +20,13 @@ export class S3Service {
       secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY'),
     },
   });
-
+  //s3://hadi-bucket-1/0e2d8128-2f53-4491-bbec-663ea5853047.jpeg
   private readonly bucketName = this.configService.get<string>('S3_BUCKET');
   private readonly region = this.configService.get<string>('S3_REGION');
   private readonly s3BaseUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com`;
 
   async uploadFile(file: Express.Multer.File, key: string) {
+    console.log('this is the file', file.mimetype);
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,

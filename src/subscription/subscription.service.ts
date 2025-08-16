@@ -20,9 +20,22 @@ export class SubscriptionService {
   ) {}
   async create(createSubscriptionDto: CreateSubscriptionDto, manager: Manager) {
     const gym = await this.gymModel.findOne({ owner: manager._id.toString() });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const subscriptionDuration =
+      createSubscriptionDto.type === SubscriptionType.YEARLY_GYM
+        ? createSubscriptionDto.duration * 365
+        : createSubscriptionDto.type === SubscriptionType.MONTHLY_GYM
+          ? createSubscriptionDto.duration * 30
+          : createSubscriptionDto.duration;
+
     const subscription = await this.subscriptionModel.create({
-      ...createSubscriptionDto,
+      title: createSubscriptionDto.title,
+      type: createSubscriptionDto.type,
+      price: createSubscriptionDto.price,
       gym: gym.id,
+      duration: subscriptionDuration,
     });
     return subscription;
   }
@@ -45,11 +58,16 @@ export class SubscriptionService {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid subscription id');
     }
-
-    const subscription = await this.subscriptionModel.findByIdAndUpdate(
-      id,
-      updateSubscriptionDto,
-    );
+    const subscriptionDuration =
+      updateSubscriptionDto.type === SubscriptionType.YEARLY_GYM
+        ? updateSubscriptionDto.duration * 365
+        : updateSubscriptionDto.type === SubscriptionType.MONTHLY_GYM
+          ? updateSubscriptionDto.duration * 30
+          : updateSubscriptionDto.duration;
+    const subscription = await this.subscriptionModel.findByIdAndUpdate(id, {
+      ...updateSubscriptionDto,
+      duration: subscriptionDuration,
+    });
     if (!subscription) {
       throw new NotFoundException('Subscription not found');
     }

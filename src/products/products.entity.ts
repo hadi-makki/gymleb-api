@@ -2,6 +2,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
+import { Media } from '../media/media.entity';
+import { Gym } from 'src/gym/entities/gym.entity';
 
 export type ProductDocument = Product & Document;
 
@@ -16,6 +18,12 @@ export class Product {
   @Prop({ type: Number, required: true })
   price: number;
 
+  @Prop({ type: String, required: false })
+  description: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Media', required: false })
+  image: Media;
+
   @Prop({
     type: [{ type: Types.ObjectId, ref: 'SubscriptionInstance' }],
     default: [],
@@ -24,6 +32,9 @@ export class Product {
 
   @Prop({ type: Number, default: 600 })
   maxDurationSeconds: number;
+
+  @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
+  gym: Gym;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

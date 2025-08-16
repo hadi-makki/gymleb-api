@@ -44,6 +44,7 @@ export class ManagerAuthGuard implements CanActivate {
     const userId = validatedData?.sub;
 
     if (!userId) {
+      console.log('Unauthorized');
       throw new UnauthorizedException('Unauthorized');
     }
 
@@ -51,12 +52,17 @@ export class ManagerAuthGuard implements CanActivate {
       .findById(userId)
       .populate('roles');
 
+    console.log(manager);
+
     if (
       !manager ||
       !requiredRoles.some((role) => manager.roles.includes(role))
     ) {
+      console.log('Unauthorized');
       throw new UnauthorizedException('Unauthorized');
     }
+
+    console.log(manager);
 
     request.user = manager;
 

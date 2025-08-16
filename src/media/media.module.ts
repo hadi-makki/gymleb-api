@@ -8,6 +8,7 @@ import { UserService } from '../user/user.service';
 import { MediaController } from './media.controller';
 import { Media, MediaSchema } from './media.entity';
 import { MediaService } from './media.service';
+import { AuthenticationModule } from 'src/common/AuthModule.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { MediaService } from './media.service';
       { name: User.name, schema: UserSchema },
       { name: Token.name, schema: TokenSchema },
     ]),
+    AuthenticationModule,
   ],
   controllers: [MediaController],
   providers: [MediaService, S3Service, ConfigService, UserService],
