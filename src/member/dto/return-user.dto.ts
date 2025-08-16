@@ -14,6 +14,7 @@ export class ReturnUserDto {
   currentActiveSubscription: any;
   isNotified: boolean;
   lastSubscription: any;
+  profileImage: string;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

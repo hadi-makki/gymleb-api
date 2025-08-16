@@ -47,6 +47,9 @@ export class SubscriptionInstance extends MainEntity {
 
   @Prop({ type: String, required: false })
   paidBy: string;
+
+  @Prop({ type: Boolean, required: false, default: false })
+  isInvalidated: boolean;
 }
 
 export const SubscriptionInstanceSchema =

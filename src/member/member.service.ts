@@ -15,6 +15,7 @@ import { LoginMemberDto } from './dto/login-member.dto';
 import { TokenService } from '../token/token.service';
 import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 import { paginateModel } from '../utils/pagination';
+import { MediaService } from 'src/media/media.service';
 
 @Injectable()
 export class MemberService {
@@ -27,6 +28,7 @@ export class MemberService {
     private subscriptionModel: Model<Subscription>,
     private readonly subscriptionInstanceService: SubscriptionInstanceService,
     private readonly tokenService: TokenService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async returnMember(member: Member): Promise<ReturnUserDto> {
@@ -41,7 +43,8 @@ export class MemberService {
       (subscriptionInstance) => {
         return (
           subscriptionInstance?.endDate &&
-          new Date(subscriptionInstance.endDate) > new Date()
+          new Date(subscriptionInstance.endDate) > new Date() &&
+          !subscriptionInstance.isInvalidated
         );
       },
     );
@@ -49,7 +52,8 @@ export class MemberService {
       (subscriptionInstance) => {
         return (
           subscriptionInstance?.endDate &&
-          new Date(subscriptionInstance.endDate) > new Date()
+          new Date(subscriptionInstance.endDate) > new Date() &&
+          !subscriptionInstance.isInvalidated
         );
       },
     );
@@ -71,6 +75,7 @@ export class MemberService {
       currentActiveSubscription: currentActiveSubscription,
       lastSubscription: lastSubscription,
       isNotified: member.isNotified,
+      profileImage: member.profileImage,
     };
   }
 
@@ -237,6 +242,8 @@ export class MemberService {
         options: { sort: { createdAt: -1 } },
       });
 
+    console.log('member', member.profileImage);
+
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -400,9 +407,13 @@ export class MemberService {
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
-        return new Date(latestSubscriptionInstance.endDate) < new Date();
+        return (
+          new Date(latestSubscriptionInstance.endDate) < new Date() ||
+          latestSubscriptionInstance.isInvalidated
+        );
       })
       .map((member) => member._id);
+    console.log('expiredMemberIds', expiredMemberIds);
 
     // Use pagination utility with the filtered IDs
     const result = await paginateModel(this.memberModel, {
@@ -526,5 +537,34 @@ export class MemberService {
       member.passCode = `${member.phone}${member.name.slice(0, 1).toLowerCase()}`;
       await member.save();
     }
+  }
+
+  async updateProfileImage(
+    id: string,
+    image: Express.Multer.File,
+    manager: Manager,
+  ) {
+    const member = await this.memberModel.findById(id);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    if (image) {
+      if (member.profileImage) {
+        await this.mediaService.delete(member.profileImage);
+      }
+      const imageData = await this.mediaService.upload(image, manager.id);
+      await this.memberModel.findByIdAndUpdate(id, {
+        profileImage: imageData.id,
+      });
+      console.log('imageData', imageData);
+    } else {
+      if (member.profileImage) {
+        await this.mediaService.delete(member.profileImage);
+      }
+      await this.memberModel.findByIdAndUpdate(id, {
+        profileImage: null,
+      });
+    }
+    return { message: 'Profile image updated successfully' };
   }
 }

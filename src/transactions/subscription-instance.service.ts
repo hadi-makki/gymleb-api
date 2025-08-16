@@ -179,12 +179,14 @@ export class SubscriptionInstanceService {
       throw new NotFoundException('Member not found');
     }
     const activeSubscriptionInstance = member.subscriptionInstances.find(
-      (instance) => isAfter(new Date(instance.endDate), new Date()),
+      (instance) =>
+        isAfter(new Date(instance.endDate), new Date()) &&
+        !instance.isInvalidated,
     );
     if (!activeSubscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }
-    activeSubscriptionInstance.endDate = subDays(new Date(), 1).toISOString();
+    activeSubscriptionInstance.isInvalidated = true;
     await activeSubscriptionInstance.save();
   }
 

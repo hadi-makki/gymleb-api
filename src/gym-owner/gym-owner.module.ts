@@ -14,6 +14,7 @@ import {
 import { SubscriptionInstanceModule } from '../transactions/subscription-instance.module';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { MemberService } from 'src/member/member.service';
+import { MediaModule } from 'src/media/media.module';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -25,6 +26,7 @@ import { MemberService } from 'src/member/member.service';
     ]),
     AuthenticationModule,
     SubscriptionInstanceModule,
+    MediaModule,
   ],
   controllers: [GymOwnerController],
   providers: [GymOwnerService, SubscriptionService, MemberService],

@@ -38,6 +38,9 @@ export class Member extends MainEntity {
 
   @Prop({ type: Boolean, default: false })
   isNotified: boolean;
+
+  @Prop({ type: String, required: false })
+  profileImage: string;
 }
 
 export const MemberSchema = SchemaFactory.createForClass(Member);

@@ -9,6 +9,9 @@ import {
   UseGuards,
   Res,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { MemberService } from './member.service';
 import { CreateMemberDto } from './dto/create-member.dto';
@@ -25,6 +28,18 @@ import { LoginMemberDto } from './dto/login-member.dto';
 import { Request, Response } from 'express';
 import { cookieOptions } from 'src/utils/constants';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ParseFilePipe, MaxFileSizeValidator } from '@nestjs/common';
+import {
+  ApiConsumes,
+  ApiOperation,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+} from '@nestjs/swagger';
+import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
+import { WebpPipe } from 'src/pipes/webp.pipe';
+import { validateImage } from 'src/utils/helprt-functions';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -154,5 +169,41 @@ export class MemberController {
   @Post('fix-usernames-and-passcodes')
   async fixMemberUsernamesAndPasscodes() {
     return await this.memberService.fixMemberUsernamesAndPasscodes();
+  }
+
+  @Post('update-profile-image/:id')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Update profile image',
+    description: "Update a member's profile image with image upload",
+  })
+  @ApiCreatedResponse({
+    type: SuccessMessageReturn,
+    description: 'Profile image updated successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  @Roles(Role.GymOwner)
+  @UseInterceptors(FileInterceptor('image'))
+  @UseGuards(ManagerAuthGuard)
+  async updateProfileImage(
+    @User() manager: Manager,
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+        ],
+        fileIsRequired: false,
+      }),
+      new WebpPipe(),
+    )
+    file?: Express.Multer.File,
+  ) {
+    if (file && !validateImage(file)) {
+      throw new BadRequestException('File must be an image');
+    }
+    return await this.memberService.updateProfileImage(id, file, manager);
   }
 }

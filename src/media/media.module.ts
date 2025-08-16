@@ -21,5 +21,6 @@ import { AuthenticationModule } from 'src/common/AuthModule.module';
   ],
   controllers: [MediaController],
   providers: [MediaService, S3Service, ConfigService, UserService],
+  exports: [MediaService, MongooseModule],
 })
 export class MediaModule {}

@@ -10,6 +10,7 @@ import { SubscriptionInstanceModule } from '../transactions/subscription-instanc
 import { Member, MemberSchema } from './entities/member.entity';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
+import { MediaModule } from 'src/media/media.module';
 @Module({
   imports: [
     AuthenticationModule,
@@ -19,6 +20,7 @@ import { MemberService } from './member.service';
       { name: Subscription.name, schema: SubscriptionSchema },
     ]),
     SubscriptionInstanceModule,
+    MediaModule,
   ],
   controllers: [MemberController],
   providers: [MemberService],
