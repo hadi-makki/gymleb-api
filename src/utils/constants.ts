@@ -11,3 +11,6 @@ export const cookieOptions: CookieOptions = {
   maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
   domain: cookieDomain,
 };
+
+export const imageTypes =
+  /^image\/(jpeg|png|gif|bmp|webp|jpg|heic|heif|avif|tiff|svg|ico)$/;

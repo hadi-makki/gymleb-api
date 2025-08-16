@@ -39,6 +39,7 @@ import { Role } from 'src/decorators/roles/role.enum';
 import { Roles } from 'src/decorators/roles/Role';
 import { Manager } from 'src/manager/manager.entity';
 import { WebpPipe } from 'src/pipes/webp.pipe';
+import { imageTypes } from 'src/utils/constants';
 
 @ApiTags('Products')
 @Controller('products')
@@ -96,7 +97,9 @@ export class ProductsController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({ fileType: 'image/*' }),
+          new FileTypeValidator({
+            fileType: imageTypes,
+          }), // Specific image types
         ],
         fileIsRequired: false,
       }),
@@ -135,7 +138,9 @@ export class ProductsController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({ fileType: 'image/*' }),
+          new FileTypeValidator({
+            fileType: imageTypes,
+          }), // Specific image types
         ],
         fileIsRequired: false,
       }),
