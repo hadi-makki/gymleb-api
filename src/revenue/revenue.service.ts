@@ -6,20 +6,43 @@ import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
 import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
+import { Product } from 'src/products/products.entity';
+import { BadRequestException } from 'src/error/bad-request-error';
 
 @Injectable()
 export class RevenueService {
   constructor(
     @InjectModel(Revenue.name) private revenueModel: Model<RevenueDocument>,
     @InjectModel(Gym.name) private gymModel: Model<Gym>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
   ) {}
 
   async create(manager: Manager, dto: CreateRevenueDto) {
     const gym = await this.gymModel.findOne({ owner: manager.id });
     if (!gym) throw new NotFoundException('Gym not found');
 
+    const product = await this.productModel.findOne({
+      _id: dto.productId,
+    });
+
+    if (!product && dto.productId)
+      throw new NotFoundException('Product not found');
+
+    if (!product && !dto.numberSold && dto.productId) {
+      throw new BadRequestException('Product or number sold is required');
+    }
+    const amount =
+      product && dto.numberSold ? product.price * dto.numberSold : dto.amount;
+    const title =
+      product && dto.numberSold
+        ? `Sold ${dto.numberSold} ${product.name}`
+        : dto.title;
+
     const revenue = new this.revenueModel({
-      ...dto,
+      title,
+      amount,
+      category: dto.category,
+      notes: dto.notes,
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: new Types.ObjectId(gym.id),
     });

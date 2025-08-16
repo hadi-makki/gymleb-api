@@ -22,6 +22,7 @@ import { SubscriptionInstanceService } from '../transactions/subscription-instan
 import { Types } from 'mongoose';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { MemberService } from 'src/member/member.service';
+import { GymService } from 'src/gym/gym.service';
 @Injectable()
 export class GymOwnerService {
   constructor(
@@ -40,6 +41,7 @@ export class GymOwnerService {
     private readonly subscriptionInstanceService: SubscriptionInstanceService,
     private readonly subscriptionService: SubscriptionService,
     private readonly memberService: MemberService,
+    private readonly gymService: GymService,
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
@@ -254,10 +256,32 @@ export class GymOwnerService {
         });
       }
 
+      const mockNote =
+        'Welcome to our state-of-the-art fitness facility! We offer premium equipment and expert guidance.';
+      const mockOffers = {
+        offers: [
+          {
+            description: 'Get a 10% discount on all products',
+          },
+        ],
+      };
+
+      const mockWomensTimes = [
+        {
+          day: 'Monday',
+          from: '10:00',
+          to: '12:00',
+        },
+      ];
+      await this.gymService.addGymOffer(gymOwner, mockOffers);
+      await this.gymService.updateGymNote(gymOwner, mockNote);
+      await this.gymService.setWomensTimes(gymOwner, mockWomensTimes);
+
       console.log(`Mock data generated successfully for gym: ${gym.name}`);
       console.log(`- Created ${mockMembers.length} members`);
       console.log(`- Created ${mockExpenses.length} expenses`);
       console.log(`- Created ${mockRevenues.length} revenue entries`);
+      console.log(`- Updated gym offers`);
       console.log(`- Updated gym note`);
     } catch (error) {
       console.error('Error generating mock data:', error);
