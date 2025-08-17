@@ -3,9 +3,9 @@ import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { Media } from '../media/media.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { MainEntity } from 'src/main-classes/mainEntity';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { MainEntity } from '../main-classes/mainEntity';
+import { Transaction } from '../transactions/transaction.entity';
 
 export type ProductDocument = Product & Document;
 

@@ -26,11 +26,11 @@ import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
-} from 'src/error/api-responses.decorator';
+} from '../error/api-responses.decorator';
 import { Response } from 'express';
-import { AuthGuard } from 'src/guards/auth.guard';
-import { User } from 'src/decorators/users.decorator';
-import { User as UserEntity } from 'src/user/user.entity';
+import { AuthGuard } from '../guards/auth.guard';
+import { User } from '../decorators/users.decorator';
+import { User as UserEntity } from '../user/user.entity';
 
 class File {
   @ApiProperty({

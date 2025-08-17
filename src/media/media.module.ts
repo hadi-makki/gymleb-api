@@ -8,7 +8,7 @@ import { UserService } from '../user/user.service';
 import { MediaController } from './media.controller';
 import { Media, MediaSchema } from './media.entity';
 import { MediaService } from './media.service';
-import { AuthenticationModule } from 'src/common/AuthModule.module';
+import { AuthenticationModule } from '../common/AuthModule.module';
 
 @Module({
   imports: [

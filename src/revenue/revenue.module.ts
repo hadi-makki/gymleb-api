@@ -5,12 +5,12 @@ import { RevenueController } from './revenue.controller';
 import { RevenueService } from './revenue.service';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
-import { Product, ProductSchema } from 'src/products/products.entity';
+import { Product, ProductSchema } from '../products/products.entity';
 import {
   Transaction,
   TransactionSchema,
-} from 'src/transactions/transaction.entity';
-import { TransactionModule } from 'src/transactions/subscription-instance.module';
+} from '../transactions/transaction.entity';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 
 @Module({
   imports: [

@@ -21,8 +21,8 @@ import { UnauthorizedException } from '../error/unauthorized-error';
 import { Role } from '../decorators/roles/role.enum';
 import { Transaction, TransactionType } from './transaction.entity';
 import { Types } from 'mongoose';
-import { Revenue } from 'src/revenue/revenue.entity';
-import { Expense } from 'src/expenses/expense.entity';
+import { Revenue } from '../revenue/revenue.entity';
+import { Expense } from '../expenses/expense.entity';
 @Injectable()
 export class TransactionService {
   constructor(

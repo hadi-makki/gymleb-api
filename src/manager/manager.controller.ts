@@ -41,10 +41,10 @@ import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
 import { ManagerService } from './manager.service';
-import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
+import { TransactionService } from '../transactions/subscription-instance.service';
 import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
-import { GymService } from 'src/gym/gym.service';
+import { GymService } from '../gym/gym.service';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
 import { v4 as uuidv4 } from 'uuid';
 @Controller('manager')

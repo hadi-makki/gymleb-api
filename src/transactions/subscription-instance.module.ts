@@ -3,11 +3,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TransactionController } from './subscription-instance.controller';
 import { TransactionService } from './subscription-instance.service';
 
-import { AuthenticationModule } from 'src/common/AuthModule.module';
+import { AuthenticationModule } from '../common/AuthModule.module';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from 'src/owner-subscriptions/owner-subscription.entity';
+} from '../owner-subscriptions/owner-subscription.entity';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import { Manager, ManagerSchema } from '../manager/manager.entity';
 import { Member, MemberSchema } from '../member/entities/member.entity';

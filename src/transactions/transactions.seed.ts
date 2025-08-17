@@ -3,9 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Transaction, TransactionType } from './transaction.entity';
 import { SubscriptionInstance } from './subscription-instance.entity';
-import { Member } from 'src/member/entities/member.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { Product } from 'src/products/products.entity';
+import { Member } from '../member/entities/member.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { Product } from '../products/products.entity';
 
 @Injectable({ scope: Scope.DEFAULT })
 export class TransactionSeeding implements OnModuleInit {

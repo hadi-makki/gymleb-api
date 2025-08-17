@@ -13,13 +13,13 @@ import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
 import { paginateModel } from '../utils/pagination';
 import { AddOfferDto } from './dto/add-offer.dto';
 import {
   Transaction,
   TransactionType,
-} from 'src/transactions/transaction.entity';
+} from '../transactions/transaction.entity';
 
 @Injectable()
 export class GymService {

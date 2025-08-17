@@ -6,10 +6,10 @@ import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
 import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
-import { Product } from 'src/products/products.entity';
-import { BadRequestException } from 'src/error/bad-request-error';
-import { TransactionType } from 'src/transactions/transaction.entity';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { Product } from '../products/products.entity';
+import { BadRequestException } from '../error/bad-request-error';
+import { TransactionType } from '../transactions/transaction.entity';
+import { TransactionService } from '../transactions/subscription-instance.service';
 
 @Injectable()
 export class RevenueService {

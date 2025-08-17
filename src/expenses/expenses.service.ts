@@ -6,7 +6,7 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/subscription-instance.service';
 
 @Injectable()
 export class ExpensesService {

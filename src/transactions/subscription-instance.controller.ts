@@ -9,8 +9,8 @@ import { Roles } from '../decorators/roles/Role';
 import { Role } from '../decorators/roles/role.enum';
 import { TransactionService } from './subscription-instance.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { Manager } from 'src/manager/manager.entity';
-import { User } from 'src/decorators/users.decorator';
+import { Manager } from '../manager/manager.entity';
+import { User } from '../decorators/users.decorator';
 
 @Controller('transactions')
 @ApiTags('Transactions')

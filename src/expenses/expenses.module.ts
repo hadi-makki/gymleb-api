@@ -5,7 +5,7 @@ import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
-import { TransactionModule } from 'src/transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 
 @Module({
   imports: [

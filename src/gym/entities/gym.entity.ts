@@ -6,7 +6,7 @@ import { Manager } from '../../manager/manager.entity';
 import { PersonalTrainer } from '../../personal-trainers/entities/personal-trainer.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { Transaction } from '../../transactions/transaction.entity';
 
 @CustomSchema()
 export class Gym extends MainEntity {

@@ -12,9 +12,9 @@ import {
   SubscriptionSchema,
 } from '../subscription/entities/subscription.entity';
 import { TransactionModule } from '../transactions/subscription-instance.module';
-import { SubscriptionService } from 'src/subscription/subscription.service';
-import { MemberService } from 'src/member/member.service';
-import { MediaModule } from 'src/media/media.module';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { MemberService } from '../member/member.service';
+import { MediaModule } from '../media/media.module';
 @Module({
   imports: [
     MongooseModule.forFeature([

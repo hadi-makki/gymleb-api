@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { TransactionModule } from 'src/transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import {

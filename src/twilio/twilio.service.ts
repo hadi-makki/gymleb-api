@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException } from 'src/error/bad-request-error';
-import { GymService } from 'src/gym/gym.service';
-import { Manager } from 'src/manager/manager.entity';
-import { MemberService } from 'src/member/member.service';
+import { BadRequestException } from '../error/bad-request-error';
+import { GymService } from '../gym/gym.service';
+import { Manager } from '../manager/manager.entity';
+import { MemberService } from '../member/member.service';
 
 import { Twilio } from 'twilio';
 

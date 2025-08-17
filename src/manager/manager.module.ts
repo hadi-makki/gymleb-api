@@ -3,8 +3,8 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AuthenticationModule } from 'src/common/AuthModule.module';
-import { TransactionModule } from 'src/transactions/subscription-instance.module';
+import { AuthenticationModule } from '../common/AuthModule.module';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 import { AuthService } from '../auth/auth.service';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 import {

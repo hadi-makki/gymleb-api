@@ -5,10 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { GymService } from 'src/gym/gym.service';
-import { MemberService } from 'src/member/member.service';
-import { SubscriptionService } from 'src/subscription/subscription.service';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { GymService } from '../gym/gym.service';
+import { MemberService } from '../member/member.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { Transaction } from '../transactions/transaction.entity';
 import { Role } from '../decorators/roles/role.enum';
 import { Expense } from '../expenses/expense.entity';
 import { Gym } from '../gym/entities/gym.entity';

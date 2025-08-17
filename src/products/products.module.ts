@@ -10,7 +10,7 @@ import { MediaService } from '../media/media.service';
 import { S3Service } from '../s3/s3.service';
 import { UserService } from '../user/user.service';
 import { ConfigService } from '@nestjs/config';
-import { AuthenticationModule } from 'src/common/AuthModule.module';
+import { AuthenticationModule } from '../common/AuthModule.module';
 
 @Module({
   imports: [

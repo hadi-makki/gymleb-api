@@ -11,18 +11,18 @@ import { UserService } from '../user/user.service';
 import { ManagerService } from '../manager/manager.service';
 import { Manager, ManagerSchema } from '../manager/manager.entity';
 import { Member, MemberSchema } from '../member/entities/member.entity';
-import { GymService } from 'src/gym/gym.service';
-import { Gym, GymSchema } from 'src/gym/entities/gym.entity';
-import { Expense, ExpenseSchema } from 'src/expenses/expense.entity';
+import { GymService } from '../gym/gym.service';
+import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Expense, ExpenseSchema } from '../expenses/expense.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from 'src/owner-subscriptions/owner-subscription.entity';
-import { Revenue, RevenueSchema } from 'src/revenue/revenue.entity';
+} from '../owner-subscriptions/owner-subscription.entity';
+import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
 import {
   Transaction,
   TransactionSchema,
-} from 'src/transactions/transaction.entity';
+} from '../transactions/transaction.entity';
 @Module({
   imports: [
     MongooseModule.forFeature([

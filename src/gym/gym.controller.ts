@@ -21,9 +21,9 @@ import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
-import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { AddOfferDto } from './dto/add-offer.dto';
-import { TransactionType } from 'src/transactions/transaction.entity';
+import { TransactionType } from '../transactions/transaction.entity';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {

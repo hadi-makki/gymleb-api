@@ -10,7 +10,7 @@ import { TransactionModule } from '../transactions/subscription-instance.module'
 import { Member, MemberSchema } from './entities/member.entity';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
-import { MediaModule } from 'src/media/media.module';
+import { MediaModule } from '../media/media.module';
 @Module({
   imports: [
     AuthenticationModule,

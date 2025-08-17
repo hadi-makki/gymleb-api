@@ -12,11 +12,11 @@ import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from 'src/owner-subscriptions/owner-subscription.entity';
+} from '../owner-subscriptions/owner-subscription.entity';
 import {
   Transaction,
   TransactionSchema,
-} from 'src/transactions/transaction.entity';
+} from '../transactions/transaction.entity';
 @Module({
   imports: [
     AuthenticationModule,

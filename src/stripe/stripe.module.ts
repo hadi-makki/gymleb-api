@@ -15,7 +15,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   Transaction,
   TransactionSchema,
-} from 'src/transactions/transaction.entity';
+} from '../transactions/transaction.entity';
 
 @Module({
   imports: [

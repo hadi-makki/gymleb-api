@@ -12,8 +12,8 @@ import {
 import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.entity';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.entity';
-import { Revenue } from 'src/revenue/revenue.entity';
-import { Expense } from 'src/expenses/expense.entity';
+import { Revenue } from '../revenue/revenue.entity';
+import { Expense } from '../expenses/expense.entity';
 export type TransactionDocument = Transaction & Document;
 
 export enum TransactionType {

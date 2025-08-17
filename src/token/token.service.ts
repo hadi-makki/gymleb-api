@@ -12,7 +12,7 @@ import { Member } from '../member/entities/member.entity';
 import { GenerateTokenDTO } from './token.dto';
 import TokenEntity from './token.entity';
 import { User } from '../user/user.entity';
-import { cookieOptions } from 'src/utils/constants';
+import { cookieOptions } from '../utils/constants';
 @Injectable()
 export class TokenService {
   constructor(

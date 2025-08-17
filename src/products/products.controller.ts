@@ -25,7 +25,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { User } from '../decorators/users.decorator';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { User as UserEntity } from '../user/user.entity';
@@ -35,13 +35,13 @@ import {
   UploadFileDto,
 } from './dto/create-product.dto';
 import { ProductsService } from './products.service';
-import { Role } from 'src/decorators/roles/role.enum';
-import { Roles } from 'src/decorators/roles/Role';
-import { Manager } from 'src/manager/manager.entity';
-import { WebpPipe } from 'src/pipes/webp.pipe';
-import { imageTypes } from 'src/utils/constants';
-import { validateImage } from 'src/utils/helprt-functions';
-import { BadRequestException } from 'src/error/bad-request-error';
+import { Role } from '../decorators/roles/role.enum';
+import { Roles } from '../decorators/roles/Role';
+import { Manager } from '../manager/manager.entity';
+import { WebpPipe } from '../pipes/webp.pipe';
+import { imageTypes } from '../utils/constants';
+import { validateImage } from '../utils/helprt-functions';
+import { BadRequestException } from '../error/bad-request-error';
 
 @ApiTags('Products')
 @Controller('products')

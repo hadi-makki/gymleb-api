@@ -26,7 +26,7 @@ import { AuthGuard } from '../guards/auth.guard';
 import { Member } from './entities/member.entity';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { Request, Response } from 'express';
-import { cookieOptions } from 'src/utils/constants';
+import { cookieOptions } from '../utils/constants';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ParseFilePipe, MaxFileSizeValidator } from '@nestjs/common';
@@ -37,9 +37,9 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
-import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
-import { WebpPipe } from 'src/pipes/webp.pipe';
-import { validateImage } from 'src/utils/helprt-functions';
+import { SuccessMessageReturn } from '../main-classes/success-message-return';
+import { WebpPipe } from '../pipes/webp.pipe';
+import { validateImage } from '../utils/helprt-functions';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}

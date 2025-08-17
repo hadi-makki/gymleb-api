@@ -4,12 +4,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isMongoId } from 'class-validator';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { Model, Types } from 'mongoose';
-import { Expense } from 'src/expenses/expense.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { GymService } from 'src/gym/gym.service';
-import { Member } from 'src/member/entities/member.entity';
-import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
-import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
+import { Expense } from '../expenses/expense.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { GymService } from '../gym/gym.service';
+import { Member } from '../member/entities/member.entity';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { returnManager } from '../functions/returnUser';
@@ -21,7 +21,7 @@ import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dt
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { Transaction } from '../transactions/transaction.entity';
 @Injectable()
 export class ManagerService {
   constructor(
@@ -212,16 +212,14 @@ export class ManagerService {
     );
     const ownersCount = ownersSet.size;
 
-    const lastMonthTransactions =
-      await this.transactionModel.find({
-        ...baseFilter,
-        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
-      });
-    const currentMonthTransactions =
-      await this.transactionModel.find({
-        ...baseFilter,
-        createdAt: { $gte: currentMonthStart },
-      });
+    const lastMonthTransactions = await this.transactionModel.find({
+      ...baseFilter,
+      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+    });
+    const currentMonthTransactions = await this.transactionModel.find({
+      ...baseFilter,
+      createdAt: { $gte: currentMonthStart },
+    });
 
     const lastMonthRevenue = lastMonthTransactions.reduce(
       (sum, t) => sum + (t.paidAmount || 0),

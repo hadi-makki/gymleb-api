@@ -5,8 +5,8 @@ import { Product } from './products.entity';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { User } from '../user/user.entity';
 import { MediaService } from '../media/media.service';
-import { Manager } from 'src/manager/manager.entity';
-import { GymService } from 'src/gym/gym.service';
+import { Manager } from '../manager/manager.entity';
+import { GymService } from '../gym/gym.service';
 import { isMongoId } from 'class-validator';
 
 @Injectable()

@@ -1,10 +1,10 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { Roles } from 'src/decorators/roles/Role';
-import { Role } from 'src/decorators/roles/role.enum';
-import { User } from 'src/decorators/users.decorator';
-import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
-import { Manager } from 'src/manager/manager.entity';
+import { Roles } from '../decorators/roles/Role';
+import { Role } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { Manager } from '../manager/manager.entity';
 import { CreateTwilioDto } from './dto/create-twilio.dto';
 import { TwilioService } from './twilio.service';
 

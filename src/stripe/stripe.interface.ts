@@ -1,9 +1,9 @@
-import { Member } from 'src/member/entities/member.entity';
+import { Member } from '../member/entities/member.entity';
 import {
   Subscription,
   SubscriptionType,
 } from '../subscription/entities/subscription.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.entity';
 
 export interface PaymentDetails {
   subscription: Subscription;

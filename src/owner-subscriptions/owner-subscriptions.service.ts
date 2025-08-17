@@ -8,7 +8,7 @@ import {
   AssignOwnerSubscriptionDto,
   CreateOwnerSubscriptionTypeDto,
 } from './dto';
-import { Manager } from 'src/manager/manager.entity';
+import { Manager } from '../manager/manager.entity';
 import { TransactionService } from '../transactions/subscription-instance.service';
 
 @Injectable()
