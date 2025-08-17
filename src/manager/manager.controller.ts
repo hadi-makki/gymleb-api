@@ -42,7 +42,7 @@ import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
 import { ManagerService } from './manager.service';
 import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
-import { SubscriptionInstanceService } from 'src/transactions/subscription-instance.service';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
 import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
 import { GymService } from 'src/gym/gym.service';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
@@ -54,7 +54,7 @@ export class ManagerController {
   constructor(
     private readonly ManagerService: ManagerService,
     private readonly AuthService: AuthService,
-    private readonly SubscriptionInstanceService: SubscriptionInstanceService,
+    private readonly TransactionService: TransactionService,
     private readonly GymService: GymService,
   ) {}
 
@@ -211,9 +211,7 @@ export class ManagerController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: [SubscriptionInstance] })
   async getTransactions(@User() user: Manager) {
-    return await this.SubscriptionInstanceService.findAllSubscriptionInstances(
-      user.id,
-    );
+    return await this.TransactionService.findAllSubscriptionInstances(user.id);
   }
 
   @Get('get/analytics')

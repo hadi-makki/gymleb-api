@@ -8,14 +8,15 @@ import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { NotFoundException } from '../error/not-found-error';
 import { Subscription } from '../subscription/entities/subscription.entity';
-import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/subscription-instance.service';
 import { isMongoId, isUUID } from 'class-validator';
 import { BadRequestException } from '../error/bad-request-error';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { TokenService } from '../token/token.service';
 import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 import { paginateModel } from '../utils/pagination';
-import { MediaService } from 'src/media/media.service';
+import { MediaService } from '../media/media.service';
+import { Transaction } from '../transactions/transaction.entity';
 
 @Injectable()
 export class MemberService {
@@ -26,9 +27,11 @@ export class MemberService {
     private gymModel: Model<Gym>,
     @InjectModel(Subscription.name)
     private subscriptionModel: Model<Subscription>,
-    private readonly subscriptionInstanceService: SubscriptionInstanceService,
+    private readonly transactionService: TransactionService,
     private readonly tokenService: TokenService,
     private readonly mediaService: MediaService,
+    @InjectModel(Transaction.name)
+    private readonly transactionModel: Model<Transaction>,
   ) {}
 
   async returnMember(member: Member): Promise<ReturnUserDto> {
@@ -37,9 +40,9 @@ export class MemberService {
     }
 
     // Ensure subscriptionInstances is an array
-    const subscriptionInstances = member.subscriptionInstances || [];
+    const subscriptionTransactions = member.transactions || [];
 
-    const checkActiveSubscription = subscriptionInstances.some(
+    const checkActiveSubscription = subscriptionTransactions.some(
       (subscriptionInstance) => {
         return (
           subscriptionInstance?.endDate &&
@@ -48,7 +51,7 @@ export class MemberService {
         );
       },
     );
-    const currentActiveSubscription = subscriptionInstances.find(
+    const currentActiveSubscription = subscriptionTransactions.find(
       (subscriptionInstance) => {
         return (
           subscriptionInstance?.endDate &&
@@ -58,7 +61,7 @@ export class MemberService {
       },
     );
     const lastSubscription =
-      subscriptionInstances[subscriptionInstances.length - 1];
+      subscriptionTransactions[subscriptionTransactions.length - 1];
     return {
       id: member.id,
       name: member.name,
@@ -68,7 +71,7 @@ export class MemberService {
       passCode: member.passCode,
       gym: member.gym,
       subscription: member.subscription,
-      subscriptionInstances: member.subscriptionInstances,
+      subscriptionTransactions: member.transactions,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
       hasActiveSubscription: checkActiveSubscription,
@@ -143,10 +146,10 @@ export class MemberService {
       passCode: `${phoneNumber}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
     });
     const subscriptionInstance =
-      await this.subscriptionInstanceService.createSubscriptionInstance({
-        memberId: member.id,
-        gymId: gym.id,
-        subscriptionId: subscription.id,
+      await this.transactionService.createSubscriptionInstance({
+        member: member,
+        gym: gym,
+        subscription: subscription,
         subscriptionType: subscription.type,
         amount: subscription.price,
         giveFullDay: createMemberDto.giveFullDay,
@@ -154,18 +157,18 @@ export class MemberService {
         endDate: createMemberDto.endDate,
       });
 
-    member.subscriptionInstances = [subscriptionInstance.id];
+    member.transactions = [subscriptionInstance.id];
 
     await member.save();
 
-    gym.subscriptionInstances.push(subscriptionInstance.id);
+    gym.transactions.push(subscriptionInstance.id);
     await gym.save();
 
     const newMember = await this.memberModel
       .findById(member.id)
       .populate('gym')
       .populate('subscription')
-      .populate('subscriptionInstances');
+      .populate('transactions');
 
     return await this.returnMember(newMember);
   }
@@ -181,7 +184,7 @@ export class MemberService {
       })
       .populate('gym')
       .populate('subscription')
-      .populate('subscriptionInstances');
+      .populate('transactions');
     if (!member) {
       throw new BadRequestException('Invalid passcode or username');
     }
@@ -212,7 +215,7 @@ export class MemberService {
       populate: [
         { path: 'gym' },
         { path: 'subscription' },
-        { path: 'subscriptionInstances' },
+        { path: 'transactions' },
       ],
       page,
       limit,
@@ -237,7 +240,7 @@ export class MemberService {
       .populate('gym')
       .populate('subscription')
       .populate({
-        path: 'subscriptionInstances',
+        path: 'transactions',
         populate: { path: 'subscription' },
         options: { sort: { createdAt: -1 } },
       });
@@ -262,7 +265,7 @@ export class MemberService {
 
     const member = await this.memberModel
       .findById(id)
-      .populate('subscriptionInstances')
+      .populate('transactions')
       .populate('subscription');
 
     if (!member) {
@@ -284,7 +287,7 @@ export class MemberService {
         throw new BadRequestException('Invalid subscription id');
       }
 
-      checkSubscription = await this.subscriptionModel.findById(subscriptionId);
+      checkSubscription = await this.transactionModel.findById(subscriptionId);
 
       if (!checkSubscription) {
         throw new NotFoundException('Subscription not found');
@@ -302,8 +305,8 @@ export class MemberService {
       await member.save();
     } else {
       // Use existing subscription logic
-      if (member.subscriptionInstances.length > 0) {
-        const getLatestSubscriptionInstance = member.subscriptionInstances.sort(
+      if (member.transactions.length > 0) {
+        const getLatestSubscriptionInstance = member.transactions.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
@@ -325,21 +328,21 @@ export class MemberService {
     }
 
     const createSubscriptionInstance =
-      await this.subscriptionInstanceService.createSubscriptionInstance({
-        memberId: member.id,
-        gymId: checkGym.id,
-        subscriptionId: checkSubscription.id,
+      await this.transactionService.createSubscriptionInstance({
+        member: member,
+        gym: checkGym,
+        subscription: checkSubscription,
         subscriptionType: checkSubscription.type,
         amount: checkSubscription.price,
         giveFullDay,
       });
 
-    member.subscriptionInstances.push(createSubscriptionInstance.id);
+    member.transactions.push(createSubscriptionInstance.id);
     member.isNotified = false;
 
     await member.save();
 
-    checkGym.subscriptionInstances.push(createSubscriptionInstance.id);
+    checkGym.transactions.push(createSubscriptionInstance.id);
     await checkGym.save();
 
     return {
@@ -396,14 +399,14 @@ export class MemberService {
         gym: gym.id,
         ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
       })
-      .populate('subscriptionInstances')
+      .populate('transactions')
       .populate('subscription')
       .lean();
 
     // Filter expired members
     const expiredMemberIds = allMembers
       .filter((member) => {
-        const latestSubscriptionInstance = member.subscriptionInstances.sort(
+        const latestSubscriptionInstance = member.transactions.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
@@ -424,7 +427,7 @@ export class MemberService {
       populate: [
         { path: 'gym' },
         { path: 'subscription' },
-        { path: 'subscriptionInstances' },
+        { path: 'transactions' },
       ],
       page,
       limit,
@@ -439,7 +442,7 @@ export class MemberService {
       .findById(id)
       .populate('gym')
       .populate('subscription')
-      .populate('subscriptionInstances');
+      .populate('transactions');
 
     return await this.returnMember(checkMember);
   }
@@ -452,7 +455,7 @@ export class MemberService {
       .findById(id)
       .populate('gym')
       .populate('subscription')
-      .populate('subscriptionInstances');
+      .populate('transactions');
     if (!checkMember) {
       throw new NotFoundException('Member not found');
     }
@@ -473,7 +476,7 @@ export class MemberService {
         _id: id,
         gym: gym.id,
       })
-      .populate('subscriptionInstances')
+      .populate('transactions')
       .populate('gym')
       .populate('subscription');
     if (!member) {
@@ -485,17 +488,20 @@ export class MemberService {
   async checkUserSubscriptionExpired(id: string) {
     const member = await this.memberModel
       .findById(id)
-      .populate('subscriptionInstances')
+      .populate('transactions')
       .populate('gym')
       .populate('subscription');
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    const latestSubscriptionInstance = member.subscriptionInstances.sort(
+    const latestSubscriptionInstance = member.transactions.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0];
-    if (new Date(latestSubscriptionInstance.endDate) < new Date()) {
+    if (
+      new Date(latestSubscriptionInstance.endDate) < new Date() ||
+      latestSubscriptionInstance.isInvalidated
+    ) {
       return true;
     }
     return false;
@@ -519,9 +525,7 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    await this.subscriptionInstanceService.invalidateSubscriptionInstance(
-      member.id,
-    );
+    await this.transactionService.invalidateSubscriptionInstance(member.id);
     await member.save();
   }
 
@@ -566,5 +570,16 @@ export class MemberService {
       });
     }
     return { message: 'Profile image updated successfully' };
+  }
+
+  async fixGymPhoneNumbers() {
+    const members = await this.memberModel.find();
+    for (const member of members) {
+      // if phone number does not start with +961, add it
+      if (!member.phone.startsWith('+961')) {
+        member.phone = `+961${member.phone}`;
+        await member.save();
+      }
+    }
   }
 }

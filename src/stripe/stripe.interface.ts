@@ -1,9 +1,14 @@
-import { SubscriptionType } from '../subscription/entities/subscription.entity';
+import { Member } from 'src/member/entities/member.entity';
+import {
+  Subscription,
+  SubscriptionType,
+} from '../subscription/entities/subscription.entity';
+import { Gym } from 'src/gym/entities/gym.entity';
 
 export interface PaymentDetails {
-  subscriptionId: string;
-  memberId: string;
-  gymId: string;
+  subscription: Subscription;
+  member: Member;
+  gym: Gym;
   subscriptionType: SubscriptionType;
   amount: number;
   // If true for daily subscriptions, grant a full 24 hours. If false/undefined, expire at end of day

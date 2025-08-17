@@ -13,16 +13,16 @@ import { Manager, ManagerSchema } from '../manager/manager.entity';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 import { GymService } from 'src/gym/gym.service';
 import { Gym, GymSchema } from 'src/gym/entities/gym.entity';
-import {
-  SubscriptionInstance,
-  SubscriptionInstanceSchema,
-} from 'src/transactions/subscription-instance.entity';
 import { Expense, ExpenseSchema } from 'src/expenses/expense.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
 } from 'src/owner-subscriptions/owner-subscription.entity';
 import { Revenue, RevenueSchema } from 'src/revenue/revenue.entity';
+import {
+  Transaction,
+  TransactionSchema,
+} from 'src/transactions/transaction.entity';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -31,7 +31,7 @@ import { Revenue, RevenueSchema } from 'src/revenue/revenue.entity';
       { name: User.name, schema: UserSchema },
       { name: Member.name, schema: MemberSchema },
       { name: Gym.name, schema: GymSchema },
-      { name: SubscriptionInstance.name, schema: SubscriptionInstanceSchema },
+      { name: Transaction.name, schema: TransactionSchema },
       { name: Expense.name, schema: ExpenseSchema },
       { name: Revenue.name, schema: RevenueSchema },
       { name: OwnerSubscription.name, schema: OwnerSubscriptionSchema },

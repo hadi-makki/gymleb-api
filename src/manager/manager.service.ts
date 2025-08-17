@@ -21,6 +21,7 @@ import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dt
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
+import { Transaction } from 'src/transactions/transaction.entity';
 @Injectable()
 export class ManagerService {
   constructor(
@@ -28,8 +29,6 @@ export class ManagerService {
     private readonly managerEntity: Model<Manager>,
     private readonly tokenService: TokenService,
     private readonly GymService: GymService,
-    @InjectModel(SubscriptionInstance.name)
-    private readonly subscriptionInstanceModel: Model<SubscriptionInstance>,
     @InjectModel(Gym.name)
     private readonly gymModel: Model<Gym>,
     @InjectModel(OwnerSubscription.name)
@@ -38,6 +37,8 @@ export class ManagerService {
     private readonly memberModel: Model<Member>,
     @InjectModel(Expense.name)
     private readonly expenseModel: Model<Expense>,
+    @InjectModel(Transaction.name)
+    private readonly transactionModel: Model<Transaction>,
   ) {}
 
   async createManager(
@@ -134,7 +135,7 @@ export class ManagerService {
       { owner: id },
       { owner: null },
     );
-    await this.subscriptionInstanceModel.deleteMany({ owner: id });
+    await this.transactionModel.deleteMany({ owner: id });
     await this.memberModel.deleteMany({ owner: id });
     await this.expenseModel.deleteMany({ owner: id });
     await this.tokenService.deleteTokensByUserId(id, deviceId);
@@ -182,7 +183,7 @@ export class ManagerService {
 
     const baseFilter: any = { isOwnerSubscriptionAssignment: true };
 
-    const subscriptionInstances = await this.subscriptionInstanceModel
+    const transactions = await this.transactionModel
       .find({
         ...baseFilter,
         ...(start || end
@@ -197,13 +198,13 @@ export class ManagerService {
       .populate('owner')
       .populate('ownerSubscriptionType');
 
-    const totalRevenue = subscriptionInstances.reduce(
+    const totalRevenue = transactions.reduce(
       (sum, t) => sum + (t.paidAmount || 0),
       0,
     );
-    const totalTransactions = subscriptionInstances.length;
+    const totalTransactions = transactions.length;
     const ownersSet = new Set(
-      subscriptionInstances
+      transactions
         .map(
           (t) => t.owner?.toString?.() || (t.owner as any)?._id?.toString?.(),
         )
@@ -211,22 +212,22 @@ export class ManagerService {
     );
     const ownersCount = ownersSet.size;
 
-    const lastMonthSubscriptionInstances =
-      await this.subscriptionInstanceModel.find({
+    const lastMonthTransactions =
+      await this.transactionModel.find({
         ...baseFilter,
         createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
       });
-    const currentMonthSubscriptionInstances =
-      await this.subscriptionInstanceModel.find({
+    const currentMonthTransactions =
+      await this.transactionModel.find({
         ...baseFilter,
         createdAt: { $gte: currentMonthStart },
       });
 
-    const lastMonthRevenue = lastMonthSubscriptionInstances.reduce(
+    const lastMonthRevenue = lastMonthTransactions.reduce(
       (sum, t) => sum + (t.paidAmount || 0),
       0,
     );
-    const currentMonthRevenue = currentMonthSubscriptionInstances.reduce(
+    const currentMonthRevenue = currentMonthTransactions.reduce(
       (sum, t) => sum + (t.paidAmount || 0),
       0,
     );
@@ -240,7 +241,7 @@ export class ManagerService {
       ownersCount,
       revenueChange,
       currentMonthRevenue,
-      currentMonthTransactions: currentMonthSubscriptionInstances.length,
+      currentMonthTransactions: currentMonthTransactions.length,
     };
   }
 

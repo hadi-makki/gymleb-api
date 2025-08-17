@@ -11,7 +11,7 @@ import {
   Subscription,
   SubscriptionSchema,
 } from '../subscription/entities/subscription.entity';
-import { SubscriptionInstanceModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { MemberService } from 'src/member/member.service';
 import { MediaModule } from 'src/media/media.module';
@@ -25,7 +25,7 @@ import { MediaModule } from 'src/media/media.module';
       { name: Subscription.name, schema: SubscriptionSchema },
     ]),
     AuthenticationModule,
-    SubscriptionInstanceModule,
+    TransactionModule,
     MediaModule,
   ],
   controllers: [GymOwnerController],

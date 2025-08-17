@@ -3,26 +3,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { GymService } from 'src/gym/gym.service';
+import { MemberService } from 'src/member/member.service';
+import { SubscriptionService } from 'src/subscription/subscription.service';
+import { Transaction } from 'src/transactions/transaction.entity';
+import { Role } from '../decorators/roles/role.enum';
+import { Expense } from '../expenses/expense.entity';
+import { Gym } from '../gym/entities/gym.entity';
+import { Manager } from '../manager/manager.entity';
+import { Revenue } from '../revenue/revenue.entity';
+import { Days } from '../seeder/gym.seeding';
+import { SubscriptionType } from '../subscription/entities/subscription.entity';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { Manager } from '../manager/manager.entity';
-import { Role } from '../decorators/roles/role.enum';
-import { Gym } from '../gym/entities/gym.entity';
-import { Days } from '../seeder/gym.seeding';
-import { Member } from '../member/entities/member.entity';
-import { Expense } from '../expenses/expense.entity';
-import { Revenue } from '../revenue/revenue.entity';
-import {
-  Subscription,
-  SubscriptionType,
-} from '../subscription/entities/subscription.entity';
-import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
-import { Types } from 'mongoose';
-import { SubscriptionService } from 'src/subscription/subscription.service';
-import { MemberService } from 'src/member/member.service';
-import { GymService } from 'src/gym/gym.service';
 @Injectable()
 export class GymOwnerService {
   constructor(
@@ -30,18 +25,15 @@ export class GymOwnerService {
     private readonly gymOwnerModel: Model<Manager>,
     @InjectModel(Gym.name)
     private readonly gymModel: Model<Gym>,
-    @InjectModel(Member.name)
-    private readonly memberModel: Model<Member>,
     @InjectModel(Expense.name)
     private readonly expenseModel: Model<Expense>,
     @InjectModel(Revenue.name)
     private readonly revenueModel: Model<Revenue>,
-    @InjectModel(Subscription.name)
-    private readonly subscriptionModel: Model<Subscription>,
-    private readonly subscriptionInstanceService: SubscriptionInstanceService,
     private readonly subscriptionService: SubscriptionService,
     private readonly memberService: MemberService,
     private readonly gymService: GymService,
+    @InjectModel(Transaction.name)
+    private readonly transactionModel: Model<Transaction>,
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
@@ -97,15 +89,23 @@ export class GymOwnerService {
 
     const gym = await this.gymModel.findById(checkGym.id).populate('owner');
 
-    await this.subscriptionService.create(
-      {
-        title: 'Monthly Membership',
-        type: SubscriptionType.MONTHLY_GYM,
-        price: 50.0,
-        duration: 30,
-      },
-      gymOwner,
-    );
+    await this.subscriptionService
+      .create(
+        {
+          title: 'Monthly Membership',
+          type: SubscriptionType.MONTHLY_GYM,
+          price: 50.0,
+          duration: 30,
+        },
+        gymOwner,
+      )
+      .catch(async (err) => {
+        // remove the gym owner from the gym
+        await this.gymModel.findByIdAndDelete(gym.id);
+        await this.gymOwnerModel.findByIdAndDelete(gymOwner.id);
+        console.log('this is the error', err);
+        throw new BadRequestException('Failed to create subscription', err);
+      });
 
     // Generate mock data if requested
     if (createGymOwnerDto.generateMockData) {
@@ -118,7 +118,7 @@ export class GymOwnerService {
   async generateMockDataForGym(gymOwner: Manager, gym: Gym) {
     try {
       // Get available subscriptions from the database
-      const subscriptions = await this.subscriptionModel.find().limit(10);
+      const subscriptions = await this.transactionModel.find().limit(10);
 
       if (subscriptions.length === 0) {
         console.log(

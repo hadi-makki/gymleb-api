@@ -6,6 +6,11 @@ import { RevenueService } from './revenue.service';
 import { Gym, GymSchema } from '../gym/entities/gym.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { Product, ProductSchema } from 'src/products/products.entity';
+import {
+  Transaction,
+  TransactionSchema,
+} from 'src/transactions/transaction.entity';
+import { TransactionModule } from 'src/transactions/subscription-instance.module';
 
 @Module({
   imports: [
@@ -14,7 +19,9 @@ import { Product, ProductSchema } from 'src/products/products.entity';
       { name: Revenue.name, schema: RevenueSchema },
       { name: Gym.name, schema: GymSchema },
       { name: Product.name, schema: ProductSchema },
+      { name: Transaction.name, schema: TransactionSchema },
     ]),
+    TransactionModule,
   ],
   controllers: [RevenueController],
   providers: [RevenueService],

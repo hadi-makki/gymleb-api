@@ -2,11 +2,8 @@ import { Module } from '@nestjs/common';
 import { StripeController } from './stripe.controller';
 import { StripeService } from './stripe.service';
 import { User, UserSchema } from '../user/user.entity';
-import {
-  SubscriptionInstance,
-  SubscriptionInstanceSchema,
-} from '../transactions/subscription-instance.entity';
-import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
+
+import { TransactionService } from '../transactions/subscription-instance.service';
 import { ConfigService } from '@nestjs/config';
 import { Manager, ManagerSchema } from '../manager/manager.entity';
 import { TokenService } from '../token/token.service';
@@ -15,12 +12,16 @@ import { JwtService } from '@nestjs/jwt';
 import { Product, ProductSchema } from '../products/products.entity';
 import { ProductsService } from '../products/products.service';
 import { MongooseModule } from '@nestjs/mongoose';
+import {
+  Transaction,
+  TransactionSchema,
+} from 'src/transactions/transaction.entity';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
-      { name: SubscriptionInstance.name, schema: SubscriptionInstanceSchema },
+      { name: Transaction.name, schema: TransactionSchema },
       { name: Manager.name, schema: ManagerSchema },
       { name: Token.name, schema: TokenSchema },
       { name: Product.name, schema: ProductSchema },
@@ -28,7 +29,7 @@ import { MongooseModule } from '@nestjs/mongoose';
   ],
   providers: [
     StripeService,
-    SubscriptionInstanceService,
+    TransactionService,
     ConfigService,
     TokenService,
     JwtService,

@@ -8,6 +8,8 @@ import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { Product } from 'src/products/products.entity';
 import { BadRequestException } from 'src/error/bad-request-error';
+import { TransactionType } from 'src/transactions/transaction.entity';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
 
 @Injectable()
 export class RevenueService {
@@ -15,6 +17,7 @@ export class RevenueService {
     @InjectModel(Revenue.name) private revenueModel: Model<RevenueDocument>,
     @InjectModel(Gym.name) private gymModel: Model<Gym>,
     @InjectModel(Product.name) private productModel: Model<Product>,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async create(manager: Manager, dto: CreateRevenueDto) {
@@ -45,6 +48,13 @@ export class RevenueService {
       notes: dto.notes,
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: new Types.ObjectId(gym.id),
+    });
+    await this.transactionService.createRevenueTransaction({
+      paidAmount: amount,
+      gym: gym,
+      product: product,
+      numberSold: dto.numberSold,
+      revenue: revenue,
     });
     return revenue.save();
   }

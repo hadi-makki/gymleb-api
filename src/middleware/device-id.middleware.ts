@@ -5,7 +5,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class DeviceIdMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
+  async delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  async use(req: Request, res: Response, next: NextFunction) {
+    if (process.env.NODE_ENV === 'local') {
+      await this.delay(1000);
+    }
     const deviceId = req.cookies['deviceId'];
 
     if (!deviceId) {

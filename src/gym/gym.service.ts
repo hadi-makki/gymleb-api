@@ -13,25 +13,25 @@ import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { Expense } from '../expenses/expense.entity';
-import { Revenue } from '../revenue/revenue.entity';
 import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
 import { paginateModel } from '../utils/pagination';
 import { AddOfferDto } from './dto/add-offer.dto';
+import {
+  Transaction,
+  TransactionType,
+} from 'src/transactions/transaction.entity';
 
 @Injectable()
 export class GymService {
   constructor(
     @InjectModel(Gym.name) private gymModel: Model<Gym>,
     @InjectModel(Manager.name) private gymOwnerModel: Model<Manager>,
-    @InjectModel(SubscriptionInstance.name)
-    private subscriptionInstanceModel: Model<SubscriptionInstance>,
     @InjectModel(Member.name) private memberModel: Model<Member>,
-    @InjectModel(Expense.name) private expenseModel: Model<Expense>,
-    @InjectModel(Revenue.name) private revenueModel: Model<Revenue>,
     @InjectModel(OwnerSubscription.name)
     private ownerSubscriptionModel: Model<OwnerSubscription>,
     @InjectModel(Manager.name) private managerModel: Model<Manager>,
+    @InjectModel(Transaction.name)
+    private transactionModel: Model<Transaction>,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
@@ -83,35 +83,58 @@ export class GymService {
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
     const currentMonthStart = startOfMonth(now);
 
-    // Fetch transactions for last month
-    const lastMonthTransactions = await this.subscriptionInstanceModel
+    // Build date filter for the specified range
+    const dateFilter: any = {};
+    if (start || end) {
+      dateFilter.createdAt = {};
+      if (start) dateFilter.createdAt.$gte = new Date(start);
+      if (end) dateFilter.createdAt.$lte = new Date(end);
+    }
+
+    // Fetch all transactions for the gym in the specified range
+    const allTransactions = await this.transactionModel
+      .find({
+        gym: new Types.ObjectId(gym.id),
+        ...dateFilter,
+      })
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
+
+    // Fetch transactions for last month comparison
+    const lastMonthTransactions = await this.transactionModel
       .find({
         gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
       })
-      .populate('subscription');
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
 
-    // Fetch transactions for current month
-    const currentMonthTransactions = await this.subscriptionInstanceModel
+    // Fetch transactions for current month comparison
+    const currentMonthTransactions = await this.transactionModel
       .find({
         gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: currentMonthStart },
       })
-      .populate('subscription');
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
 
-    // Calculate revenue for both periods
-    const lastMonthRevenue = lastMonthTransactions.reduce(
-      (total, transaction) => total + transaction.subscription.price,
-      0,
-    );
-    const currentMonthRevenue = currentMonthTransactions.reduce(
-      (total, transaction) => total + transaction.subscription.price,
-      0,
-    );
+    // Calculate subscription revenue for both periods
+    const lastMonthSubscriptionRevenue = lastMonthTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    // Calculate percentage change in revenue
-    const revenueChange = lastMonthRevenue
-      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+    const currentMonthSubscriptionRevenue = currentMonthTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    // Calculate percentage change in subscription revenue
+    const revenueChange = lastMonthSubscriptionRevenue
+      ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
+          lastMonthSubscriptionRevenue) *
+        100
       : 0;
 
     // Fetch member count for both periods
@@ -129,64 +152,36 @@ export class GymService {
       ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
       : 0;
 
-    // Fetch all transactions and members for current analytics
-    const transactions = await this.subscriptionInstanceModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        ...(start || end
-          ? {
-              createdAt: {
-                ...(start ? { $gte: new Date(start) } : {}),
-                ...(end ? { $lte: new Date(end) } : {}),
-              },
-            }
-          : {}),
-      })
-      .populate('subscription');
-    const totalRevenue = transactions.reduce((total, transaction) => {
-      const amount =
-        typeof transaction.paidAmount === 'number'
-          ? transaction.paidAmount
-          : transaction.subscription?.price || 0;
-      return total + amount;
-    }, 0);
+    // Calculate totals from all transactions
+    const subscriptionRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    // Expenses in range
-    const expenseFilter: any = { gym: new Types.ObjectId(gym.id) };
-    if (start || end) {
-      expenseFilter.date = {};
-      if (start) expenseFilter.date.$gte = new Date(start);
-      if (end) expenseFilter.date.$lte = new Date(end);
-    }
-    const expenses = await this.expenseModel.find(expenseFilter);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const additionalRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.REVENUE)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    // Additional Revenue in range (non-subscription revenue)
-    const revenueFilter: any = { gym: new Types.ObjectId(gym.id) };
-    if (start || end) {
-      revenueFilter.date = {};
-      if (start) revenueFilter.date.$gte = new Date(start);
-      if (end) revenueFilter.date.$lte = new Date(end);
-    }
-    const additionalRevenues = await this.revenueModel.find(revenueFilter);
-    const totalAdditionalRevenue = additionalRevenues.reduce(
-      (sum, r) => sum + (r.amount || 0),
-      0,
-    );
+    const totalExpenses = allTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const totalRevenue = subscriptionRevenue + additionalRevenue;
+    const netRevenue = totalRevenue - totalExpenses;
+
     const totalMembers = await this.memberModel.countDocuments({ gym: gym.id });
     const members = await this.memberModel
       .find({ gym: gym.id })
       .populate('subscription')
-      .populate('subscriptionInstances')
+      .populate('transactions')
       .populate('gym');
 
     const membersWithActiveSubscription = members.map((member) => {
-      const checkActiveSubscription = member.subscriptionInstances.some(
-        (subscriptionInstance) => {
-          return new Date(subscriptionInstance.endDate) > new Date();
+      const checkActiveSubscription = member.transactions.some(
+        (transaction) => {
+          return new Date(transaction.endDate) > new Date();
         },
       );
-      const latestSubscriptionInstance = member.subscriptionInstances.sort(
+      const latestSubscriptionInstance = member.transactions.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )[0];
@@ -198,7 +193,7 @@ export class GymService {
         createdAt: member.createdAt,
         updatedAt: member.updatedAt,
         subscription: member.subscription,
-        subscriptionInstances: member.subscriptionInstances,
+        subscriptionTransactions: member.transactions,
         gym: member.gym,
         hasActiveSubscription: checkActiveSubscription,
         currentActiveSubscription: latestSubscriptionInstance || null,
@@ -211,23 +206,22 @@ export class GymService {
       : startOfMonth(subMonths(now, 1));
     const analyticsEndDate = end ? new Date(end) : now;
 
-    // Calculate combined revenue (subscriptions + additional revenue)
-    const combinedTotalRevenue = totalRevenue + totalAdditionalRevenue;
-
     return {
-      totalRevenue: combinedTotalRevenue,
-      subscriptionRevenue: totalRevenue,
-      additionalRevenue: totalAdditionalRevenue,
+      totalRevenue,
+      subscriptionRevenue,
+      additionalRevenue,
       totalExpenses,
-      netRevenue: combinedTotalRevenue - totalExpenses,
+      netRevenue,
       totalMembers,
       members: membersWithActiveSubscription,
-      totalTransactions: transactions.length,
+      totalTransactions: allTransactions.length,
       revenueChange,
       memberChange,
       currentMonthMembers,
-      currentMonthRevenue,
-      currentMonthTransactions: currentMonthTransactions.length,
+      currentMonthRevenue: currentMonthSubscriptionRevenue,
+      currentMonthTransactions: currentMonthTransactions.filter(
+        (t) => t.type === TransactionType.SUBSCRIPTION,
+      ).length,
       dateRange: {
         startDate: analyticsStartDate,
         endDate: analyticsEndDate,
@@ -354,6 +348,7 @@ export class GymService {
     limit: number,
     page: number,
     search: string,
+    type: TransactionType,
   ) {
     const gym = await this.gymModel.findOne({
       owner: manager.id,
@@ -372,12 +367,22 @@ export class GymService {
       memberIds = matchingMembers.map((m) => m._id);
     }
 
-    const result = await paginateModel(this.subscriptionInstanceModel, {
+    console.log(type);
+
+    const result = await paginateModel(this.transactionModel, {
       filter: {
         gym: new Types.ObjectId(gym.id),
         ...(search ? { member: { $in: memberIds } } : {}),
+        ...(type ? { type: type as TransactionType } : {}),
       },
-      populate: [{ path: 'subscription' }, { path: 'member' }, { path: 'gym' }],
+      populate: [
+        { path: 'subscription' },
+        { path: 'member' },
+        { path: 'gym' },
+        { path: 'product' },
+        { path: 'revenue' },
+        { path: 'expense' },
+      ],
       page,
       limit,
       sort: { createdAt: -1 }, // Sort by most recent first
@@ -403,99 +408,102 @@ export class GymService {
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
     const currentMonthStart = startOfMonth(now);
 
-    const lastMonthTransactions = await this.subscriptionInstanceModel
+    // Build date filter for the specified range
+    const dateFilter: any = {};
+    if (start || end) {
+      dateFilter.createdAt = {};
+      if (start) dateFilter.createdAt.$gte = new Date(start);
+      if (end) dateFilter.createdAt.$lte = new Date(end);
+    }
+
+    // Fetch all transactions for the gym in the specified range
+    const allTransactions = await this.transactionModel
       .find({
-        gym: gym._id,
+        gym: new Types.ObjectId(gym.id),
+        ...dateFilter,
+      })
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
+
+    // Fetch transactions for last month comparison
+    const lastMonthTransactions = await this.transactionModel
+      .find({
+        gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
       })
-      .populate('subscription');
-    const currentMonthTransactions = await this.subscriptionInstanceModel
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
+
+    // Fetch transactions for current month comparison
+    const currentMonthTransactions = await this.transactionModel
       .find({
-        gym: gym._id,
+        gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: currentMonthStart },
       })
-      .populate('subscription');
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
 
-    const lastMonthRevenue = lastMonthTransactions.reduce(
-      (total, t) => total + (t.subscription?.price || 0),
-      0,
-    );
-    const currentMonthRevenue = currentMonthTransactions.reduce(
-      (total, t) => total + (t.subscription?.price || 0),
-      0,
-    );
-    const revenueChange = lastMonthRevenue
-      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+    // Calculate subscription revenue for both periods
+    const lastMonthSubscriptionRevenue = lastMonthTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const currentMonthSubscriptionRevenue = currentMonthTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    // Calculate percentage change in subscription revenue
+    const revenueChange = lastMonthSubscriptionRevenue
+      ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
+          lastMonthSubscriptionRevenue) *
+        100
       : 0;
 
     const lastMonthMembers = await this.memberModel.countDocuments({
-      gym: gym._id,
+      gym: gym.id,
       createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
     });
     const currentMonthMembers = await this.memberModel.countDocuments({
-      gym: gym._id,
+      gym: gym.id,
       createdAt: { $gte: currentMonthStart },
     });
     const memberChange = lastMonthMembers
       ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
       : 0;
 
-    const transactions = await this.subscriptionInstanceModel
-      .find({
-        gym: gym._id,
-        ...(start || end
-          ? {
-              createdAt: {
-                ...(start ? { $gte: new Date(start) } : {}),
-                ...(end ? { $lte: new Date(end) } : {}),
-              },
-            }
-          : {}),
-      })
-      .populate('subscription');
-    const totalRevenue = transactions.reduce((total, t) => {
-      const amount =
-        typeof t.paidAmount === 'number'
-          ? t.paidAmount
-          : t.subscription?.price || 0;
-      return total + amount;
-    }, 0);
+    // Calculate totals from all transactions
+    const subscriptionRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    const expenseFilter: any = { gym: gym._id };
-    if (start || end) {
-      expenseFilter.date = {};
-      if (start) expenseFilter.date.$gte = new Date(start);
-      if (end) expenseFilter.date.$lte = new Date(end);
-    }
-    const expenses = await this.expenseModel.find(expenseFilter);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const additionalRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.REVENUE)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    // Additional Revenue in range (non-subscription revenue)
-    const revenueFilter: any = { gym: gym._id };
-    if (start || end) {
-      revenueFilter.date = {};
-      if (start) revenueFilter.date.$gte = new Date(start);
-      if (end) revenueFilter.date.$lte = new Date(end);
-    }
-    const additionalRevenues = await this.revenueModel.find(revenueFilter);
-    const totalAdditionalRevenue = additionalRevenues.reduce(
-      (sum, r) => sum + (r.amount || 0),
-      0,
-    );
+    const totalExpenses = allTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const totalRevenue = subscriptionRevenue + additionalRevenue;
+    const netRevenue = totalRevenue - totalExpenses;
+
     const totalMembers = await this.memberModel.countDocuments({
-      gym: gym._id,
+      gym: gym.id,
     });
     const members = await this.memberModel
-      .find({ gym: gym._id })
+      .find({ gym: gym.id })
       .populate('subscription')
-      .populate('subscriptionInstances')
+      .populate('transactions')
       .populate('gym');
 
     const membersWithActiveSubscription = members.map((member) => {
-      const checkActiveSubscription = member.subscriptionInstances.some(
-        (instance) => new Date(instance.endDate) > new Date(),
+      const checkActiveSubscription = member.transactions.some(
+        (transaction) => new Date(transaction.endDate) > new Date(),
       );
-      const latestSubscriptionInstance = member.subscriptionInstances.sort(
+      const latestSubscriptionInstance = member.transactions.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )[0];
@@ -507,7 +515,7 @@ export class GymService {
         createdAt: member.createdAt,
         updatedAt: member.updatedAt,
         subscription: member.subscription,
-        subscriptionInstances: member.subscriptionInstances,
+        subscriptionTransactions: member.transactions,
         gym: member.gym,
         hasActiveSubscription: checkActiveSubscription,
         currentActiveSubscription: latestSubscriptionInstance || null,
@@ -519,23 +527,22 @@ export class GymService {
       : startOfMonth(subMonths(now, 1));
     const analyticsEndDate = end ? new Date(end) : now;
 
-    // Calculate combined revenue (subscriptions + additional revenue)
-    const combinedTotalRevenue = totalRevenue + totalAdditionalRevenue;
-
     return {
-      totalRevenue: combinedTotalRevenue,
-      subscriptionRevenue: totalRevenue,
-      additionalRevenue: totalAdditionalRevenue,
+      totalRevenue,
+      subscriptionRevenue,
+      additionalRevenue,
       totalExpenses,
-      netRevenue: combinedTotalRevenue - totalExpenses,
+      netRevenue,
       totalMembers,
       members: membersWithActiveSubscription,
-      totalTransactions: transactions.length,
+      totalTransactions: allTransactions.length,
       revenueChange,
       memberChange,
       currentMonthMembers,
-      currentMonthRevenue,
-      currentMonthTransactions: currentMonthTransactions.length,
+      currentMonthRevenue: currentMonthSubscriptionRevenue,
+      currentMonthTransactions: currentMonthTransactions.filter(
+        (t) => t.type === TransactionType.SUBSCRIPTION,
+      ).length,
       dateRange: { startDate: analyticsStartDate, endDate: analyticsEndDate },
       gym,
     };
@@ -565,12 +572,19 @@ export class GymService {
       memberIds = matchingMembers.map((m) => m._id as Types.ObjectId);
     }
 
-    const result = await paginateModel(this.subscriptionInstanceModel, {
+    const result = await paginateModel(this.transactionModel, {
       filter: {
         gym: gym._id,
         ...(search ? { member: { $in: memberIds } } : {}),
       },
-      populate: [{ path: 'subscription' }, { path: 'member' }, { path: 'gym' }],
+      populate: [
+        { path: 'subscription' },
+        { path: 'member' },
+        { path: 'gym' },
+        { path: 'product' },
+        { path: 'revenue' },
+        { path: 'expense' },
+      ],
       page,
       limit,
       sort: { createdAt: -1 },
@@ -599,7 +613,7 @@ export class GymService {
 
     const result = await paginateModel(this.memberModel as any, {
       filter,
-      populate: [{ path: 'subscription' }, { path: 'subscriptionInstances' }],
+      populate: [{ path: 'subscription' }, { path: 'transactions' }],
       page,
       limit,
       sort: { createdAt: -1 },

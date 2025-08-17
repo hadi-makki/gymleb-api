@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { ProductsService } from '../products/products.service';
-import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/subscription-instance.service';
 import { User } from '../user/user.entity';
 import Stripe from 'stripe';
 import {
@@ -19,7 +19,7 @@ export class StripeService {
   private readonly logger = new Logger(StripeService.name);
   constructor(
     private configService: ConfigService,
-    private readonly subscriptionInstanceService: SubscriptionInstanceService,
+    private readonly transactionService: TransactionService,
     @InjectModel(User.name)
     private readonly userRepository: Model<User>,
     private readonly productService: ProductsService,

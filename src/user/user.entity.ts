@@ -8,6 +8,7 @@ import { PersonalTrainer } from '../personal-trainers/entities/personal-trainer.
 import { Gym } from '../gym/entities/gym.entity';
 import { Subscription } from '../subscription/entities/subscription.entity';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
+import { Transaction } from 'src/transactions/transaction.entity';
 
 export type UserDocument = User & Document;
 
@@ -40,6 +41,14 @@ export class User extends MainEntity {
     ref: 'SubscriptionInstance',
   })
   subscriptionInstances: SubscriptionInstance[];
+
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'Transaction',
+    required: false,
+    default: [],
+  })
+  transactions: Transaction[];
 
   async comparePassword(oldPassword: string) {
     return await bcrypt.compare(oldPassword, this.password);

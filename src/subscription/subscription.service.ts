@@ -8,7 +8,7 @@ import { Gym } from '../gym/entities/gym.entity';
 import { Manager } from '../manager/manager.entity';
 import { isMongoId } from 'validator';
 import { BadRequestException } from '../error/bad-request-error';
-import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/subscription-instance.service';
 @Injectable()
 export class SubscriptionService {
   constructor(
@@ -16,7 +16,7 @@ export class SubscriptionService {
     private subscriptionModel: Model<Subscription>,
     @InjectModel(Gym.name)
     private gymModel: Model<Gym>,
-    private readonly subscriptionInstanceService: SubscriptionInstanceService,
+    private readonly transactionService: TransactionService,
   ) {}
   async create(createSubscriptionDto: CreateSubscriptionDto, manager: Manager) {
     const gym = await this.gymModel.findOne({ owner: manager._id.toString() });
@@ -97,7 +97,7 @@ export class SubscriptionService {
   }
 
   async deleteSubscriptionInstance(subscriptionId: string, manager: Manager) {
-    return await this.subscriptionInstanceService.deleteSubscriptionInstance(
+    return await this.transactionService.deleteSubscriptionInstance(
       subscriptionId,
       manager,
     );

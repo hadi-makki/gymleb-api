@@ -6,12 +6,14 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { Manager } from '../manager/manager.entity';
 import { Gym } from '../gym/entities/gym.entity';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
 
 @Injectable()
 export class ExpensesService {
   constructor(
     @InjectModel(Expense.name) private expenseModel: Model<Expense>,
     @InjectModel(Gym.name) private gymModel: Model<Gym>,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async create(manager: Manager, dto: CreateExpenseDto) {
@@ -21,6 +23,13 @@ export class ExpensesService {
       ...dto,
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: new Types.ObjectId(gym.id),
+    });
+    await this.transactionService.createExpenseTransaction({
+      paidAmount: dto.amount,
+      gym: gym,
+      expense: expense,
+      title: expense.title,
+      date: expense.date,
     });
     return expense.save();
   }

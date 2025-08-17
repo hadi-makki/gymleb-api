@@ -13,12 +13,12 @@ import { OwnerSubscriptionsService } from './owner-subscriptions.service';
 
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { Manager, ManagerSchema } from '../manager/manager.entity';
-import { SubscriptionInstanceModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 
 @Module({
   imports: [
     AuthenticationModule,
-    SubscriptionInstanceModule,
+    TransactionModule,
     MongooseModule.forFeature([
       { name: OwnerSubscriptionType.name, schema: OwnerSubscriptionTypeSchema },
       { name: OwnerSubscription.name, schema: OwnerSubscriptionSchema },

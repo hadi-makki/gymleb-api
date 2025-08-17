@@ -23,6 +23,7 @@ import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { SubscriptionInstance } from 'src/transactions/subscription-instance.entity';
 import { AddOfferDto } from './dto/add-offer.dto';
+import { TransactionType } from 'src/transactions/transaction.entity';
 @Controller('gym')
 @Roles(Role.GymOwner)
 export class GymController {
@@ -99,13 +100,13 @@ export class GymController {
   @Get('admin/:ownerId/transactions')
   @UseGuards(ManagerAuthGuard)
   @Roles(Role.SuperAdmin)
-  getTransactionsByOwnerId(
+  async getTransactionsByOwnerId(
     @Param('ownerId') ownerId: string,
     @Query('page') page = '1',
     @Query('limit') limit = '10',
     @Query('search') search?: string,
   ) {
-    return this.gymService.getTransactionHistoryByOwnerId(
+    return await this.gymService.getTransactionHistoryByOwnerId(
       ownerId,
       Number(limit),
       Number(page),
@@ -218,12 +219,14 @@ export class GymController {
     @Query('page') page = '1',
     @Query('limit') limit = '5',
     @Query('search') search: string,
+    @Query('type') type: TransactionType,
   ) {
     return this.gymService.getTransactionHistory(
       user,
       Number(limit),
       Number(page),
       search,
+      type,
     );
   }
 

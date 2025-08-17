@@ -206,4 +206,9 @@ export class MemberController {
     }
     return await this.memberService.updateProfileImage(id, file, manager);
   }
+
+  @Post('fix-gym-phone-numbers')
+  async fixGymPhoneNumbers() {
+    return await this.memberService.fixGymPhoneNumbers();
+  }
 }

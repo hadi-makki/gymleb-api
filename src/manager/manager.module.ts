@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthenticationModule } from 'src/common/AuthModule.module';
-import { SubscriptionInstanceModule } from 'src/transactions/subscription-instance.module';
+import { TransactionModule } from 'src/transactions/subscription-instance.module';
 import { AuthService } from '../auth/auth.service';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 import {
@@ -28,7 +28,7 @@ import { ManagerService } from './manager.service';
       { name: Member.name, schema: MemberSchema },
       { name: OwnerSubscription.name, schema: OwnerSubscriptionSchema },
     ]),
-    SubscriptionInstanceModule,
+    TransactionModule,
     AuthenticationModule,
   ],
   providers: [

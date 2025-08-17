@@ -7,7 +7,7 @@ export class ReturnUserDto {
   passCode: string;
   gym: any;
   subscription: any;
-  subscriptionInstances: any[];
+  subscriptionTransactions: any[];
   createdAt: Date;
   updatedAt: Date;
   hasActiveSubscription: boolean;

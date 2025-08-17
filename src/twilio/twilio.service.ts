@@ -35,7 +35,6 @@ export class TwilioService {
     let notifiedNumber = 0;
     for (const member of members.items) {
       if (member.phone && !member.isNotified) {
-        // await this.sendWhatsappMessage(member.phone);
         await this.memberService.toggleNotified(member.id, true);
         notifiedNumber++;
       }
@@ -61,9 +60,7 @@ export class TwilioService {
     }
 
     await this.memberService.toggleNotified(member.id, true);
-    if (member.phone) {
-      // await this.sendWhatsappMessage(member.phone);
-    }
+
     await this.gymService.addGymMembersNotified(gym.id, 1);
   }
 

@@ -16,14 +16,16 @@ import {
 import { addDays, addHours, endOfDay } from 'date-fns';
 import { Manager } from '../manager/manager.entity';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscription } from 'src/owner-subscriptions/owner-subscription.entity';
-import { UnauthorizedException } from 'src/error/unauthorized-error';
-import { Role } from 'src/decorators/roles/role.enum';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
+import { UnauthorizedException } from '../error/unauthorized-error';
+import { Role } from '../decorators/roles/role.enum';
+import { Transaction, TransactionType } from './transaction.entity';
+import { Types } from 'mongoose';
+import { Revenue } from 'src/revenue/revenue.entity';
+import { Expense } from 'src/expenses/expense.entity';
 @Injectable()
-export class SubscriptionInstanceService {
+export class TransactionService {
   constructor(
-    @InjectModel(SubscriptionInstance.name)
-    private readonly subscriptionInstanceRepository: Model<SubscriptionInstance>,
     @InjectModel(User.name)
     private readonly userRepository: Model<User>,
     @InjectModel(Product.name)
@@ -40,27 +42,10 @@ export class SubscriptionInstanceService {
     private readonly ownerSubscriptionTypeRepository: Model<OwnerSubscriptionType>,
     @InjectModel(OwnerSubscription.name)
     private readonly ownerSubscriptionRepository: Model<OwnerSubscription>,
+    @InjectModel(Transaction.name)
+    private readonly transactionModel: Model<Transaction>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
-    const getMember = await this.memberRepository.findById(
-      paymentDetails.memberId,
-    );
-    if (!getMember) {
-      throw new NotFoundException('Member not found');
-    }
-
-    const getGym = await this.gymRepository.findById(paymentDetails.gymId);
-    if (!getGym) {
-      throw new NotFoundException('Gym not found');
-    }
-
-    const getSubscription = await this.subscriptionRepository.findById(
-      paymentDetails.subscriptionId,
-    );
-    if (!getSubscription) {
-      throw new NotFoundException('Subscription not found');
-    }
-
     console.log('paymentDetails', paymentDetails);
     console.log('startDate', paymentDetails.startDate);
     console.log('endDate', paymentDetails.endDate);
@@ -83,18 +68,19 @@ export class SubscriptionInstanceService {
           ? addHours(startDate, 24)
           : endOfDay(startDate);
       } else {
-        endDate = addDays(startDate, getSubscription.duration);
+        endDate = addDays(startDate, paymentDetails.subscription.duration);
       }
     }
 
-    const newTransaction = this.subscriptionInstanceRepository.create({
-      member: getMember,
-      gym: getGym,
-      subscription: getSubscription,
+    const newTransaction = await this.transactionModel.create({
+      type: TransactionType.SUBSCRIPTION,
+      member: paymentDetails.member,
+      gym: paymentDetails.gym,
+      subscription: paymentDetails.subscription,
       endDate: endDate.toISOString(),
       paidAmount: paymentDetails.amount,
       startDate: startDate.toISOString(),
-      paidBy: getMember.name,
+      paidBy: paymentDetails.member.name,
     });
     return newTransaction;
   }
@@ -118,7 +104,8 @@ export class SubscriptionInstanceService {
       throw new NotFoundException('Owner subscription type not found');
     }
     const endDate = params.endDateIso ?? undefined;
-    const trx = await this.subscriptionInstanceRepository.create({
+    const trx = await this.transactionModel.create({
+      type: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
       owner,
       ownerSubscriptionType: type,
       paidAmount: params.paidAmount,
@@ -145,7 +132,7 @@ export class SubscriptionInstanceService {
       }
     }
 
-    const subscriptionInstances = await this.subscriptionInstanceRepository
+    const subscriptionInstances = await this.transactionModel
       .find({
         ...(manager
           ? { isOwnerSubscriptionAssignment: true }
@@ -156,15 +143,17 @@ export class SubscriptionInstanceService {
       .populate('member')
       .populate('owner')
       .populate('ownerSubscriptionType')
+      .populate('product')
+      .populate('revenue')
       .sort({ createdAt: -1 });
 
     return subscriptionInstances;
   }
 
   async findByIds(ids: string[]) {
-    const subscriptionInstance = await this.subscriptionInstanceRepository.find(
-      { _id: { $in: ids } },
-    );
+    const subscriptionInstance = await this.transactionModel.find({
+      _id: { $in: ids },
+    });
     if (!subscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }
@@ -174,24 +163,27 @@ export class SubscriptionInstanceService {
   async invalidateSubscriptionInstance(memberId: string) {
     const member = await this.memberRepository
       .findById(memberId)
-      .populate('subscriptionInstances');
+      .populate('transactions');
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    const activeSubscriptionInstance = member.subscriptionInstances.find(
-      (instance) =>
-        isAfter(new Date(instance.endDate), new Date()) &&
-        !instance.isInvalidated,
+    const activeSubscriptionInstance = member.transactions.find(
+      (transaction) =>
+        isAfter(new Date(transaction.endDate), new Date()) &&
+        !transaction.isInvalidated,
     );
     if (!activeSubscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }
     activeSubscriptionInstance.isInvalidated = true;
     await activeSubscriptionInstance.save();
+    return {
+      message: 'Subscription instance invalidated successfully',
+    };
   }
 
   async deleteSubscriptionInstance(subscriptionId: string, manager: Manager) {
-    const subscriptionInstance = await this.subscriptionInstanceRepository
+    const subscriptionInstance = await this.transactionModel
       .findById(subscriptionId)
       .populate('gym');
     if (!subscriptionInstance) {
@@ -210,11 +202,47 @@ export class SubscriptionInstanceService {
       );
     }
 
-    await this.subscriptionInstanceRepository.deleteOne({
+    await this.transactionModel.deleteOne({
       _id: subscriptionInstance._id,
     });
     return {
       message: 'Subscription instance deleted successfully',
     };
+  }
+
+  async createRevenueTransaction(dto: {
+    paidAmount: number;
+    gym: Gym;
+    product: Product;
+    numberSold: number;
+
+    revenue: Revenue;
+  }) {
+    const newTransaction = await this.transactionModel.create({
+      type: TransactionType.REVENUE,
+      paidAmount: dto.paidAmount,
+      gym: dto.gym,
+      product: dto.product,
+      numberSold: dto.numberSold,
+      revenue: dto.revenue,
+    });
+    return newTransaction;
+  }
+
+  async createExpenseTransaction(dto: {
+    paidAmount: number;
+    gym: Gym;
+    expense: Expense;
+    title: string;
+    date: Date;
+  }) {
+    const newTransaction = await this.transactionModel.create({
+      type: TransactionType.EXPENSE,
+      paidAmount: dto.paidAmount,
+      gym: dto.gym,
+      expense: dto.expense,
+      createdAt: dto.date,
+    });
+    return newTransaction;
   }
 }

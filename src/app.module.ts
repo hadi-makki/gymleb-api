@@ -13,7 +13,7 @@ import { MediaModule } from './media/media.module';
 import { S3Module } from './s3/s3.module';
 import { ManagerSeeding } from './seeder/managers.seeding';
 import { TokenModule } from './token/token.module';
-import { SubscriptionInstanceModule } from './transactions/subscription-instance.module';
+import { TransactionModule } from './transactions/subscription-instance.module';
 import { UserModule } from './user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Manager, ManagerSchema } from './manager/manager.entity';
@@ -51,7 +51,7 @@ import { ProductsModule } from './products/products.module';
     TokenModule,
     ManagerModule,
     // StripeModule,
-    SubscriptionInstanceModule,
+    TransactionModule,
     PersonalTrainersModule,
     SubscriptionModule,
     GymModule,

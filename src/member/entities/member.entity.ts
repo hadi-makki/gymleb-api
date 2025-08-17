@@ -5,6 +5,7 @@ import { Types } from 'mongoose';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
+import { Transaction } from 'src/transactions/transaction.entity';
 
 @CustomSchema()
 export class Member extends MainEntity {
@@ -32,6 +33,14 @@ export class Member extends MainEntity {
     required: false,
   })
   subscriptionInstances: SubscriptionInstance[];
+
+  @Prop({
+    ref: 'Transaction',
+    type: [Types.ObjectId],
+    required: false,
+    default: [],
+  })
+  transactions: Transaction[];
 
   @Prop({ type: String, required: false })
   passCode: string;

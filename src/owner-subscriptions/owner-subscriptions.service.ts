@@ -9,7 +9,7 @@ import {
   CreateOwnerSubscriptionTypeDto,
 } from './dto';
 import { Manager } from 'src/manager/manager.entity';
-import { SubscriptionInstanceService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/subscription-instance.service';
 
 @Injectable()
 export class OwnerSubscriptionsService {
@@ -19,7 +19,7 @@ export class OwnerSubscriptionsService {
     @InjectModel(OwnerSubscription.name)
     private subModel: Model<OwnerSubscription>,
     @InjectModel(Manager.name) private ownerModel: Model<Manager>,
-    private readonly subscriptionInstanceService: SubscriptionInstanceService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async createType(dto: CreateOwnerSubscriptionTypeDto) {
@@ -57,14 +57,12 @@ export class OwnerSubscriptionsService {
       active: true,
     });
     // create transaction for the assignment so super admin can see it later
-    await this.subscriptionInstanceService.createOwnerSubscriptionAssignmentInstance(
-      {
-        ownerId: owner.id,
-        ownerSubscriptionTypeId: type.id,
-        paidAmount: type.price,
-        endDateIso: end.toISOString(),
-      },
-    );
+    await this.transactionService.createOwnerSubscriptionAssignmentInstance({
+      ownerId: owner.id,
+      ownerSubscriptionTypeId: type.id,
+      paidAmount: type.price,
+      endDateIso: end.toISOString(),
+    });
     return created;
   }
 

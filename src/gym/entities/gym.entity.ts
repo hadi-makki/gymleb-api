@@ -6,6 +6,7 @@ import { Manager } from '../../manager/manager.entity';
 import { PersonalTrainer } from '../../personal-trainers/entities/personal-trainer.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
+import { Transaction } from 'src/transactions/transaction.entity';
 
 @CustomSchema()
 export class Gym extends MainEntity {
@@ -36,6 +37,14 @@ export class Gym extends MainEntity {
     required: false,
   })
   subscriptionInstances: SubscriptionInstance[];
+
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'Transaction',
+    required: false,
+    default: [],
+  })
+  transactions: Transaction[];
 
   @Prop({ type: Boolean, default: false })
   finishedPageSetup: boolean;

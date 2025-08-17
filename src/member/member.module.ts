@@ -6,7 +6,7 @@ import {
   Subscription,
   SubscriptionSchema,
 } from '../subscription/entities/subscription.entity';
-import { SubscriptionInstanceModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/subscription-instance.module';
 import { Member, MemberSchema } from './entities/member.entity';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
@@ -19,7 +19,7 @@ import { MediaModule } from 'src/media/media.module';
       { name: Gym.name, schema: GymSchema },
       { name: Subscription.name, schema: SubscriptionSchema },
     ]),
-    SubscriptionInstanceModule,
+    TransactionModule,
     MediaModule,
   ],
   controllers: [MemberController],

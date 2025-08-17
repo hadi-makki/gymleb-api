@@ -4,11 +4,13 @@ import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { Media } from '../media/media.entity';
 import { Gym } from 'src/gym/entities/gym.entity';
+import { MainEntity } from 'src/main-classes/mainEntity';
+import { Transaction } from 'src/transactions/transaction.entity';
 
 export type ProductDocument = Product & Document;
 
 @CustomSchema()
-export class Product {
+export class Product extends MainEntity {
   @Prop({ type: String, required: true })
   name: string;
 
@@ -29,6 +31,14 @@ export class Product {
     default: [],
   })
   subscriptionInstances: SubscriptionInstance[];
+
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'Transaction',
+    required: false,
+    default: [],
+  })
+  transactions: Transaction[];
 
   @Prop({ type: Number, default: 600 })
   maxDurationSeconds: number;
