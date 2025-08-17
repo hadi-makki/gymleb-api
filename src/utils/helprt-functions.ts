@@ -6,8 +6,9 @@ export const returnUser = (user: User) => {
   return restUser;
 };
 
-export const validateImage = (file: Express.Multer.File) => {
-  if (!file) return false;
-  if (!imageTypes.test(file.mimetype)) return false;
+export const validateImage = (file: Express.Multer.File, required?: boolean) => {
+  if (!file && required) return false;
+  if (!file) return true;
+  if (!imageTypes.test(file?.mimetype)) return false;
   return true;
 };

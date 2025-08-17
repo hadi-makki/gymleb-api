@@ -112,7 +112,7 @@ export class ProductsController {
     @User() user: Manager,
     @Body() body: CreateProductDto,
   ) {
-    if (!validateImage(file)) {
+    if (!validateImage(file, false)) {
       throw new BadRequestException('Invalid image type');
     }
     return await this.productsService.createProduct(file, user, body);

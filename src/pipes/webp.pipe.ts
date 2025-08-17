@@ -8,7 +8,7 @@ export class WebpPipe
   implements PipeTransform<Express.Multer.File, Promise<Express.Multer.File>>
 {
   async transform(image: Express.Multer.File): Promise<Express.Multer.File> {
-    if (!image.mimetype.startsWith('image/')) return image;
+    if (!image?.mimetype?.startsWith('image/')) return image;
     const transformedImage = await sharp(
       !image.originalname.endsWith('.heic')
         ? Buffer.from(image.buffer)

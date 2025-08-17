@@ -4,7 +4,7 @@ import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { MainEntity } from '../main-classes/mainEntity';
 import { OwnerSubscriptionType } from './owner-subscription-type.entity';
 import { Manager } from '../manager/manager.entity';
-import { Transaction } from 'typeorm';
+// import { Transaction } from 'typeorm';
 
 @CustomSchema()
 export class OwnerSubscription extends MainEntity {
@@ -23,8 +23,8 @@ export class OwnerSubscription extends MainEntity {
   @Prop({ type: Boolean, default: true })
   active: boolean;
 
-  @Prop({ type: Types.ObjectId, ref: 'Transaction' })
-  transaction: Transaction;
+  // @Prop({ type: Types.ObjectId, ref: 'Transaction' })
+  // transaction: Transaction;
 }
 
 export const OwnerSubscriptionSchema =
