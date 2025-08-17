@@ -4,24 +4,23 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isMongoId } from 'class-validator';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { Model, Types } from 'mongoose';
-import { Expense } from '../expenses/expense.entity';
-import { Gym } from '../gym/entities/gym.entity';
-import { GymService } from '../gym/gym.service';
-import { Member } from '../member/entities/member.entity';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
-import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
+import { Expense } from '../expenses/expense.entity';
 import { returnManager } from '../functions/returnUser';
+import { Gym } from '../gym/entities/gym.entity';
+import { GymService } from '../gym/gym.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
+import { Member } from '../member/entities/member.entity';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
 import { TokenService } from '../token/token.service';
+import { Transaction } from '../transactions/transaction.entity';
 import { CreateManagerDto } from './dtos/create-manager.dto';
 import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.entity';
-import { Transaction } from '../transactions/transaction.entity';
 @Injectable()
 export class ManagerService {
   constructor(

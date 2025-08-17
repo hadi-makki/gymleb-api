@@ -123,6 +123,6 @@ export class TransactionSeeding implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.migrateTransactions();
+    // await this.migrateTransactions();
   }
 }
