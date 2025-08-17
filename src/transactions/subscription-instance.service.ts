@@ -44,6 +44,10 @@ export class TransactionService {
     private readonly ownerSubscriptionRepository: Model<OwnerSubscription>,
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
+    @InjectModel(Revenue.name)
+    private readonly revenueModel: Model<Revenue>,
+    @InjectModel(Expense.name)
+    private readonly expenseModel: Model<Expense>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
     console.log('paymentDetails', paymentDetails);
@@ -207,6 +211,16 @@ export class TransactionService {
     await this.transactionModel.deleteOne({
       _id: subscriptionInstance._id,
     });
+
+    if (subscriptionInstance.type === TransactionType.REVENUE) {
+      await this.revenueModel.deleteOne({
+        _id: subscriptionInstance.revenue,
+      });
+    } else if (subscriptionInstance.type === TransactionType.EXPENSE) {
+      await this.expenseModel.deleteOne({
+        _id: subscriptionInstance.expense,
+      });
+    }
     return {
       message: 'Subscription instance deleted successfully',
     };

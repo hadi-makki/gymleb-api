@@ -3,6 +3,7 @@ import { Types, Document } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { MainEntity } from '../main-classes/mainEntity';
 import { Gym } from '../gym/entities/gym.entity';
+import { Transaction } from 'src/transactions/transaction.entity';
 
 export type RevenueDocument = Revenue & Document;
 
@@ -25,6 +26,9 @@ export class Revenue extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Gym', required: true })
   gym: Gym;
+
+  @Prop({ type: Types.ObjectId, ref: 'Transaction', required: true })
+  transaction: Transaction;
 }
 
 export const RevenueSchema = SchemaFactory.createForClass(Revenue);

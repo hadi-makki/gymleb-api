@@ -24,14 +24,16 @@ export class ExpensesService {
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: new Types.ObjectId(gym.id),
     });
-    await this.transactionService.createExpenseTransaction({
+    const transaction = await this.transactionService.createExpenseTransaction({
       paidAmount: dto.amount,
       gym: gym,
       expense: expense,
       title: expense.title,
       date: expense.date,
     });
-    return expense.save();
+    expense.transaction = transaction.id;
+    await expense.save();
+    return await this.expenseModel.findById(expense.id).populate('transaction');
   }
 
   async findAll(manager: Manager, start?: string, end?: string) {
@@ -43,7 +45,10 @@ export class ExpensesService {
       if (start) filter.date.$gte = new Date(start);
       if (end) filter.date.$lte = new Date(end);
     }
-    return this.expenseModel.find(filter).sort({ date: -1 });
+    return this.expenseModel
+      .find(filter)
+      .sort({ date: -1 })
+      .populate('transaction');
   }
 
   async update(manager: Manager, id: string, dto: UpdateExpenseDto) {
@@ -66,6 +71,8 @@ export class ExpensesService {
       gym: new Types.ObjectId(gym.id),
     });
     if (!expense) throw new NotFoundException('Expense not found');
+
+    await this.transactionService.removeExpenseTransaction(id);
 
     return { success: true };
   }

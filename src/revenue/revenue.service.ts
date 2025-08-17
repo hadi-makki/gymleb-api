@@ -49,7 +49,7 @@ export class RevenueService {
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: new Types.ObjectId(gym.id),
     });
-    await this.transactionService.createRevenueTransaction({
+    const transaction = await this.transactionService.createRevenueTransaction({
       paidAmount: amount,
       gym: gym,
       product: product,
@@ -57,7 +57,9 @@ export class RevenueService {
       revenue: revenue,
       date: dto.date ? new Date(dto.date) : new Date(),
     });
-    return revenue.save();
+    revenue.transaction = transaction.id;
+    await revenue.save();
+    return await this.revenueModel.findById(revenue.id).populate('transaction');
   }
 
   async findAll(manager: Manager, start?: string, end?: string) {
@@ -77,7 +79,10 @@ export class RevenueService {
       filter.date = { $lte: new Date(end) };
     }
 
-    return this.revenueModel.find(filter).sort({ date: -1 }).exec();
+    return await this.revenueModel
+      .find(filter)
+      .sort({ date: -1 })
+      .populate('transaction');
   }
 
   async update(manager: Manager, id: string, dto: UpdateRevenueDto) {
@@ -120,6 +125,7 @@ export class RevenueService {
     }
 
     // remove transaction
+    await this.transactionService.removeRevenueTransaction(id);
 
     return { message: 'Revenue deleted successfully' };
   }
