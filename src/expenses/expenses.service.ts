@@ -66,6 +66,7 @@ export class ExpensesService {
       gym: new Types.ObjectId(gym.id),
     });
     if (!expense) throw new NotFoundException('Expense not found');
+
     return { success: true };
   }
 }

@@ -73,6 +73,7 @@ export class TransactionService {
     }
 
     const newTransaction = await this.transactionModel.create({
+      title: paymentDetails.subscription.title,
       type: TransactionType.SUBSCRIPTION,
       member: paymentDetails.member,
       gym: paymentDetails.gym,
@@ -105,6 +106,7 @@ export class TransactionService {
     }
     const endDate = params.endDateIso ?? undefined;
     const trx = await this.transactionModel.create({
+      title: type.title,
       type: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
       owner,
       ownerSubscriptionType: type,
@@ -215,16 +217,18 @@ export class TransactionService {
     gym: Gym;
     product: Product;
     numberSold: number;
-
+    date: Date;
     revenue: Revenue;
   }) {
     const newTransaction = await this.transactionModel.create({
+      title: dto.revenue.title,
       type: TransactionType.REVENUE,
       paidAmount: dto.paidAmount,
       gym: dto.gym,
       product: dto.product,
       numberSold: dto.numberSold,
       revenue: dto.revenue,
+      date: dto.date,
     });
     return newTransaction;
   }
@@ -237,12 +241,27 @@ export class TransactionService {
     date: Date;
   }) {
     const newTransaction = await this.transactionModel.create({
+      title: dto.expense.title,
       type: TransactionType.EXPENSE,
       paidAmount: dto.paidAmount,
       gym: dto.gym,
       expense: dto.expense,
-      createdAt: dto.date,
+      date: dto.date,
     });
     return newTransaction;
+  }
+
+  async removeRevenueTransaction(revenueId: string) {
+    await this.transactionModel.deleteOne({
+      revenue: new Types.ObjectId(revenueId),
+      type: TransactionType.REVENUE,
+    });
+  }
+
+  async removeExpenseTransaction(expenseId: string) {
+    await this.transactionModel.deleteOne({
+      expense: new Types.ObjectId(expenseId),
+      type: TransactionType.EXPENSE,
+    });
   }
 }

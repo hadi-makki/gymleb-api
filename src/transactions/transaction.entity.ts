@@ -25,6 +25,9 @@ export enum TransactionType {
 
 @CustomSchema()
 export class Transaction extends MainEntity {
+  @Prop({ type: String, required: false })
+  title: string;
+
   @Prop({ type: String, required: false, enum: TransactionType })
   type: TransactionType;
 
@@ -80,6 +83,9 @@ export class Transaction extends MainEntity {
 
   @Prop({ type: Types.ObjectId, required: false, ref: 'Expense' })
   expense: Expense;
+
+  @Prop({ type: Date, required: false })
+  date: Date;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

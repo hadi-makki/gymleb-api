@@ -55,6 +55,7 @@ export class RevenueService {
       product: product,
       numberSold: dto.numberSold,
       revenue: revenue,
+      date: dto.date ? new Date(dto.date) : new Date(),
     });
     return revenue.save();
   }
@@ -102,6 +103,13 @@ export class RevenueService {
     const gym = await this.gymModel.findOne({ owner: manager.id });
     if (!gym) throw new NotFoundException('Gym not found');
 
+    const revenue = await this.revenueModel.findOne({
+      _id: id,
+      gym: new Types.ObjectId(gym.id),
+    });
+
+    if (!revenue) throw new NotFoundException('Revenue not found');
+
     const result = await this.revenueModel.deleteOne({
       _id: id,
       gym: new Types.ObjectId(gym.id),
@@ -110,6 +118,8 @@ export class RevenueService {
     if (result.deletedCount === 0) {
       throw new NotFoundException('Revenue not found');
     }
+
+    // remove transaction
 
     return { message: 'Revenue deleted successfully' };
   }
