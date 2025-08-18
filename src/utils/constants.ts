@@ -5,6 +5,8 @@ dotenv.config({
   path: `.env`,
 });
 
+console.log('this is the node env', process.env.NODE_ENV);
+
 const isProduction = process.env.NODE_ENV === 'production';
 const cookieDomain = isProduction ? '.gym-leb.com' : '.localhost';
 
