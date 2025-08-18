@@ -47,6 +47,7 @@
     "heic-convert": "^2.1.0",
     "helmet": "^8.1.0",
     "mongoose": "^8.13.1",
+    "nest": "^0.1.6",
     "pg": "^8.14.1",
     "prettier-eslint": "^16.3.0",
     "reflect-metadata": "^0.2.0",
