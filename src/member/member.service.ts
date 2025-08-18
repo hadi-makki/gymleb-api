@@ -82,7 +82,11 @@ export class MemberService {
     };
   }
 
-  async create(createMemberDto: CreateMemberDto, manager: Manager) {
+  async create(
+    createMemberDto: CreateMemberDto,
+    manager: Manager,
+    image?: Express.Multer.File,
+  ) {
     const gym = await this.gymModel.findOne({
       owner: manager.id,
     });
@@ -145,6 +149,12 @@ export class MemberService {
       username: username,
       passCode: `${phoneNumber}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
     });
+    // Optional image upload and assignment
+    if (image) {
+      const imageData = await this.mediaService.upload(image, manager.id);
+      member.profileImage = imageData.id as any;
+      await member.save();
+    }
     const subscriptionInstance =
       await this.transactionService.createSubscriptionInstance({
         member: member,

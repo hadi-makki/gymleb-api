@@ -45,13 +45,26 @@ export class MemberController {
   constructor(private readonly memberService: MemberService) {}
 
   @Post()
+  @ApiConsumes('multipart/form-data')
   @Roles(Role.GymOwner)
   @UseGuards(ManagerAuthGuard)
+  @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createMemberDto: CreateMemberDto,
     @User() manager: Manager,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 })],
+        fileIsRequired: false,
+      }),
+      new WebpPipe(),
+    )
+    file?: Express.Multer.File,
   ) {
-    return await this.memberService.create(createMemberDto, manager);
+    if (file && !validateImage(file)) {
+      throw new BadRequestException('File must be an image');
+    }
+    return await this.memberService.create(createMemberDto, manager, file);
   }
 
   @Post('login')

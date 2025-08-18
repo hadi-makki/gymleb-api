@@ -38,6 +38,8 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
       exceptionFactory: (validationErrors: ValidationError[] = []) => {
         const firstError = Object.values(validationErrors[0].constraints)[0];
         return new BadRequestException(firstError);
