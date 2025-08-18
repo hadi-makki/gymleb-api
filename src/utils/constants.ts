@@ -1,4 +1,9 @@
 import { CookieOptions } from 'express';
+import * as dotenv from 'dotenv';
+
+dotenv.config({
+  path: `.env`,
+});
 
 const isProduction = process.env.NODE_ENV === 'production';
 const cookieDomain = isProduction ? '.gym-leb.com' : '.localhost';

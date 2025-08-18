@@ -23,6 +23,11 @@ export enum TransactionType {
   EXPENSE = 'expense',
 }
 
+export enum Currency {
+  USD = 'USD',
+  LBP = 'LBP',
+}
+
 @CustomSchema()
 export class Transaction extends MainEntity {
   @Prop({ type: String, required: false })
@@ -42,6 +47,14 @@ export class Transaction extends MainEntity {
 
   @Prop({ type: Number, required: false })
   paidAmount: number;
+
+  @Prop({
+    type: String,
+    required: false,
+    enum: Currency,
+    default: Currency.USD,
+  })
+  currency: Currency;
 
   @Prop({ type: Types.ObjectId, required: false, ref: 'Gym' })
   gym: Gym;

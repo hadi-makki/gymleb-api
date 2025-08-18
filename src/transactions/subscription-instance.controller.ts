@@ -1,4 +1,4 @@
-import { Controller, Delete, Param, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Param, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
@@ -11,6 +11,7 @@ import { TransactionService } from './subscription-instance.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { Manager } from '../manager/manager.entity';
 import { User } from '../decorators/users.decorator';
+import { Convert } from 'easy-currencies';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -26,5 +27,14 @@ export class TransactionController {
   @Roles(Role.SuperAdmin, Role.GymOwner)
   async delete(@Param('id') id: string, @User() manager: Manager) {
     return this.service.deleteSubscriptionInstance(id, manager);
+  }
+
+  @Get('currency-exchange')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Role.SuperAdmin, Role.GymOwner)
+  async currencyExchange() {
+    const convert = await Convert().from('USD').fetch();
+    console.log(await convert.amount(1).to('LBP'));
   }
 }
