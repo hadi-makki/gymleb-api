@@ -94,9 +94,15 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
 
-    const subscription = await this.subscriptionModel.findOne({
-      _id: createMemberDto.subscriptionId,
-    });
+    const subscription = await this.subscriptionModel.findById(
+      createMemberDto.subscriptionId,
+    );
+
+    console.log('subscription', subscription);
+    console.log(
+      'createMemberDto.subscriptionId',
+      createMemberDto.subscriptionId,
+    );
     if (!subscription) {
       throw new NotFoundException('Subscription not found');
     }

@@ -15,6 +15,8 @@ import { TransactionModule } from '../transactions/subscription-instance.module'
 import { SubscriptionService } from '../subscription/subscription.service';
 import { MemberService } from '../member/member.service';
 import { MediaModule } from '../media/media.module';
+import { RevenueService } from 'src/revenue/revenue.service';
+import { ExpensesService } from 'src/expenses/expenses.service';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -29,6 +31,12 @@ import { MediaModule } from '../media/media.module';
     MediaModule,
   ],
   controllers: [GymOwnerController],
-  providers: [GymOwnerService, SubscriptionService, MemberService],
+  providers: [
+    GymOwnerService,
+    SubscriptionService,
+    MemberService,
+    ExpensesService,
+    RevenueService,
+  ],
 })
 export class GymOwnerModule {}

@@ -15,10 +15,14 @@ import { Gym } from '../gym/entities/gym.entity';
 import { Manager } from '../manager/manager.entity';
 import { Revenue } from '../revenue/revenue.entity';
 import { Days } from '../seeder/gym.seeding';
-import { SubscriptionType } from '../subscription/entities/subscription.entity';
+import {
+  Subscription,
+  SubscriptionType,
+} from '../subscription/entities/subscription.entity';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
-@Injectable()
+import { ExpensesService } from 'src/expenses/expenses.service';
+import { RevenueService } from 'src/revenue/revenue.service';
 export class GymOwnerService {
   constructor(
     @InjectModel(Manager.name)
@@ -32,8 +36,10 @@ export class GymOwnerService {
     private readonly subscriptionService: SubscriptionService,
     private readonly memberService: MemberService,
     private readonly gymService: GymService,
-    @InjectModel(Transaction.name)
-    private readonly transactionModel: Model<Transaction>,
+    @InjectModel(Subscription.name)
+    private readonly subscriptionModel: Model<Subscription>,
+    private readonly expenseService: ExpensesService,
+    private readonly revenueService: RevenueService,
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
@@ -95,7 +101,7 @@ export class GymOwnerService {
           title: 'Monthly Membership',
           type: SubscriptionType.MONTHLY_GYM,
           price: 50.0,
-          duration: 30,
+          duration: 1,
         },
         gymOwner,
       )
@@ -118,7 +124,7 @@ export class GymOwnerService {
   async generateMockDataForGym(gymOwner: Manager, gym: Gym) {
     try {
       // Get available subscriptions from the database
-      const subscriptions = await this.transactionModel.find().limit(10);
+      const subscriptions = await this.subscriptionModel.find().limit(10);
 
       if (subscriptions.length === 0) {
         console.log(
@@ -194,9 +200,12 @@ export class GymOwnerService {
       ];
 
       for (const expenseData of mockExpenses) {
-        await this.expenseModel.create({
-          ...expenseData,
-          gym: new Types.ObjectId(gym.id),
+        await this.expenseService.create(gymOwner, {
+          title: expenseData.title,
+          amount: expenseData.amount,
+          category: expenseData.category,
+          notes: expenseData.notes,
+          date: expenseData.date.toISOString(),
         });
       }
 
@@ -250,9 +259,9 @@ export class GymOwnerService {
       ];
 
       for (const revenueData of mockRevenues) {
-        await this.revenueModel.create({
+        await this.revenueService.create(gymOwner, {
           ...revenueData,
-          gym: new Types.ObjectId(gym.id),
+          date: revenueData.date.toISOString(),
         });
       }
 
