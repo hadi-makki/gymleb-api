@@ -20,7 +20,6 @@ export class ManagerScript implements OnModuleInit {
         { _id: manager._id },
         { gyms: manager.gyms },
       );
-      console.log('Manager updated:', manager._id);
     }
     console.log('Manager module has been initialized.');
     // You can add any initialization logic here

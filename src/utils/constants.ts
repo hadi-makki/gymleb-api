@@ -8,7 +8,7 @@ dotenv.config({
 console.log('this is the node env', process.env.NODE_ENV);
 
 const isProduction = process.env.NODE_ENV === 'production';
-const cookieDomain = isProduction ? '.gym-leb.com' : '.localhost';
+const cookieDomain = isProduction ? '.localhost' : '.localhost';
 
 export const cookieOptions: CookieOptions = {
   httpOnly: true, // not accessible from JS

@@ -88,6 +88,7 @@ export class ManagerService {
     body: LoginManagerDto,
     deviceId: string,
   ): Promise<ManagerCreatedWithTokenDto> {
+    console.log('this is the body', body);
     const manager = await this.managerEntity.findOne({
       $or: [{ username: body.username }, { email: body.username }],
     });
@@ -108,7 +109,7 @@ export class ManagerService {
       deviceId,
     });
     //   ?.token;
-
+    console.log('this is the token', token);
     return {
       ...returnManager(manager),
       token: token.accessToken,
