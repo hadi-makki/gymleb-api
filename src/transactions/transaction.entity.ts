@@ -85,6 +85,9 @@ export class Transaction extends MainEntity {
   @Prop({ type: Boolean, required: false, default: false })
   isInvalidated: boolean;
 
+  @Prop({ type: Date, required: false })
+  invalidatedAt: Date;
+
   @Prop({ type: Types.ObjectId, required: false, ref: 'Product' })
   product: Product;
 

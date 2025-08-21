@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,8 +9,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Manager } from '../manager/manager.entity';
 import { TokenService } from '../token/token.service';
-import { Role } from '../decorators/roles/role.enum';
-import { ROLES_KEY } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
+import { PERMISSIONS_KEY } from '../decorators/roles/Role';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 @Injectable()
@@ -27,13 +28,13 @@ export class ManagerAuthGuard implements CanActivate {
       .getRequest<Request & { user: Manager }>();
     const response = context.switchToHttp().getResponse();
     const requiredRoles =
-      this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
+      this.reflector.getAllAndOverride<Permissions[]>(PERMISSIONS_KEY, [
         context.getHandler(),
         context.getClass(),
       ]) || [];
 
     if (!requiredRoles) {
-      requiredRoles.push(Role.SuperAdmin);
+      requiredRoles.push(Permissions.SuperAdmin);
     }
 
     const validatedData = await this.tokenService.validateJwt(
@@ -42,6 +43,8 @@ export class ManagerAuthGuard implements CanActivate {
     );
 
     const userId = validatedData?.sub;
+
+    console.log('this is the userId', userId);
 
     if (!userId) {
       console.log('Unauthorized');
@@ -52,17 +55,17 @@ export class ManagerAuthGuard implements CanActivate {
       .findById(userId)
       .populate('roles');
 
-    console.log(manager);
+    console.log('this is the manager', manager.roles);
+    console.log('this is the requiredRoles', requiredRoles);
 
     if (
-      !manager ||
-      !requiredRoles.some((role) => manager.roles.includes(role))
+      (!manager ||
+        !requiredRoles.some((role) => manager.roles.includes(role))) &&
+      !requiredRoles.includes(Permissions.Any)
     ) {
       console.log('Unauthorized');
-      throw new UnauthorizedException('Unauthorized');
+      throw new ForbiddenException('Unauthorized');
     }
-
-    console.log(manager);
 
     request.user = manager;
 

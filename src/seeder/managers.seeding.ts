@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { Manager } from '../manager/manager.entity';
 
 @Injectable({ scope: Scope.DEFAULT })
@@ -34,7 +34,7 @@ export class ManagerSeeding implements OnModuleInit {
         username,
         email,
         password: hashedPassword,
-        roles: [Role.SuperAdmin],
+        roles: [Permissions.SuperAdmin],
       });
       console.log('Admin seeded');
     }

@@ -6,10 +6,12 @@ import { Manager } from '../manager/manager.entity';
 import { MemberService } from '../member/member.service';
 
 import { Twilio } from 'twilio';
+import { NotFoundException } from 'src/error/not-found-error';
+import { format } from 'date-fns';
 
 export enum TwilioWhatsappTemplates {
-  ARABIC_TEMPLATE = 'HX00fa7ca5bea0f3a99ae45f92e7ec91f5',
-  ENGLISH_TEMPLATE = 'HX7b5378e81ba80b22ddf8cec596692df5',
+  EXPIARY_REMINDER = 'HXcc65a0e4783fd7f892683be58ad27285',
+  SUBSCRIPTION_EXPIRED = 'HX9f136ce037cfb13b0d4daf887b331437',
 }
 
 @Injectable()
@@ -25,13 +27,15 @@ export class TwilioService {
     process.env.TWILIO_AUTH,
   );
 
-  async notifyExpiredMembers(manager: Manager) {
+  async notifyExpiredMembers(manager: Manager, gymId: string) {
     const members = await this.memberService.getExpiredMembers(
       manager,
-      100,
+      1000,
       1,
       '',
+      gymId,
     );
+
     let notifiedNumber = 0;
     for (const member of members.items) {
       if (member.phone && !member.isNotified) {
@@ -39,19 +43,19 @@ export class TwilioService {
         notifiedNumber++;
       }
     }
-    const gym = await this.gymService.getGymByManager(manager);
-    await this.gymService.addGymMembersNotified(gym.id, notifiedNumber);
+    await this.gymService.addGymMembersNotified(gymId, notifiedNumber);
   }
 
-  async notifySingleMember(manager: Manager, userId: string) {
-    const member = await this.memberService.getMemberByIdAndGym(
-      userId,
-      manager,
-    );
-    const gym = await this.gymService.getGymByManager(manager);
+  async notifySingleMember(userId: string, gymId: string) {
+    const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
+
+    const gym = await this.gymService.getGymById(gymId);
     const isExpired = await this.memberService.checkUserSubscriptionExpired(
       member.id,
     );
+    if (gym.membersNotified > 100) {
+      throw new BadRequestException('Gym members notified limit reached');
+    }
     if (!isExpired) {
       throw new BadRequestException('Member subscription is not expired');
     }
@@ -59,16 +63,50 @@ export class TwilioService {
       throw new BadRequestException('Member is already notified');
     }
 
-    await this.memberService.toggleNotified(member.id, true);
+    await this.client.messages
+      .create({
+        from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+        to: `whatsapp:${member.phone}`,
+        contentSid: TwilioWhatsappTemplates.EXPIARY_REMINDER,
+        contentVariables: JSON.stringify({
+          1: member.name,
+          2: gym.name,
+          3: member.lastSubscription?.title,
+          4: member.lastSubscription.isInvalidated
+            ? format(
+                new Date(member.lastSubscription.invalidatedAt),
+                'dd/MM/yyyy',
+              )
+            : format(new Date(member.lastSubscription.endDate), 'dd/MM/yyyy'),
+          5: gym.phone,
+        }),
+      })
+      .then(async () => {
+        await this.memberService.toggleNotified(member.id, true);
 
-    await this.gymService.addGymMembersNotified(gym.id, 1);
+        await this.gymService.addGymMembersNotified(gym.id, 1);
+      })
+      .catch((error) => {
+        console.log('this is twilio error', error);
+        throw new BadRequestException(error);
+      });
+
+    return {
+      message: 'Member notified successfully',
+    };
+  }
+
+  async notifyManyUsers(manager: Manager, userIds: string[], gymId: string) {
+    for (const userId of userIds) {
+      await this.notifySingleMember(userId, gymId);
+    }
   }
 
   async sendWhatsappMessage(phoneNumber: string) {
     const verify = await this.client.messages.create({
       from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
       to: `whatsapp:${phoneNumber}`,
-      contentSid: TwilioWhatsappTemplates.ENGLISH_TEMPLATE,
+      contentSid: TwilioWhatsappTemplates.EXPIARY_REMINDER,
       contentVariables: JSON.stringify({
         1: 'Hadi',
         2: '123456',

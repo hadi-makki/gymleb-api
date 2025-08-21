@@ -14,24 +14,28 @@ import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { ApiOperation, ApiQuery } from '@nestjs/swagger';
 
 @Controller('revenue')
-@Roles(Role.GymOwner)
+@Roles(Permissions.GymOwner, Permissions.revenue)
 @UseGuards(ManagerAuthGuard)
 export class RevenueController {
   constructor(private readonly revenueService: RevenueService) {}
 
-  @Post()
+  @Post(':gymId')
   @ApiOperation({ summary: 'Create a revenue entry' })
-  create(@User() user: Manager, @Body() dto: CreateRevenueDto) {
-    return this.revenueService.create(user, dto);
+  create(
+    @User() user: Manager,
+    @Param('gymId') gymId: string,
+    @Body() dto: CreateRevenueDto,
+  ) {
+    return this.revenueService.create(user, dto, gymId);
   }
 
-  @Get()
+  @Get('/gym/:gymId')
   @ApiOperation({
     summary: 'List revenue entries (optionally filtered by date range)',
   })
@@ -39,39 +43,46 @@ export class RevenueController {
   @ApiQuery({ name: 'end', required: false })
   findAll(
     @User() user: Manager,
+    @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.revenueService.findAll(user, start, end);
+    return this.revenueService.findAll(user, start, end, gymId);
   }
 
-  @Get('total')
+  @Get('total/:gymId')
   @ApiOperation({ summary: 'Get total revenue for a date range' })
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
   getTotalRevenue(
     @User() user: Manager,
+    @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
     const startDate = start ? new Date(start) : undefined;
     const endDate = end ? new Date(end) : undefined;
-    return this.revenueService.getTotalRevenue(user, startDate, endDate);
+    return this.revenueService.getTotalRevenue(user, startDate, endDate, gymId);
   }
 
-  @Patch(':id')
+  @Patch(':gymId/:id')
   @ApiOperation({ summary: 'Update a revenue entry' })
   update(
     @User() user: Manager,
+    @Param('gymId') gymId: string,
     @Param('id') id: string,
     @Body() dto: UpdateRevenueDto,
   ) {
-    return this.revenueService.update(user, id, dto);
+    return this.revenueService.update(user, id, dto, gymId);
   }
 
-  @Delete(':id')
+  @Delete(':gymId/:id')
   @ApiOperation({ summary: 'Delete a revenue entry' })
-  remove(@User() user: Manager, @Param('id') id: string) {
-    return this.revenueService.remove(user, id);
+  remove(
+    @User() user: Manager,
+    @Param('gymId') gymId: string,
+    @Param('id') id: string,
+  ) {
+    return this.revenueService.remove(user, id, gymId);
   }
 }

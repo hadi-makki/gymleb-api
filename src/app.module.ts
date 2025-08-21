@@ -29,6 +29,7 @@ import { RevenueModule } from './revenue/revenue.module';
 import { OwnerSubscriptionsModule } from './owner-subscriptions/owner-subscriptions.module';
 import { GymOwnerModule } from './gym-owner/gym-owner.module';
 import { ProductsModule } from './products/products.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ProductsModule } from './products/products.module';
     OwnerSubscriptionsModule,
     GymOwnerModule,
     ProductsModule,
+    StaffModule,
   ],
   controllers: [AppController],
   providers: [

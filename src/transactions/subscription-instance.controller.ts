@@ -6,7 +6,7 @@ import {
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { TransactionService } from './subscription-instance.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { Manager } from '../manager/manager.entity';
@@ -18,21 +18,25 @@ import { Convert } from 'easy-currencies';
 export class TransactionController {
   constructor(private readonly service: TransactionService) {}
 
-  @Delete(':id')
+  @Delete(':gymId/:id')
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Role.SuperAdmin, Role.GymOwner)
-  async delete(@Param('id') id: string, @User() manager: Manager) {
-    return this.service.deleteSubscriptionInstance(id, manager);
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  async delete(
+    @Param('id') id: string,
+    @User() manager: Manager,
+    @Param('gymId') gymId: string,
+  ) {
+    return this.service.deleteSubscriptionInstance(id, manager, gymId);
   }
 
   @Get('currency-exchange')
   @ApiBearerAuth()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Role.SuperAdmin, Role.GymOwner)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
   async currencyExchange() {
     const convert = await Convert().from('USD').fetch();
     console.log(await convert.amount(1).to('LBP'));

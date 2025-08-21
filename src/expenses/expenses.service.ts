@@ -17,7 +17,7 @@ export class ExpensesService {
   ) {}
 
   async create(manager: Manager, dto: CreateExpenseDto) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+    const gym = await this.gymModel.findById(dto.gymId);
     if (!gym) throw new NotFoundException('Gym not found');
     const expense = new this.expenseModel({
       ...dto,
@@ -36,8 +36,13 @@ export class ExpensesService {
     return await this.expenseModel.findById(expense.id).populate('transaction');
   }
 
-  async findAll(manager: Manager, start?: string, end?: string) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async findAll(
+    manager: Manager,
+    start?: string,
+    end?: string,
+    gymId?: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
     const filter: any = { gym: new Types.ObjectId(gym.id) };
     if (start || end) {
@@ -51,8 +56,13 @@ export class ExpensesService {
       .populate('transaction');
   }
 
-  async update(manager: Manager, id: string, dto: UpdateExpenseDto) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async update(
+    manager: Manager,
+    id: string,
+    dto: UpdateExpenseDto,
+    gymId: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
     const expense = await this.expenseModel.findOneAndUpdate(
       { _id: id, gym: new Types.ObjectId(gym.id) },
@@ -63,8 +73,8 @@ export class ExpensesService {
     return expense;
   }
 
-  async remove(manager: Manager, id: string) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async remove(manager: Manager, id: string, gymId: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
     const expense = await this.expenseModel.findOneAndDelete({
       _id: id,

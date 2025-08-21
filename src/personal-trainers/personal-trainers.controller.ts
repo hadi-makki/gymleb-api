@@ -15,7 +15,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
@@ -32,7 +32,7 @@ export class PersonalTrainersController {
 
   @Post()
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new personal trainer' })
   @ApiBody({ type: CreatePersonalTrainerDto })
@@ -47,7 +47,7 @@ export class PersonalTrainersController {
 
   @Get()
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all personal trainers' })
   @ApiResponse({
@@ -61,7 +61,7 @@ export class PersonalTrainersController {
 
   @Get(':id')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a personal trainer by ID' })
   @ApiResponse({
@@ -75,7 +75,7 @@ export class PersonalTrainersController {
 
   @Patch(':id')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a personal trainer by ID' })
   @ApiResponse({
@@ -92,7 +92,7 @@ export class PersonalTrainersController {
 
   @Delete(':id')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a personal trainer by ID' })
   @ApiResponse({
@@ -105,7 +105,7 @@ export class PersonalTrainersController {
 
   @Get('users')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({
@@ -119,7 +119,7 @@ export class PersonalTrainersController {
 
   @Post('add-user')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a user to a personal trainer' })
   @ApiResponse({

@@ -1,17 +1,17 @@
-export enum Role {
+export enum Permissions {
   Any = 'any',
   SuperAdmin = 'super-admin',
-  ReadUsers = 'read:users',
-  WriteUsers = 'write:users',
-  ReadPersonalTrainers = 'read:personal-trainers',
-  WritePersonalTrainers = 'write:personal-trainers',
-  ReadGymOwners = 'read:gym-owners',
-  WriteGymOwners = 'write:gym-owners',
-  ReadGyms = 'read:gyms',
-  WriteGyms = 'write:gyms',
+  members = 'members',
+  personalTrainers = 'personal-trainers',
+  gyms = 'gyms',
   GymOwner = 'gym-owner',
+  subscriptions = 'subscriptions',
+  transactions = 'transactions',
+  products = 'products',
+  revenue = 'revenue',
+  expenses = 'expenses',
 }
 
 export const returnAllRoles = () => {
-  return Object.values(Role);
+  return Object.values(Permissions);
 };

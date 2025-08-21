@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Manager } from '../manager/manager.entity';
@@ -18,24 +18,28 @@ export class TwilioController {
     return await this.twilioService.sendWhatsappMessage(phoneNumber);
   }
 
-  @Post('notify-expired-members')
+  @Post('notify-expired-members/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Notify expired members' })
   @ApiBearerAuth()
-  @Roles(Role.GymOwner)
-  async notifyExpiredMembers(@User() manager: Manager) {
-    return await this.twilioService.notifyExpiredMembers(manager);
+  @Roles(Permissions.GymOwner)
+  async notifyExpiredMembers(
+    @User() manager: Manager,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.twilioService.notifyExpiredMembers(manager, gymId);
   }
 
-  @Post('notify-single-member/:userId')
+  @Post('notify-single-member/:gymId/:userId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Notify single member' })
   @ApiBearerAuth()
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   async notifySingleMember(
     @User() manager: Manager,
     @Param('userId') userId: string,
+    @Param('gymId') gymId: string,
   ) {
-    return await this.twilioService.notifySingleMember(manager, userId);
+    return await this.twilioService.notifySingleMember(userId, gymId);
   }
 }

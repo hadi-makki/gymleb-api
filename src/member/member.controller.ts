@@ -20,7 +20,7 @@ import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { AuthGuard } from '../guards/auth.guard';
 import { Member } from './entities/member.entity';
@@ -44,14 +44,15 @@ import { validateImage } from '../utils/helprt-functions';
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
 
-  @Post()
+  @Post('create/:gymId')
   @ApiConsumes('multipart/form-data')
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createMemberDto: CreateMemberDto,
     @User() manager: Manager,
+    @Param('gymId') gymId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 })],
@@ -64,7 +65,12 @@ export class MemberController {
     if (file && !validateImage(file)) {
       throw new BadRequestException('File must be an image');
     }
-    return await this.memberService.create(createMemberDto, manager, file);
+    return await this.memberService.create(
+      createMemberDto,
+      manager,
+      gymId,
+      file,
+    );
   }
 
   @Post('login')
@@ -90,75 +96,82 @@ export class MemberController {
     return { message: 'Logged out successfully' };
   }
 
-  @Get()
-  @Roles(Role.GymOwner)
+  @Get('gym/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   async findAll(
     @User() manager: Manager,
     @Query('search') search: string,
     @Query('page') page = '1',
     @Query('limit') limit = '5',
+    @Param('gymId') gymId: string,
   ) {
     return await this.memberService.findAll(
       manager,
       search,
       Number(limit),
       Number(page),
+      gymId,
     );
   }
 
-  @Get('get-member/:id')
-  @Roles(Role.GymOwner)
+  @Get('get-member/:gymId/:id')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
-  async findOne(@Param('id') id: string) {
-    return await this.memberService.findOne(id);
+  async findOne(@Param('id') id: string, @Param('gymId') gymId: string) {
+    return await this.memberService.findOne(id, gymId);
   }
 
-  @Patch(':id')
-  @Roles(Role.GymOwner)
+  @Patch(':gymId/:id')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   async update(
     @Param('id') id: string,
     @Body() updateMemberDto: UpdateMemberDto,
+    @Param('gymId') gymId: string,
   ) {
-    return await this.memberService.update(id, updateMemberDto);
+    return await this.memberService.update(id, updateMemberDto, gymId);
   }
 
-  @Delete(':id')
-  @Roles(Role.GymOwner)
+  @Delete(':gymId/:id')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
-  async remove(@Param('id') id: string) {
-    return await this.memberService.remove(id);
+  async remove(@Param('id') id: string, @Param('gymId') gymId: string) {
+    return await this.memberService.remove(id, gymId);
   }
 
-  @Post(':id/renew')
-  @Roles(Role.GymOwner)
+  @Post(':gymId/:id/renew')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   async renewSubscription(
     @Param('id') id: string,
     @Body() renewSubscriptionDto: RenewSubscriptionDto,
+    @Param('gymId') gymId: string,
   ) {
     return await this.memberService.renewSubscription(
       id,
       renewSubscriptionDto.subscriptionId,
+      gymId,
       renewSubscriptionDto.giveFullDay,
     );
   }
 
-  @Get('expired')
-  @Roles(Role.GymOwner)
+  @Get('expired/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   async getExpiredMembers(
     @User() manager: Manager,
     @Query('page') page = '1',
     @Query('limit') limit = '5',
     @Query('search') search: string,
+    @Param('gymId') gymId: string,
   ) {
     return await this.memberService.getExpiredMembers(
       manager,
       Number(limit),
       Number(page),
       search,
+      gymId,
     );
   }
 
@@ -172,11 +185,14 @@ export class MemberController {
     return await this.memberService.getMember(id);
   }
 
-  @Post(':id/invalidate')
-  @Roles(Role.GymOwner)
+  @Post(':gymId/:id/invalidate')
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
-  async invalidateMemberSubscription(@Param('id') id: string) {
-    return await this.memberService.invalidateMemberSubscription(id);
+  async invalidateMemberSubscription(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.invalidateMemberSubscription(id, gymId);
   }
 
   @Post('fix-usernames-and-passcodes')
@@ -184,7 +200,7 @@ export class MemberController {
     return await this.memberService.fixMemberUsernamesAndPasscodes();
   }
 
-  @Post('update-profile-image/:id')
+  @Post('update-profile-image/:gymId/:id')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Update profile image',
@@ -197,12 +213,13 @@ export class MemberController {
   @ApiNotFoundResponse({
     description: 'User not found',
   })
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.members)
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(ManagerAuthGuard)
   async updateProfileImage(
     @User() manager: Manager,
     @Param('id') id: string,
+    @Param('gymId') gymId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -217,7 +234,12 @@ export class MemberController {
     if (file && !validateImage(file)) {
       throw new BadRequestException('File must be an image');
     }
-    return await this.memberService.updateProfileImage(id, file, manager);
+    return await this.memberService.updateProfileImage(
+      id,
+      file,
+      manager,
+      gymId,
+    );
   }
 
   @Post('fix-gym-phone-numbers')

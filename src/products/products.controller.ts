@@ -35,7 +35,7 @@ import {
   UploadFileDto,
 } from './dto/create-product.dto';
 import { ProductsService } from './products.service';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { Roles } from '../decorators/roles/Role';
 import { Manager } from '../manager/manager.entity';
 import { WebpPipe } from '../pipes/webp.pipe';
@@ -75,7 +75,7 @@ export class ProductsController {
     return await this.productsService.getProductById(id);
   }
 
-  @Post('create')
+  @Post('create/:gymId')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Create product',
@@ -93,8 +93,9 @@ export class ProductsController {
   })
   @UseInterceptors(FileInterceptor('file'))
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.products)
   async createProduct(
+    @Param('gymId') gymId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -115,10 +116,10 @@ export class ProductsController {
     if (!validateImage(file, false)) {
       throw new BadRequestException('Invalid image type');
     }
-    return await this.productsService.createProduct(file, user, body);
+    return await this.productsService.createProduct(file, user, body, gymId);
   }
 
-  @Put(':id')
+  @Put(':gymId/:id')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Update product',
@@ -136,8 +137,9 @@ export class ProductsController {
   })
   @UseInterceptors(FileInterceptor('file'))
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.products)
   async updateProduct(
+    @Param('gymId') gymId: string,
     @Param('id') id: string,
     @UploadedFile(
       new ParseFilePipe({
@@ -158,10 +160,16 @@ export class ProductsController {
     if (!validateImage(file)) {
       throw new BadRequestException('Invalid image type');
     }
-    return await this.productsService.updateProduct(id, file, user, body);
+    return await this.productsService.updateProduct(
+      id,
+      file,
+      user,
+      body,
+      gymId,
+    );
   }
 
-  @Delete(':id')
+  @Delete(':gymId/:id')
   @ApiOperation({
     summary: 'Delete product',
     description: 'Delete a product by ID',
@@ -174,8 +182,12 @@ export class ProductsController {
     description: 'Product not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
-  async deleteProduct(@Param('id') id: string, @User() user: UserEntity) {
-    return await this.productsService.deleteProduct(id, user);
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async deleteProduct(
+    @Param('gymId') gymId: string,
+    @Param('id') id: string,
+    @User() user: UserEntity,
+  ) {
+    return await this.productsService.deleteProduct(id, user, gymId);
   }
 }

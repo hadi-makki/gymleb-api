@@ -42,7 +42,12 @@ export class ProductsService {
     file: Express.Multer.File,
     user: Manager,
     createProductDto: CreateProductDto,
+    gymId: string,
   ) {
+    const gym = await this.gymService.getGymById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
     let imageId = null;
 
     // Upload image if provided
@@ -54,7 +59,7 @@ export class ProductsService {
     const product = await this.productRepository.create({
       ...createProductDto,
       image: imageId,
-      gym: user.gym,
+      gym: gym.id,
     });
 
     return {
@@ -68,8 +73,12 @@ export class ProductsService {
     file: Express.Multer.File,
     user: User,
     updateProductDto: UpdateProductDto,
+    gymId: string,
   ) {
-    const product = await this.productRepository.findById(id);
+    const product = await this.productRepository.findOne({
+      _id: id,
+      gym: gymId,
+    });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
@@ -97,6 +106,7 @@ export class ProductsService {
         {
           ...updateProductDto,
           image: imageId,
+          gym: gymId,
         },
         { new: true },
       )
@@ -108,8 +118,11 @@ export class ProductsService {
     };
   }
 
-  async deleteProduct(id: string, user: User) {
-    const product = await this.productRepository.findById(id);
+  async deleteProduct(id: string, user: User, gymId: string) {
+    const product = await this.productRepository.findOne({
+      _id: id,
+      gym: gymId,
+    });
     if (!product) {
       throw new NotFoundException('Product not found');
     }

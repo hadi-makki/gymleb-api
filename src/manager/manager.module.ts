@@ -18,6 +18,7 @@ import { UserService } from '../user/user.service';
 import { ManagerController } from './manager.controller';
 import { Manager, ManagerSchema } from './manager.entity';
 import { ManagerService } from './manager.service';
+import { ManagerScript } from './managers.script';
 
 @Module({
   imports: [
@@ -38,7 +39,9 @@ import { ManagerService } from './manager.service';
     ConfigService,
     AuthService,
     UserService,
+    ManagerScript,
   ],
   controllers: [ManagerController],
+  exports: [ManagerService, ManagerModule],
 })
 export class ManagerModule {}

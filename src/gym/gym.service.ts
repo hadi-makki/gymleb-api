@@ -72,8 +72,13 @@ export class GymService {
     return gym;
   }
 
-  async getGymAnalytics(manager: Manager, start?: string, end?: string) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async getGymAnalytics(
+    manager: Manager,
+    start?: string,
+    end?: string,
+    gymId?: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -240,6 +245,14 @@ export class GymService {
     return gym;
   }
 
+  async getGymById(gymId: string) {
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    return gym;
+  }
+
   async updateGymDay(dayToUpdate: string, manager: Manager) {
     const gym = await this.gymModel.findOne({
       owner: manager.id,
@@ -349,10 +362,9 @@ export class GymService {
     page: number,
     search: string,
     type: TransactionType,
+    gymId: string,
   ) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -497,7 +509,7 @@ export class GymService {
       .find({ gym: gym.id })
       .populate('subscription')
       .populate('transactions')
-      .populate('gym');
+      .populate('gyms');
 
     const membersWithActiveSubscription = members.map((member) => {
       const checkActiveSubscription = member.transactions.some(
@@ -554,11 +566,9 @@ export class GymService {
     page: number,
     search: string,
   ) {
-    console.log(ownerId);
     const gym = await this.gymModel.findOne({
       owner: ownerId,
     });
-    console.log(gym._id);
     if (!gym) {
       throw new NotFoundException('Owner subscription not found');
     }
@@ -625,7 +635,7 @@ export class GymService {
   async getGymOwnerSummary(ownerId: string) {
     const owner = await this.gymOwnerModel
       .findById(ownerId)
-      .populate('gym')
+      .populate('gyms')
       .populate('ownerSubscription');
     if (!owner) {
       throw new NotFoundException('Owner not found');

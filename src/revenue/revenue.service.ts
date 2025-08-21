@@ -20,8 +20,8 @@ export class RevenueService {
     private readonly transactionService: TransactionService,
   ) {}
 
-  async create(manager: Manager, dto: CreateRevenueDto) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async create(manager: Manager, dto: CreateRevenueDto, gymId: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
 
     const product = await this.productModel.findOne({
@@ -62,8 +62,13 @@ export class RevenueService {
     return await this.revenueModel.findById(revenue.id).populate('transaction');
   }
 
-  async findAll(manager: Manager, start?: string, end?: string) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async findAll(
+    manager: Manager,
+    start?: string,
+    end?: string,
+    gymId?: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
 
     const filter: any = { gym: new Types.ObjectId(gym.id) };
@@ -85,8 +90,13 @@ export class RevenueService {
       .populate('transaction');
   }
 
-  async update(manager: Manager, id: string, dto: UpdateRevenueDto) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async update(
+    manager: Manager,
+    id: string,
+    dto: UpdateRevenueDto,
+    gymId: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
 
     const revenue = await this.revenueModel.findOne({
@@ -104,8 +114,8 @@ export class RevenueService {
     return revenue.save();
   }
 
-  async remove(manager: Manager, id: string) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async remove(manager: Manager, id: string, gymId: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
 
     const revenue = await this.revenueModel.findOne({
@@ -130,8 +140,13 @@ export class RevenueService {
     return { message: 'Revenue deleted successfully' };
   }
 
-  async getTotalRevenue(manager: Manager, start?: Date, end?: Date) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async getTotalRevenue(
+    manager: Manager,
+    start?: Date,
+    end?: Date,
+    gymId?: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) throw new NotFoundException('Gym not found');
 
     const filter: any = { gym: new Types.ObjectId(gym.id) };

@@ -14,7 +14,7 @@ import {
   AssignOwnerSubscriptionDto,
 } from './dto';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
@@ -25,37 +25,37 @@ export class OwnerSubscriptionsController {
   constructor(private service: OwnerSubscriptionsService) {}
 
   @Post('types')
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   createType(@Body() dto: CreateOwnerSubscriptionTypeDto) {
     return this.service.createType(dto);
   }
 
   @Get('types')
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   listTypes() {
     return this.service.listTypes();
   }
 
   @Post('assign')
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   assign(@Body() dto: AssignOwnerSubscriptionDto) {
     return this.service.assign(dto);
   }
 
   @Get('me')
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.Any)
   getMy(@User() user: Manager) {
     return this.service.getOwnerSubscription(user.id);
   }
 
   @Delete(':id')
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   deleteType(@Param('id') id: string) {
     return this.service.deleteType(id);
   }
 
   @Patch(':id')
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   updateType(
     @Param('id') id: string,
     @Body() dto: CreateOwnerSubscriptionTypeDto,

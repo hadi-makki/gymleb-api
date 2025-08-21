@@ -14,7 +14,7 @@ import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { Manager } from '../manager/manager.entity';
 import { User } from '../decorators/users.decorator';
 import { returnManager } from '../functions/returnUser';
@@ -30,7 +30,7 @@ export class GymOwnerController {
     description: 'The gym owner has been successfully created.',
     type: Manager,
   })
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   async create(
     @Body() createGymOwnerDto: CreateGymOwnerDto,
     @User() user: Manager,
@@ -45,7 +45,7 @@ export class GymOwnerController {
     description: 'The gym owners have been successfully retrieved.',
     type: [Manager],
   })
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   findAll() {
     return this.gymOwnerService.findAll();
   }
@@ -57,7 +57,7 @@ export class GymOwnerController {
     description: 'The gym owner has been successfully retrieved.',
     type: Manager,
   })
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   findOne(@Param('id') id: string) {
     return this.gymOwnerService.findOne(id);
   }
@@ -69,7 +69,7 @@ export class GymOwnerController {
     description: 'The gym owner has been successfully updated.',
     type: Manager,
   })
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   update(
     @Param('id') id: string,
     @Body() updateGymOwnerDto: UpdateGymOwnerDto,
@@ -84,7 +84,7 @@ export class GymOwnerController {
     description: 'The gym owner has been successfully deleted.',
     type: Manager,
   })
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   remove(@Param('id') id: string) {
     return this.gymOwnerService.remove(id);
   }
@@ -96,7 +96,7 @@ export class GymOwnerController {
     description: 'The gym owner has been successfully retrieved.',
     type: Manager,
   })
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   getGymOwner(@User() user: Manager) {
     return returnManager(user);
   }

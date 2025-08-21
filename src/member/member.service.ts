@@ -85,11 +85,10 @@ export class MemberService {
   async create(
     createMemberDto: CreateMemberDto,
     manager: Manager,
+    gymId: string,
     image?: Express.Multer.File,
   ) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -217,8 +216,15 @@ export class MemberService {
     };
   }
 
-  async findAll(manager: Manager, search: string, limit: number, page: number) {
-    const checkGym = await this.gymModel.findOne({ owner: manager.id });
+  async findAll(
+    manager: Manager,
+    search: string,
+    limit: number,
+    page: number,
+    gymId: string,
+  ) {
+    console.log('this is the manager in findAll', manager.id);
+    const checkGym = await this.gymModel.findById(gymId);
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
@@ -247,12 +253,19 @@ export class MemberService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, gymId: string) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
     const member = await this.memberModel
-      .findById(id)
+      .findOne({
+        _id: id,
+        gym: checkGym.id,
+      })
       .populate('gym')
       .populate('subscription')
       .populate({
@@ -273,25 +286,27 @@ export class MemberService {
   async renewSubscription(
     id: string,
     subscriptionId: string,
+    gymId: string,
     giveFullDay?: boolean,
   ) {
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
 
     const member = await this.memberModel
-      .findById(id)
+      .findOne({
+        _id: id,
+        gym: checkGym.id,
+      })
       .populate('transactions')
       .populate('subscription');
 
     if (!member) {
       throw new NotFoundException('Member not found');
-    }
-
-    const checkGym = await this.gymModel.findById(member.gym);
-
-    if (!checkGym) {
-      throw new NotFoundException('Gym not found');
     }
 
     let checkSubscription;
@@ -366,11 +381,21 @@ export class MemberService {
     };
   }
 
-  async update(id: string, updateMemberDto: UpdateMemberDto) {
+  async update(id: string, updateMemberDto: UpdateMemberDto, gymId: string) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
-    const member = await this.memberModel.findById(id);
+    if (!isMongoId(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const member = await this.memberModel.findOne({
+      _id: id,
+      gym: checkGym.id,
+    });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -382,11 +407,18 @@ export class MemberService {
     return await this.returnMember(member);
   }
 
-  async remove(id: string) {
+  async remove(id: string, gymId: string) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
-    const member = await this.memberModel.findById(id);
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const member = await this.memberModel.findOne({
+      _id: id,
+      gym: checkGym.id,
+    });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -400,10 +432,9 @@ export class MemberService {
     limit: number,
     page: number,
     search: string,
+    gymId: string,
   ) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+    const gym = await this.gymModel.findById(gymId);
 
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -478,19 +509,15 @@ export class MemberService {
     return await this.returnMember(checkMember);
   }
 
-  async getMemberByIdAndGym(id: string, manager: Manager) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
-
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
+  async getMemberByIdAndGym(id: string, gymId: string) {
+    if (!isMongoId(gymId)) {
+      throw new BadRequestException('Invalid gym id');
     }
 
     const member = await this.memberModel
       .findOne({
         _id: id,
-        gym: gym.id,
+        gym: gymId,
       })
       .populate('transactions')
       .populate('gym')
@@ -536,8 +563,15 @@ export class MemberService {
     await this.tokenService.deleteTokensByUserId(member.id, deviceId);
   }
 
-  async invalidateMemberSubscription(id: string) {
-    const member = await this.memberModel.findById(id);
+  async invalidateMemberSubscription(id: string, gymId: string) {
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const member = await this.memberModel.findOne({
+      _id: id,
+      gym: checkGym.id,
+    });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -563,8 +597,16 @@ export class MemberService {
     id: string,
     image: Express.Multer.File,
     manager: Manager,
+    gymId: string,
   ) {
-    const member = await this.memberModel.findById(id);
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const member = await this.memberModel.findOne({
+      _id: id,
+      gym: checkGym.id,
+    });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -573,17 +615,29 @@ export class MemberService {
         await this.mediaService.delete(member.profileImage);
       }
       const imageData = await this.mediaService.upload(image, manager.id);
-      await this.memberModel.findByIdAndUpdate(id, {
-        profileImage: imageData.id,
-      });
+      await this.memberModel.findOneAndUpdate(
+        {
+          _id: id,
+          gym: checkGym.id,
+        },
+        {
+          profileImage: imageData.id,
+        },
+      );
       console.log('imageData', imageData);
     } else {
       if (member.profileImage) {
         await this.mediaService.delete(member.profileImage);
       }
-      await this.memberModel.findByIdAndUpdate(id, {
-        profileImage: null,
-      });
+      await this.memberModel.findOneAndUpdate(
+        {
+          _id: id,
+          gym: checkGym.id,
+        },
+        {
+          profileImage: null,
+        },
+      );
     }
     return { message: 'Profile image updated successfully' };
   }

@@ -2,6 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ManagerCreatedDto {
   @ApiProperty()
+  _id?: any;
+
+  @ApiProperty()
   id: string;
 
   @ApiProperty()

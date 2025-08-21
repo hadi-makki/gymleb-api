@@ -9,9 +9,9 @@ export class DeviceIdMiddleware implements NestMiddleware {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
   async use(req: Request, res: Response, next: NextFunction) {
-    if (process.env.NODE_ENV === 'local') {
-      await this.delay(1000);
-    }
+    // if (process.env.NODE_ENV === 'local') {
+    //   await this.delay(1000);
+    // }
     const deviceId = req.cookies['deviceId'];
 
     if (!deviceId) {

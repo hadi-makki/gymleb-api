@@ -23,7 +23,7 @@ import { AuthService } from '../auth/auth.service';
 import { RefreshTokenOutDto } from '../auth/dtos/out/refresh-token-out.dto';
 import { RefreshDto } from '../auth/dtos/refresh-token.dto';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import {
   ApiBadRequestResponse,
@@ -112,7 +112,7 @@ export class ManagerController {
 
   @Post('logout')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner, Role.SuperAdmin)
+  @Roles(Permissions.Any)
   @ApiBearerAuth()
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
@@ -128,7 +128,7 @@ export class ManagerController {
 
   @Get('get/me')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.Any)
   @ApiBearerAuth()
   @ApiOkResponse({ type: Manager })
   @ApiBadRequestResponse()
@@ -139,7 +139,7 @@ export class ManagerController {
 
   @Patch('update/me')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   @ApiBearerAuth()
   @ApiOkResponse({ type: Manager })
   updateMe(@User() user: Manager, @Body() body: UpdateManagerDto) {
@@ -152,7 +152,6 @@ export class ManagerController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: [Manager] })
-  @Roles(Role.ReadPersonalTrainers)
   getAll() {
     return this.ManagerService.getAll();
   }
@@ -177,7 +176,7 @@ export class ManagerController {
   @ApiUnauthorizedResponse()
   @ApiNotFoundResponse('Manager not found')
   @ApiOkResponse({ type: Manager })
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   async updateManager(@Param('id') id: string, @Body() body: UpdateManagerDto) {
     return await this.ManagerService.updateManager(id, body);
   }
@@ -207,7 +206,7 @@ export class ManagerController {
 
   @Get('get/transactions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   @ApiBearerAuth()
   @ApiOkResponse({ type: [SubscriptionInstance] })
   async getTransactions(@User() user: Manager) {
@@ -216,7 +215,7 @@ export class ManagerController {
 
   @Get('get/analytics')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Admin analytics', type: Object })
   async getAdminAnalytics(

@@ -9,7 +9,7 @@ import { GymService } from '../gym/gym.service';
 import { MemberService } from '../member/member.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { Transaction } from '../transactions/transaction.entity';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { Expense } from '../expenses/expense.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { Manager } from '../manager/manager.entity';
@@ -43,7 +43,6 @@ export class GymOwnerService {
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
-    console.log('createGymOwnerDto', createGymOwnerDto);
     const checkGymOwner = await this.gymOwnerModel.findOne({
       email: createGymOwnerDto.email,
     });
@@ -69,7 +68,7 @@ export class GymOwnerService {
       address: createGymOwnerDto.address,
       phone: createGymOwnerDto.phone,
       username,
-      roles: [Role.GymOwner],
+      roles: [Permissions.GymOwner],
     });
     let gymName =
       createGymOwnerDto.firstName + ' ' + createGymOwnerDto.lastName;
@@ -104,6 +103,7 @@ export class GymOwnerService {
           duration: 1,
         },
         gymOwner,
+        gym.id,
       )
       .catch(async (err) => {
         // remove the gym owner from the gym
@@ -165,6 +165,7 @@ export class GymOwnerService {
             subscriptionId: randomSubscription.id,
           },
           gymOwner,
+          gym.id,
         );
       }
 
@@ -206,6 +207,7 @@ export class GymOwnerService {
           category: expenseData.category,
           notes: expenseData.notes,
           date: expenseData.date.toISOString(),
+          gymId: gym.id,
         });
       }
 
@@ -259,10 +261,14 @@ export class GymOwnerService {
       ];
 
       for (const revenueData of mockRevenues) {
-        await this.revenueService.create(gymOwner, {
-          ...revenueData,
-          date: revenueData.date.toISOString(),
-        });
+        await this.revenueService.create(
+          gymOwner,
+          {
+            ...revenueData,
+            date: revenueData.date.toISOString(),
+          },
+          gym.id,
+        );
       }
 
       const mockNote =

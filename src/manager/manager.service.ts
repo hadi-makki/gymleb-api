@@ -66,6 +66,7 @@ export class ManagerService {
       userId: null,
       deviceId,
     });
+
     return {
       ...returnManager(savedManager),
       token: token.accessToken,
@@ -245,7 +246,9 @@ export class ManagerService {
   async getMe(manager: Manager): Promise<ManagerCreatedDto> {
     const checkManager = await this.managerEntity
       .findById(manager.id)
-      .populate('gym');
+      .populate({ path: 'gyms', model: Gym.name });
+
+    console.log('this is the check manager', checkManager);
 
     if (!checkManager) {
       throw new NotFoundException('Manager not found');

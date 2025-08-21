@@ -16,7 +16,7 @@ import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Gym } from './entities/gym.entity';
 import { Roles } from '../decorators/roles/Role';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.entity';
 import { UpdateGymNameDto } from './dto/update-name.dto';
@@ -25,7 +25,7 @@ import { SubscriptionInstance } from '../transactions/subscription-instance.enti
 import { AddOfferDto } from './dto/add-offer.dto';
 import { TransactionType } from '../transactions/transaction.entity';
 @Controller('gym')
-@Roles(Role.GymOwner)
+@Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
   constructor(private readonly gymService: GymService) {}
 
@@ -54,6 +54,7 @@ export class GymController {
 
   @Get('/get-one/:id')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.Any)
   @ApiOperation({ summary: 'Get a gym by id' })
   @ApiOkResponse({
     description: 'The gym has been successfully retrieved.',
@@ -74,21 +75,22 @@ export class GymController {
     return this.gymService.remove(id);
   }
 
-  @Get('analytics')
+  @Get('analytics/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get gym analytics' })
   getGymAnalytics(
     @User() user: Manager,
+    @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getGymAnalytics(user, start, end);
+    return this.gymService.getGymAnalytics(user, start, end, gymId);
   }
 
   // Admin endpoints to query by owner id
   @Get('admin/:ownerId/analytics')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   async getGymAnalyticsByOwnerId(
     @Param('ownerId') ownerId: string,
     @Query('start') start?: string,
@@ -99,7 +101,7 @@ export class GymController {
 
   @Get('admin/:ownerId/transactions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   async getTransactionsByOwnerId(
     @Param('ownerId') ownerId: string,
     @Query('page') page = '1',
@@ -116,7 +118,7 @@ export class GymController {
 
   @Get('admin/:ownerId/members')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   getMembersByOwnerId(
     @Param('ownerId') ownerId: string,
     @Query('page') page = '1',
@@ -133,7 +135,7 @@ export class GymController {
 
   @Get('admin/:ownerId/summary')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   getOwnerSummary(@Param('ownerId') ownerId: string) {
     return this.gymService.getGymOwnerSummary(ownerId);
   }
@@ -161,7 +163,7 @@ export class GymController {
 
   @Get('admin/get-all-gyms')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.SuperAdmin)
+  @Roles(Permissions.SuperAdmin)
   getAllGyms() {
     return this.gymService.getAllGyms();
   }
@@ -185,7 +187,7 @@ export class GymController {
 
   @Patch('womens-times')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Role.GymOwner)
+  @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: "Update women's-only times" })
   async setWomensTimes(
     @User() user: Manager,
@@ -207,8 +209,9 @@ export class GymController {
     return this.gymService.updateGymNote(user, updateGymNoteDto.note);
   }
 
-  @Get('get-transaction-history')
+  @Get('get-transaction-history/:gymId')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.transactions)
   @ApiOperation({ summary: 'Get transaction history' })
   @ApiOkResponse({
     description: 'The transaction history has been successfully retrieved.',
@@ -220,6 +223,7 @@ export class GymController {
     @Query('limit') limit = '5',
     @Query('search') search: string,
     @Query('type') type: TransactionType,
+    @Param('gymId') gymId: string,
   ) {
     return this.gymService.getTransactionHistory(
       user,
@@ -227,6 +231,7 @@ export class GymController {
       Number(page),
       search,
       type,
+      gymId,
     );
   }
 

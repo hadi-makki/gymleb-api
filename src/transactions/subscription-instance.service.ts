@@ -18,7 +18,7 @@ import { Manager } from '../manager/manager.entity';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.entity';
 import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
 import { UnauthorizedException } from '../error/unauthorized-error';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { Transaction, TransactionType } from './transaction.entity';
 import { Types } from 'mongoose';
 import { Revenue } from '../revenue/revenue.entity';
@@ -145,7 +145,7 @@ export class TransactionService {
           : { member: member._id }),
       })
       .populate('subscription')
-      .populate('gym')
+      .populate('gyms')
       .populate('member')
       .populate('owner')
       .populate('ownerSubscriptionType')
@@ -182,27 +182,27 @@ export class TransactionService {
       throw new NotFoundException('Subscription instance not found');
     }
     activeSubscriptionInstance.isInvalidated = true;
+    activeSubscriptionInstance.invalidatedAt = new Date();
     await activeSubscriptionInstance.save();
     return {
       message: 'Subscription instance invalidated successfully',
     };
   }
 
-  async deleteSubscriptionInstance(subscriptionId: string, manager: Manager) {
+  async deleteSubscriptionInstance(
+    subscriptionId: string,
+    manager: Manager,
+    gymId: string,
+  ) {
     const subscriptionInstance = await this.transactionModel
       .findById(subscriptionId)
-      .populate('gym');
+      .populate('gyms');
     if (!subscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }
-    const getManagerGym = await this.gymRepository
-      .findById(subscriptionInstance.gym._id)
-      .populate('owner');
+    const getManagerGym = await this.gymRepository.findById(gymId);
 
-    if (
-      getManagerGym.owner.toString() !== manager._id.toString() &&
-      manager.roles.includes(Role.SuperAdmin)
-    ) {
+    if (getManagerGym.owner.toString() !== manager._id.toString()) {
       throw new UnauthorizedException(
         'You do not have permission to delete this subscription instance',
       );

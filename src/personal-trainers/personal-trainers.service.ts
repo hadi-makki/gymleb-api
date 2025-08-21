@@ -4,7 +4,7 @@ import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { PersonalTrainer } from './entities/personal-trainer.entity';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Role } from '../decorators/roles/role.enum';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../user/user.entity';
 import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
 import { NotFoundException } from '../error/not-found-error';
@@ -24,7 +24,7 @@ export class PersonalTrainersService {
       email: createPersonalTrainerDto.email,
       password: createPersonalTrainerDto.password,
       users: createPersonalTrainerDto.users,
-      roles: [Role.ReadUsers],
+      roles: [Permissions.personalTrainers],
     });
     return personalTrainer;
   }

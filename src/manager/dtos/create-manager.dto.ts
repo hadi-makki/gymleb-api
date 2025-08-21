@@ -9,7 +9,7 @@ import {
   IsUUID,
   Matches,
 } from 'class-validator';
-import { Role } from '../../decorators/roles/role.enum';
+import { Permissions } from '../../decorators/roles/role.enum';
 
 export class CreateManagerDto {
   @ApiProperty()
@@ -32,6 +32,6 @@ export class CreateManagerDto {
   email: string;
 
   @ApiProperty()
-  @IsEnum(Role, { each: true })
-  roles: Role[];
+  @IsEnum(Permissions, { each: true })
+  roles: Permissions[];
 }
