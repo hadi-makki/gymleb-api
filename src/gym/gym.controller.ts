@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { GymService } from './gym.service';
 import { CreateGymDto } from './dto/create-gym.dto';
@@ -99,6 +100,21 @@ export class GymController {
     return await this.gymService.getGymAnalyticsByOwnerId(ownerId, start, end);
   }
 
+  @Get('admin/analytics/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  async getGymAnalyticsByOwnerIdAndGymId(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return await this.gymService.getGymAnalyticsByOwnerIdAndGymId(
+      gymId,
+      start,
+      end,
+    );
+  }
+
   @Get('admin/:ownerId/transactions')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin)
@@ -150,15 +166,15 @@ export class GymController {
     return this.gymService.getGymByGymName(gymName);
   }
 
-  @Patch('day/:day')
+  @Patch('day/:gymId/:day')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update a gym day' })
   @ApiOkResponse({
     description: 'The gym day has been successfully updated.',
     type: Gym,
   })
-  updateGymDay(@Param('day') day: string, @User() user: Manager) {
-    return this.gymService.updateGymDay(day, user);
+  updateGymDay(@Param('gymId') gymId: string, @Param('day') day: string) {
+    return this.gymService.updateGymDay(gymId, day);
   }
 
   @Get('admin/get-all-gyms')
@@ -168,45 +184,48 @@ export class GymController {
     return this.gymService.getAllGyms();
   }
 
-  @Patch('update/name')
+  @Patch('update/name/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym name' })
   updateGymName(
+    @Param('gymId') gymId: string,
     @Body() updateGymNameDto: UpdateGymNameDto,
-    @User() user: Manager,
   ) {
-    return this.gymService.updateGymName(user, updateGymNameDto.name);
+    return this.gymService.updateGymName(gymId, updateGymNameDto.name);
   }
 
-  @Patch('finished-page-setup')
+  @Patch('finished-page-setup/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set gym finished page setup' })
-  async setGymFinishedPageSetup(@User() user: Manager) {
-    return await this.gymService.setGymFinishedPageSetup(user);
+  async setGymFinishedPageSetup(
+    @User() user: Manager,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.gymService.setGymFinishedPageSetup(user, gymId);
   }
 
-  @Patch('womens-times')
+  @Patch('womens-times/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: "Update women's-only times" })
   async setWomensTimes(
-    @User() user: Manager,
+    @Param('gymId') gymId: string,
     @Body()
     body: {
       womensTimes: { day: string; from: string; to: string }[];
     },
   ) {
-    return await this.gymService.setWomensTimes(user, body.womensTimes || []);
+    return await this.gymService.setWomensTimes(gymId, body.womensTimes || []);
   }
 
-  @Patch('update/note')
+  @Patch('update/note/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym note' })
   updateGymNote(
+    @Param('gymId') gymId: string,
     @Body() updateGymNoteDto: UpdateGymNoteDto,
-    @User() user: Manager,
   ) {
-    return this.gymService.updateGymNote(user, updateGymNoteDto.note);
+    return this.gymService.updateGymNote(gymId, updateGymNoteDto.note);
   }
 
   @Get('get-transaction-history/:gymId')
@@ -235,14 +254,179 @@ export class GymController {
     );
   }
 
-  @Post('add-offer')
+  @Post('add-offer/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Add a gym offer' })
   @ApiOkResponse({
     description: 'The gym offer has been successfully added.',
     type: Gym,
   })
-  addGymOffer(@User() user: Manager, @Body() addOfferDto: AddOfferDto) {
-    return this.gymService.addGymOffer(user, addOfferDto);
+  addGymOffer(@Param('gymId') gymId: string, @Body() addOfferDto: AddOfferDto) {
+    return this.gymService.addGymOffer(gymId, addOfferDto);
+  }
+
+  @Get('owner/:ownerId/gyms')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Get all gyms for a specific gym owner' })
+  @ApiOkResponse({
+    description: 'The gyms have been successfully retrieved.',
+    type: [Gym],
+  })
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  getGymsByOwner(@Param('ownerId') ownerId: string) {
+    return this.gymService.getGymsByOwner(ownerId);
+  }
+
+  @Get('admin/transactions/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  getGymTransactions(
+    @Param('gymId') gymId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+  ) {
+    return this.gymService.getGymTransactions(
+      gymId,
+      Number(limit),
+      Number(page),
+      search,
+    );
+  }
+
+  @Get('admin/members/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  getGymMembers(
+    @Param('gymId') gymId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+  ) {
+    return this.gymService.getGymMembers(
+      gymId,
+      Number(limit),
+      Number(page),
+      search,
+    );
+  }
+
+  @Get('admin/graphs/revenue/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Get gym revenue graph data' })
+  @ApiOkResponse({
+    description: 'Revenue graph data retrieved successfully.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string' },
+          revenue: { type: 'number' },
+          transactions: { type: 'number' },
+        },
+      },
+    },
+  })
+  async getGymRevenueGraphData(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('isMobile') isMobile?: boolean,
+  ) {
+    try {
+      return await this.gymService.getGymRevenueGraphData(
+        gymId,
+        start,
+        end,
+        isMobile,
+      );
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch revenue graph data');
+    }
+  }
+
+  @Get('admin/graphs/member-growth/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Get gym member growth graph data' })
+  @ApiOkResponse({
+    description: 'Member growth graph data retrieved successfully.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string' },
+          newMembers: { type: 'number' },
+          cumulativeMembers: { type: 'number' },
+        },
+      },
+    },
+  })
+  async getGymMemberGrowthGraphData(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('isMobile') isMobile?: boolean,
+  ) {
+    try {
+      return await this.gymService.getGymMemberGrowthGraphData(
+        gymId,
+        start,
+        end,
+        isMobile,
+      );
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch member growth graph data');
+    }
+  }
+
+  @Get('admin/graphs/transaction-trends/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Get gym transaction trends graph data' })
+  @ApiOkResponse({
+    description: 'Transaction trends graph data retrieved successfully.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string' },
+          subscriptions: { type: 'number' },
+          revenues: { type: 'number' },
+          expenses: { type: 'number' },
+          total: { type: 'number' },
+        },
+      },
+    },
+  })
+  async getGymTransactionTrendsGraphData(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('isMobile') isMobile?: boolean,
+  ) {
+    try {
+      return await this.gymService.getGymTransactionTrendsGraphData(
+        gymId,
+        start,
+        end,
+        isMobile,
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        'Failed to fetch transaction trends graph data',
+      );
+    }
+  }
+
+  @Delete('admin/delete-gym/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  deleteGym(@Param('gymId') gymId: string) {
+    return this.gymService.deleteGym(gymId);
   }
 }

@@ -1,23 +1,25 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
-import { GymOwnerService } from './gym-owner.service';
-import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
-import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
-import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Gym } from 'src/gym/entities/gym.entity';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Manager } from '../manager/manager.entity';
 import { User } from '../decorators/users.decorator';
 import { returnManager } from '../functions/returnUser';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { Manager } from '../manager/manager.entity';
+import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
+import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
+import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
+import { GymOwnerService } from './gym-owner.service';
 @Controller('gym-owner')
 @ApiTags('Gym Owner')
 export class GymOwnerController {
@@ -99,5 +101,29 @@ export class GymOwnerController {
   @Roles(Permissions.GymOwner)
   getGymOwner(@User() user: Manager) {
     return returnManager(user);
+  }
+
+  @Post('add-gym')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Add a gym to a gym owner' })
+  @ApiOkResponse({
+    description: 'The gym has been successfully added to the gym owner.',
+    type: Gym,
+  })
+  @Roles(Permissions.GymOwner)
+  addGym(@Body() createGymToGymOwnerDto: CreateGymToGymOwnerDto) {
+    return this.gymOwnerService.createGymToGymOwner(createGymToGymOwnerDto);
+  }
+
+  @Get('/owners/get-all')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Get all gym owners' })
+  @ApiOkResponse({
+    description: 'The gym owners have been successfully retrieved.',
+    type: [Manager],
+  })
+  @Roles(Permissions.SuperAdmin)
+  async getAllOwners() {
+    return await this.gymOwnerService.findAll();
   }
 }

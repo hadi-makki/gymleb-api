@@ -55,9 +55,6 @@ export class ManagerAuthGuard implements CanActivate {
       .findById(userId)
       .populate('roles');
 
-    console.log('this is the manager', manager.roles);
-    console.log('this is the requiredRoles', requiredRoles);
-
     if (
       (!manager ||
         !requiredRoles.some((role) => manager.roles.includes(role))) &&

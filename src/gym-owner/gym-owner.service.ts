@@ -23,6 +23,7 @@ import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { RevenueService } from 'src/revenue/revenue.service';
+import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
 export class GymOwnerService {
   constructor(
     @InjectModel(Manager.name)
@@ -288,9 +289,9 @@ export class GymOwnerService {
           to: '12:00',
         },
       ];
-      await this.gymService.addGymOffer(gymOwner, mockOffers);
-      await this.gymService.updateGymNote(gymOwner, mockNote);
-      await this.gymService.setWomensTimes(gymOwner, mockWomensTimes);
+      await this.gymService.addGymOffer(gym.id, mockOffers);
+      await this.gymService.updateGymNote(gym.id, mockNote);
+      await this.gymService.setWomensTimes(gym.id, mockWomensTimes);
 
       console.log(`Mock data generated successfully for gym: ${gym.name}`);
       console.log(`- Created ${mockMembers.length} members`);
@@ -314,7 +315,7 @@ export class GymOwnerService {
   }
 
   async findAll() {
-    const gymOwners = await this.gymOwnerModel.find();
+    const gymOwners = await this.gymOwnerModel.find().populate('gyms');
     return gymOwners;
   }
 
@@ -346,5 +347,51 @@ export class GymOwnerService {
       throw new NotFoundException('Gym owner not found');
     }
     return gymOwner;
+  }
+
+  async createGymToGymOwner({
+    gymOwnerId,
+    address,
+    name,
+    phone,
+  }: CreateGymToGymOwnerDto) {
+    console.log('this is passed', gymOwnerId, address, name, phone);
+    const gymOwner = await this.gymOwnerModel.findById(gymOwnerId);
+    if (!gymOwner) {
+      throw new NotFoundException('Gym owner not found');
+    }
+    const checkGym = await this.gymModel.exists({
+      name,
+    });
+    if (checkGym) {
+      throw new BadRequestException('Gym already exists');
+    }
+    let gymName = name ? name : gymOwner.firstName + ' ' + gymOwner.lastName;
+    const checkGymName = await this.gymModel.findOne({
+      name: gymName,
+    });
+    if (checkGymName) {
+      gymName = gymName + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    const gym = await this.gymModel.create({
+      name: gymName,
+      address,
+      phone,
+      email: gymOwner.email,
+      password: gymOwner.password,
+      openingDays: Days,
+      owner: gymOwner.id,
+      gymDashedName: gymName.toLowerCase().split(' ').join('-'),
+    });
+    await this.gymOwnerModel.findByIdAndUpdate(
+      gymOwnerId,
+      {
+        $push: { gyms: gym.id },
+      },
+      { new: true },
+    );
+
+    return gym;
   }
 }

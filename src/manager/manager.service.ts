@@ -254,8 +254,6 @@ export class ManagerService {
       .findById(manager.id)
       .populate({ path: 'gyms', model: Gym.name });
 
-    console.log('this is the check manager', checkManager);
-
     if (!checkManager) {
       throw new NotFoundException('Manager not found');
     }

@@ -12,7 +12,7 @@ import { SubscriptionInstance } from '../transactions/subscription-instance.enti
 import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.entity';
 import { Types } from 'mongoose';
-import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
 import { paginateModel } from '../utils/pagination';
 import { AddOfferDto } from './dto/add-offer.dto';
@@ -178,7 +178,8 @@ export class GymService {
       .find({ gym: gym.id })
       .populate('subscription')
       .populate('transactions')
-      .populate('gym');
+      .populate('gym')
+      .sort({ createdAt: -1 });
 
     const membersWithActiveSubscription = members.map((member) => {
       const checkActiveSubscription = member.transactions.some(
@@ -253,10 +254,8 @@ export class GymService {
     return gym;
   }
 
-  async updateGymDay(dayToUpdate: string, manager: Manager) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+  async updateGymDay(gymId: string, dayToUpdate: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -291,10 +290,8 @@ export class GymService {
     return filterDataWithoutOwners;
   }
 
-  async updateGymName(manager: Manager, gymName: string) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+  async updateGymName(gymId: string, gymName: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -304,10 +301,8 @@ export class GymService {
     return gym;
   }
 
-  async setGymFinishedPageSetup(manager: Manager) {
-    const gym = await this.gymModel.findOne({
-      owner: manager.id,
-    });
+  async setGymFinishedPageSetup(manager: Manager, gymId: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -317,10 +312,10 @@ export class GymService {
   }
 
   async setWomensTimes(
-    manager: Manager,
+    gymId: string,
     womensTimes: { day: string; from: string; to: string }[],
   ) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -329,8 +324,8 @@ export class GymService {
     return gym;
   }
 
-  async updateGymNote(manager: Manager, note: string) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async updateGymNote(gymId: string, note: string) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -645,13 +640,478 @@ export class GymService {
     return { owner, gym, activeOwnerSub };
   }
 
-  async addGymOffer(manager: Manager, { offers }: AddOfferDto) {
-    const gym = await this.gymModel.findOne({ owner: manager.id });
+  async addGymOffer(gymId: string, { offers }: AddOfferDto) {
+    const gym = await this.gymModel.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.offers = offers.map((offer) => ({ description: offer.description }));
     await gym.save();
+    return gym;
+  }
+
+  async getGymsByOwner(ownerId: string) {
+    const gyms = await this.gymModel.find({ owner: ownerId }).populate('owner');
+    return gyms;
+  }
+
+  async getGymAnalyticsByOwnerIdAndGymId(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ) {
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const now = new Date();
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    const currentMonthStart = startOfMonth(now);
+
+    // Build date filter for the specified range
+    const dateFilter: any = {};
+    if (start || end) {
+      dateFilter.createdAt = {};
+      if (start) dateFilter.createdAt.$gte = new Date(start);
+      if (end) dateFilter.createdAt.$lte = new Date(end);
+    }
+
+    // Fetch all transactions for the gym in the specified range
+    const allTransactions = await this.transactionModel
+      .find({
+        gym: new Types.ObjectId(gym.id),
+        ...dateFilter,
+      })
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
+
+    // Fetch transactions for last month comparison
+    const lastMonthTransactions = await this.transactionModel
+      .find({
+        gym: new Types.ObjectId(gym.id),
+        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+      })
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
+
+    // Fetch transactions for current month comparison
+    const currentMonthTransactions = await this.transactionModel
+      .find({
+        gym: new Types.ObjectId(gym.id),
+        createdAt: { $gte: currentMonthStart },
+      })
+      .populate('subscription')
+      .populate('revenue')
+      .populate('expense');
+
+    // Calculate subscription revenue for both periods
+    const lastMonthSubscriptionRevenue = lastMonthTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const currentMonthSubscriptionRevenue = currentMonthTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    // Calculate percentage change in subscription revenue
+    const revenueChange = lastMonthSubscriptionRevenue
+      ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
+          lastMonthSubscriptionRevenue) *
+        100
+      : 0;
+
+    const lastMonthMembers = await this.memberModel.countDocuments({
+      gym: gym.id,
+      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+    });
+    const currentMonthMembers = await this.memberModel.countDocuments({
+      gym: gym.id,
+      createdAt: { $gte: currentMonthStart },
+    });
+    const memberChange = lastMonthMembers
+      ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
+      : 0;
+
+    // Calculate totals from all transactions
+    const subscriptionRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const additionalRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.REVENUE)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const totalExpenses = allTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
+    const totalRevenue = subscriptionRevenue + additionalRevenue;
+    const netRevenue = totalRevenue - totalExpenses;
+
+    const totalMembers = await this.memberModel.countDocuments({
+      gym: gym.id,
+    });
+    const members = await this.memberModel
+      .find({ gym: gym.id })
+      .populate('subscription')
+      .populate('transactions')
+      .populate('gyms');
+
+    const membersWithActiveSubscription = members.map((member) => {
+      const checkActiveSubscription = member.transactions.some(
+        (transaction) => new Date(transaction.endDate) > new Date(),
+      );
+      const latestSubscriptionInstance = member.transactions.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )[0];
+      return {
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        createdAt: member.createdAt,
+        updatedAt: member.updatedAt,
+        subscription: member.subscription,
+        subscriptionTransactions: member.transactions,
+        gym: member.gym,
+        hasActiveSubscription: checkActiveSubscription,
+        currentActiveSubscription: latestSubscriptionInstance || null,
+      };
+    });
+
+    const analyticsStartDate = start
+      ? new Date(start)
+      : startOfMonth(subMonths(now, 1));
+    const analyticsEndDate = end ? new Date(end) : now;
+
+    return {
+      totalRevenue,
+      subscriptionRevenue,
+      additionalRevenue,
+      totalExpenses,
+      netRevenue,
+      totalMembers,
+      members: membersWithActiveSubscription,
+      totalTransactions: allTransactions.length,
+      revenueChange,
+      memberChange,
+      currentMonthMembers,
+      currentMonthRevenue: currentMonthSubscriptionRevenue,
+      currentMonthTransactions: currentMonthTransactions.filter(
+        (t) => t.type === TransactionType.SUBSCRIPTION,
+      ).length,
+      dateRange: { startDate: analyticsStartDate, endDate: analyticsEndDate },
+      gym,
+    };
+  }
+
+  async getGymTransactions(
+    gymId: string,
+    limit: number = 20,
+    page: number = 1,
+    search?: string,
+  ) {
+    console.log('getting transactions', gymId);
+
+    const result = await paginateModel(this.transactionModel, {
+      filter: {
+        gym: gymId,
+        ...(search
+          ? {
+              $or: [
+                { type: { $regex: search, $options: 'i' } },
+                { 'member.name': { $regex: search, $options: 'i' } },
+              ],
+            }
+          : {}),
+      },
+      populate: [
+        { path: 'member' },
+        { path: 'subscription' },
+        { path: 'gym' },
+        { path: 'revenue' },
+        { path: 'expense' },
+      ],
+      page,
+      limit,
+      sort: { createdAt: -1 },
+    });
+
+    return result;
+  }
+
+  async getGymMembers(
+    gymId: string,
+    limit: number = 20,
+    page: number = 1,
+    search?: string,
+  ) {
+    const result = await paginateModel(this.memberModel, {
+      filter: {
+        gym: gymId,
+        ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+      },
+      populate: [
+        { path: 'gym' },
+        { path: 'subscription' },
+        { path: 'transactions' },
+      ],
+      page,
+      limit,
+      sort: { createdAt: -1 },
+    });
+
+    return result;
+  }
+
+  async getGymRevenueGraphData(
+    gymId: string,
+    start?: string,
+    end?: string,
+    isMobile?: boolean,
+  ): Promise<{
+    data: {
+      date: string;
+      revenue: number;
+      transactions: number;
+    }[];
+    startDate: Date;
+    endDate: Date;
+  }> {
+    console.log('getting revenue graph data', gymId, start, end);
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start
+      ? new Date(start)
+      : subDays(new Date(), isMobile ? 7 : 30);
+
+    const transactions = await this.transactionModel
+      .find({
+        gym: gym._id,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+      .populate('member')
+      .sort({ createdAt: 1 });
+
+    // Group transactions by date
+    const revenueByDate = new Map();
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      revenueByDate.set(dateKey, {
+        date: dateKey,
+        revenue: 0,
+        transactions: 0,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Aggregate net revenue by date (revenue - expenses)
+    transactions.forEach((transaction) => {
+      const dateKey = transaction.createdAt.toISOString().split('T')[0];
+      const existing = revenueByDate.get(dateKey);
+      if (existing) {
+        const amount = transaction.paidAmount || 0;
+
+        // For expenses, subtract the amount (negative impact on revenue)
+        // For revenue/subscription, add the amount (positive impact on revenue)
+        if (transaction.type === TransactionType.EXPENSE) {
+          existing.revenue -= amount;
+        } else {
+          existing.revenue += amount;
+        }
+
+        existing.transactions += 1;
+      }
+    });
+
+    return {
+      data: Array.from(revenueByDate.values()),
+      startDate,
+      endDate,
+    };
+  }
+
+  async getGymMemberGrowthGraphData(
+    gymId: string,
+    start?: string,
+    end?: string,
+    isMobile?: boolean,
+  ): Promise<{
+    data: {
+      date: string;
+      newMembers: number;
+      cumulativeMembers: number;
+    }[];
+    startDate: Date;
+    endDate: Date;
+  }> {
+    console.log('getting member growth graph data', gymId, start, end);
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start
+      ? new Date(start)
+      : subDays(new Date(), isMobile ? 7 : 30);
+
+    const members = await this.memberModel
+      .find({
+        gym: gym.id,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+      .sort({ createdAt: 1 });
+
+    console.log('these are the members', members);
+
+    // Group members by date
+    const membersByDate = new Map();
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      membersByDate.set(dateKey, {
+        date: dateKey,
+        newMembers: 0,
+        cumulativeMembers: 0,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Count new members by date
+    members.forEach((member) => {
+      const dateKey = member.createdAt.toISOString().split('T')[0];
+      const existing = membersByDate.get(dateKey);
+      if (existing) {
+        existing.newMembers += 1;
+      }
+    });
+
+    // Calculate cumulative members
+    let cumulative = 0;
+    const result = Array.from(membersByDate.values()).map((item) => {
+      cumulative += item.newMembers;
+      return {
+        ...item,
+        cumulativeMembers: cumulative,
+      };
+    });
+
+    return {
+      data: result,
+      startDate,
+      endDate,
+    };
+  }
+
+  async getGymTransactionTrendsGraphData(
+    gymId: string,
+    start?: string,
+    end?: string,
+    isMobile?: boolean,
+  ): Promise<{
+    data: {
+      date: string;
+      subscriptions: number;
+      revenues: number;
+      expenses: number;
+      total: number;
+    }[];
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start
+      ? new Date(start)
+      : subDays(new Date(), isMobile ? 7 : 30);
+
+    const transactions = await this.transactionModel
+      .find({
+        gym: gym._id,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+      .populate('member')
+      .sort({ createdAt: 1 });
+
+    // Group transactions by date and type
+    const transactionsByDate = new Map();
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      transactionsByDate.set(dateKey, {
+        date: dateKey,
+        subscriptions: 0,
+        revenues: 0,
+        expenses: 0,
+        total: 0,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Aggregate transactions by date and type
+    transactions.forEach((transaction) => {
+      const dateKey = transaction.createdAt.toISOString().split('T')[0];
+      const existing = transactionsByDate.get(dateKey);
+      if (existing) {
+        const amount = transaction.paidAmount || 0;
+        existing.total += 1;
+
+        switch (transaction.type) {
+          case TransactionType.SUBSCRIPTION:
+            existing.subscriptions += 1;
+            break;
+          case TransactionType.REVENUE:
+            existing.revenues += 1;
+            break;
+          case TransactionType.EXPENSE:
+            existing.expenses += 1;
+            break;
+        }
+      }
+    });
+
+    return {
+      data: Array.from(transactionsByDate.values()),
+      startDate,
+      endDate,
+    };
+  }
+
+  async deleteGym(gymId: string) {
+    const gym = await this.gymModel.findByIdAndDelete(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
     return gym;
   }
 }

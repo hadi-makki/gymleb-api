@@ -107,8 +107,8 @@ export class MemberService {
     });
     const checkIfPhoneExists = await this.memberModel.exists({
       phone: createMemberDto.phone,
-      gym: gym.id,
     });
+
     const checkIfEmailExists = createMemberDto.email
       ? await this.memberModel.exists({
           email: createMemberDto.email,
@@ -220,7 +220,6 @@ export class MemberService {
     page: number,
     gymId: string,
   ) {
-    console.log('this is the manager in findAll', manager.id);
     const checkGym = await this.gymModel.findById(gymId);
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
