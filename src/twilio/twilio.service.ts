@@ -63,6 +63,8 @@ export class TwilioService {
       throw new BadRequestException('Member is already notified');
     }
 
+    console.log('this is the member', member.lastSubscription);
+
     await this.client.messages
       .create({
         from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
@@ -77,7 +79,9 @@ export class TwilioService {
                 new Date(member.lastSubscription.invalidatedAt),
                 'dd/MM/yyyy',
               )
-            : format(new Date(member.lastSubscription.endDate), 'dd/MM/yyyy'),
+            : member.lastSubscription.endDate
+              ? format(new Date(member.lastSubscription.endDate), 'dd/MM/yyyy')
+              : 'N/A',
           5: gym.phone,
         }),
       })

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Permissions } from 'src/decorators/roles/role.enum';
 
 export class CreateStaffDto {
@@ -15,7 +15,7 @@ export class CreateStaffDto {
     description: 'The email of the staff',
     example: 'john.doe@example.com',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   email: string;
 
@@ -34,4 +34,12 @@ export class CreateStaffDto {
   @IsNotEmpty()
   @IsEnum(Permissions, { each: true })
   permissions: Permissions[];
+
+  @ApiProperty({
+    description: 'The phone number of the staff',
+    example: '+201012345678',
+  })
+  @IsNotEmpty()
+  @IsString()
+  phoneNumber: string;
 }

@@ -22,7 +22,10 @@ export class Manager extends MainEntity {
   @Prop({ required: true })
   password: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
+  phoneNumber: string;
+
+  @Prop({ required: false })
   email: string;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Token' }] })

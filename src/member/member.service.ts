@@ -97,11 +97,6 @@ export class MemberService {
       createMemberDto.subscriptionId,
     );
 
-    console.log('subscription', subscription);
-    console.log(
-      'createMemberDto.subscriptionId',
-      createMemberDto.subscriptionId,
-    );
     if (!subscription) {
       throw new NotFoundException('Subscription not found');
     }
@@ -114,10 +109,12 @@ export class MemberService {
       phone: createMemberDto.phone,
       gym: gym.id,
     });
-    const checkIfEmailExists = await this.memberModel.exists({
-      email: createMemberDto.email,
-      gym: gym.id,
-    });
+    const checkIfEmailExists = createMemberDto.email
+      ? await this.memberModel.exists({
+          email: createMemberDto.email,
+          gym: gym.id,
+        })
+      : false;
 
     if (checkIfNameExists) {
       throw new BadRequestException('Name already exists');
@@ -127,7 +124,7 @@ export class MemberService {
       throw new BadRequestException('Phone already exists');
     }
 
-    if (checkIfEmailExists) {
+    if (checkIfEmailExists && createMemberDto.email) {
       throw new BadRequestException('Email already exists');
     }
 

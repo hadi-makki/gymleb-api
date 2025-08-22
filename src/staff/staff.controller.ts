@@ -23,12 +23,16 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 export class StaffController {
   constructor(private readonly staffService: StaffService) {}
 
-  @Post()
+  @Post(':gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()
   @Roles(Permissions.GymOwner)
-  async create(@Body() createStaffDto: CreateStaffDto, @User() user: Manager) {
-    return await this.staffService.create(createStaffDto, user);
+  async create(
+    @Body() createStaffDto: CreateStaffDto,
+    @User() user: Manager,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.staffService.create(createStaffDto, user, gymId);
   }
 
   @Get('gym/:gymId')

@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsStrongPassword,
   IsUUID,
@@ -27,9 +28,14 @@ export class CreateManagerDto {
 
   @ApiProperty()
   @IsString()
+  @IsOptional()
   @IsEmail()
-  @IsNotEmpty()
   email: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  phoneNumber: string;
 
   @ApiProperty()
   @IsEnum(Permissions, { each: true })

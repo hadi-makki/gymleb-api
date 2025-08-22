@@ -44,21 +44,26 @@ export class ManagerService {
     body: CreateManagerDto,
     deviceId: string,
   ): Promise<ManagerCreatedWithTokenDto> {
-    const manager = await this.managerEntity.findOne({
-      $or: [{ email: body.email }, { username: body.username }],
+    const checkEmail = await this.managerEntity.exists({
+      email: body.email,
     });
-    if (manager) {
-      throw new BadRequestException(
-        'User with this email or username already exists',
-      );
+    if (checkEmail && body.email) {
+      throw new BadRequestException('User with this email already exists');
+    }
+    const checkUsername = await this.managerEntity.exists({
+      username: body.username,
+    });
+    if (checkUsername) {
+      throw new BadRequestException('User with this username already exists');
     }
 
     const hashedPassword = await Manager.hashPassword(body.password);
     const savedManager = await this.managerEntity.create({
-      email: body.email.trim().toLowerCase(),
+      ...(body.email && { email: body.email.trim().toLowerCase() }),
       password: hashedPassword,
       username: body.username.trim(),
       roles: body.roles,
+      phoneNumber: body.phoneNumber,
     });
 
     const token = await this.tokenService.generateTokens({

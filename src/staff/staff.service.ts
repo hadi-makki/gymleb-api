@@ -22,24 +22,25 @@ export class StaffService {
     private readonly managerModel: Model<Manager>,
   ) {}
 
-  async create(createStaffDto: CreateStaffDto, manager: Manager) {
+  async create(
+    createStaffDto: CreateStaffDto,
+    manager: Manager,
+    gymId: string,
+  ) {
     const created = await this.managerService.createManager(
       {
         username: createStaffDto.username,
         email: createStaffDto.email,
         password: createStaffDto.password,
         roles: createStaffDto.permissions,
+        phoneNumber: createStaffDto.phoneNumber,
       },
       uuidv4(),
     );
     console.log('this is the created in create', created._id);
 
-    const gym = await this.gymService.getGymByManager(manager);
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
     await this.managerModel.findByIdAndUpdate(created._id, {
-      gym: new Types.ObjectId(gym.id),
+      gym: new Types.ObjectId(gymId),
     });
     const staffDoc = await this.managerModel.findById(created._id);
     console.log('this is the staffDoc in create', staffDoc);
@@ -94,11 +95,13 @@ export class StaffService {
 
     if (updateStaffDto.username)
       staff.username = updateStaffDto.username.trim();
-    if (updateStaffDto.email) staff.email = updateStaffDto.email.trim();
+    staff.email = updateStaffDto.email?.trim();
     if (updateStaffDto.password) {
       staff.password = await Manager.hashPassword(updateStaffDto.password);
     }
     if (updateStaffDto.permissions) staff.roles = updateStaffDto.permissions;
+    if (updateStaffDto.phoneNumber)
+      staff.phoneNumber = updateStaffDto.phoneNumber;
     await staff.save();
     return returnManager(staff as any);
   }
