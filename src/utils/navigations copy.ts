@@ -57,6 +57,30 @@ export const navItems: NavItem[] = [
     roles: [Permissions.GymOwner, Permissions.members],
   },
   {
+    title: 'Personal Trainers',
+    url: '/personal-trainers',
+    icon: 'user',
+    isActive: false,
+    items: [],
+    roles: [Permissions.GymOwner],
+  },
+  {
+    title: 'PT Sessions',
+    url: '/pt-sessions',
+    icon: 'user',
+    isActive: false,
+    items: [],
+    roles: [Permissions.personalTrainers],
+  },
+  {
+    title: 'Staff',
+    url: '/staff',
+    icon: 'user',
+    isActive: false,
+    items: [],
+    roles: [Permissions.GymOwner],
+  },
+  {
     title: 'Available Subscriptions',
     url: '/subscriptions/available',
     icon: 'cards',
@@ -115,14 +139,6 @@ export const navItems: NavItem[] = [
     isActive: false,
     items: [],
     roles: [Permissions.SuperAdmin],
-  },
-  {
-    title: 'Staff',
-    url: '/staff',
-    icon: 'user',
-    isActive: false,
-    items: [],
-    roles: [Permissions.GymOwner],
   },
 ];
 

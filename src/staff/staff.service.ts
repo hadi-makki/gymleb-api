@@ -36,12 +36,10 @@ export class StaffService {
         phoneNumber: createStaffDto.phoneNumber,
       },
       uuidv4(),
+      gymId,
     );
     console.log('this is the created in create', created._id);
 
-    await this.managerModel.findByIdAndUpdate(created._id, {
-      gym: new Types.ObjectId(gymId),
-    });
     const staffDoc = await this.managerModel.findById(created._id);
     console.log('this is the staffDoc in create', staffDoc);
     return returnManager(staffDoc);
@@ -69,7 +67,7 @@ export class StaffService {
       throw new NotFoundException('Gym not found');
     }
     const staff = await this.managerModel.findById(id);
-    if (!staff || (staff.gym as any)?.toString?.() !== gym.id) {
+    if (!staff || staff.gyms?.some((gym) => gym.id === gym.id)) {
       throw new NotFoundException('Staff not found');
     }
     return returnManager(staff as any);
@@ -89,7 +87,7 @@ export class StaffService {
       throw new NotFoundException('Gym not found');
     }
     const staff = await this.managerModel.findById(id);
-    if (!staff || (staff.gym as any)?.toString?.() !== gymId) {
+    if (!staff || staff.gyms?.some((gym) => gym.id === gymId)) {
       throw new NotFoundException('Staff not found');
     }
 
@@ -115,7 +113,7 @@ export class StaffService {
       throw new NotFoundException('Gym not found');
     }
     const staff = await this.managerModel.findById(id);
-    if (!staff || (staff.gym as any)?.toString?.() !== gymId) {
+    if (!staff || staff.gyms?.some((gym) => gym.id === gymId)) {
       throw new NotFoundException('Staff not found');
     }
     await this.managerModel.deleteOne({ _id: new Types.ObjectId(id) });

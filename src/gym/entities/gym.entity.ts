@@ -3,7 +3,6 @@ import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { MainEntity } from '../../main-classes/mainEntity';
 import { Manager } from '../../manager/manager.entity';
-import { PersonalTrainer } from '../../personal-trainers/entities/personal-trainer.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
@@ -22,8 +21,8 @@ export class Gym extends MainEntity {
   @Prop({ type: String })
   phone: string;
 
-  @Prop({ type: [Types.ObjectId], ref: 'PersonalTrainer', required: false })
-  personalTrainers: PersonalTrainer[];
+  @Prop({ type: [Types.ObjectId], ref: 'Manager', required: false })
+  personalTrainers: Manager[];
 
   @Prop({ type: [Types.ObjectId], ref: 'Subscription', required: false })
   subscriptions: Subscription[];

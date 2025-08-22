@@ -196,7 +196,7 @@ export class TransactionService {
   ) {
     const subscriptionInstance = await this.transactionModel
       .findById(subscriptionId)
-      .populate('gyms');
+      .populate('gym');
     if (!subscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }

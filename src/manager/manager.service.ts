@@ -43,6 +43,7 @@ export class ManagerService {
   async createManager(
     body: CreateManagerDto,
     deviceId: string,
+    gymId: string,
   ): Promise<ManagerCreatedWithTokenDto> {
     const checkEmail = await this.managerEntity.exists({
       email: body.email,
@@ -64,6 +65,10 @@ export class ManagerService {
       username: body.username.trim(),
       roles: body.roles,
       phoneNumber: body.phoneNumber,
+    });
+
+    await this.managerEntity.findByIdAndUpdate(savedManager._id, {
+      gyms: [new Types.ObjectId(gymId)],
     });
 
     const token = await this.tokenService.generateTokens({
@@ -101,11 +106,15 @@ export class ManagerService {
       throw new NotFoundException('User not found');
     }
 
+    console.log('this is the manager', manager.password);
+    console.log('this is the body', body.password);
+
     const isPasswordMatch = await Manager.isPasswordMatch(
       body.password,
       manager.password,
     );
     if (!isPasswordMatch) {
+      console.log('this is the isPasswordMatch', isPasswordMatch);
       throw new BadRequestException('Password is incorrect');
     }
     const token = await this.tokenService.generateTokens({

@@ -6,6 +6,7 @@ import { Subscription } from '../../subscription/entities/subscription.entity';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
+import { PTSession } from 'src/personal-trainers/entities/pt-sessions.entity';
 
 @CustomSchema()
 export class Member extends MainEntity {
@@ -50,6 +51,9 @@ export class Member extends MainEntity {
 
   @Prop({ type: String, required: false })
   profileImage: string;
+
+  @Prop({ required: false, type: [{ type: Types.ObjectId, ref: 'PTSession' }] })
+  sessions: PTSession[];
 }
 
 export const MemberSchema = SchemaFactory.createForClass(Member);

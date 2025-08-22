@@ -50,7 +50,10 @@ export class GymService {
   }
 
   async findAll() {
-    return await this.gymModel.find().populate('owner');
+    return await this.gymModel.find().populate({
+      path: 'owner',
+      select: '_id firstName lastName username phoneNumber',
+    });
   }
 
   async findOne(id: string) {
@@ -270,7 +273,10 @@ export class GymService {
   }
 
   async getAllGyms() {
-    const gyms = await this.gymModel.find().populate('owner');
+    const gyms = await this.gymModel.find().populate({
+      path: 'owner',
+      select: '_id firstName lastName username phoneNumber',
+    });
     const data = await Promise.all(
       gyms.map(async (gym) => {
         const ownerSubscriptions = await this.ownerSubscriptionModel.find({
@@ -635,7 +641,7 @@ export class GymService {
     if (!owner) {
       throw new NotFoundException('Owner not found');
     }
-    const gym = owner.gym;
+    const gym = owner.gyms[0];
     const activeOwnerSub = owner.ownerSubscription;
     return { owner, gym, activeOwnerSub };
   }
@@ -651,7 +657,10 @@ export class GymService {
   }
 
   async getGymsByOwner(ownerId: string) {
-    const gyms = await this.gymModel.find({ owner: ownerId }).populate('owner');
+    const gyms = await this.gymModel.find({ owner: ownerId }).populate({
+      path: 'owner',
+      select: '_id firstName lastName username phoneNumber',
+    });
     return gyms;
   }
 

@@ -58,7 +58,7 @@ export class ManagerController {
     private readonly GymService: GymService,
   ) {}
 
-  @Post('/create')
+  @Post('/create/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()
   @ApiBadRequestResponse()
@@ -71,8 +71,9 @@ export class ManagerController {
   createManager(
     @Body() body: CreateManagerDto,
     @GetDeviceId() deviceId: string,
+    @Param('gymId') gymId: string,
   ) {
-    return this.ManagerService.createManager(body, deviceId);
+    return this.ManagerService.createManager(body, deviceId, gymId);
   }
 
   @Get(':id')

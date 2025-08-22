@@ -4,11 +4,11 @@ import { MainEntity } from '../main-classes/mainEntity';
 import * as bcrypt from 'bcryptjs';
 import Token from '../token/token.entity';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
-import { PersonalTrainer } from '../personal-trainers/entities/personal-trainer.entity';
 import { Gym } from '../gym/entities/gym.entity';
 import { Subscription } from '../subscription/entities/subscription.entity';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { Transaction } from '../transactions/transaction.entity';
+import { Manager } from 'src/manager/manager.entity';
 
 export type UserDocument = User & Document;
 
@@ -23,8 +23,8 @@ export class User extends MainEntity {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ required: true, type: Types.ObjectId, ref: 'PersonalTrainer' })
-  personalTrainer: PersonalTrainer;
+  @Prop({ required: true, type: Types.ObjectId, ref: 'Manager' })
+  personalTrainer: Manager;
 
   @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
   gym: Gym;

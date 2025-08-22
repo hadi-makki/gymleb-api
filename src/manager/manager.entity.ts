@@ -38,10 +38,6 @@ export class Manager extends MainEntity {
     index: true,
   })
   roles: Permissions[];
-
-  @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
-  gym: Gym;
-
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Gym' }], required: false })
   gyms: Gym[];
 

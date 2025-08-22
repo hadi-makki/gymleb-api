@@ -90,7 +90,7 @@ export class GymOwnerService {
       owner: gymOwner.id,
       gymDashedName: gymName.toLowerCase().split(' ').join('-'),
     });
-    gymOwner.gym = checkGym.id;
+    gymOwner.gyms = [checkGym.id];
     await gymOwner.save();
 
     const gym = await this.gymModel.findById(checkGym.id).populate('owner');

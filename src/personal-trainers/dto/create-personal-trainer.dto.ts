@@ -1,24 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePersonalTrainerDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  name: string;
+  firstName: string;
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
+  lastName: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
   email: string;
+
+  @ApiProperty()
+  @IsString()
+  phone: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   password: string;
-
-  @ApiProperty()
-  @IsArray()
-  @IsNotEmpty()
-  users: string[];
 }

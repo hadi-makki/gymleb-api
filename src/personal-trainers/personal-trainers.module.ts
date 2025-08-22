@@ -1,18 +1,19 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthenticationModule } from '../common/AuthModule.module';
-import {
-  PersonalTrainer,
-  PersonalTrainerSchema,
-} from './entities/personal-trainer.entity';
+
 import { PersonalTrainersController } from './personal-trainers.controller';
 import { PersonalTrainersService } from './personal-trainers.service';
+import { PTSession } from './entities/pt-sessions.entity';
+import { PTSessionSchema } from './entities/pt-sessions.entity';
+import { Manager, ManagerSchema } from 'src/manager/manager.entity';
 
 @Module({
   imports: [
     AuthenticationModule,
     MongooseModule.forFeature([
-      { name: PersonalTrainer.name, schema: PersonalTrainerSchema },
+      { name: Manager.name, schema: ManagerSchema },
+      { name: PTSession.name, schema: PTSessionSchema },
     ]),
   ],
   controllers: [PersonalTrainersController],
