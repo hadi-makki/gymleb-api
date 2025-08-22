@@ -138,6 +138,16 @@ export class GymService {
       .filter((t) => t.type === TransactionType.SUBSCRIPTION)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
+    // Calculate personal trainer session revenue for current month
+    const currentMonthPTSessionRevenue = currentMonthTransactions
+      .filter((t) => t.type === TransactionType.PERSONAL_TRAINER_SESSION)
+      .reduce((total, transaction) => {
+        const sessionAmount = transaction.paidAmount || 0;
+        const gymPercentage = transaction.gymsPTSessionPercentage || 0;
+        const gymShare = (gymPercentage / 100) * sessionAmount;
+        return total + gymShare;
+      }, 0);
+
     // Calculate percentage change in subscription revenue
     const revenueChange = lastMonthSubscriptionRevenue
       ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
@@ -169,11 +179,25 @@ export class GymService {
       .filter((t) => t.type === TransactionType.REVENUE)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
+    // Calculate personal trainer session revenue based on gym percentage
+    const personalTrainerSessionRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.PERSONAL_TRAINER_SESSION)
+      .reduce((total, transaction) => {
+        const sessionAmount = transaction.paidAmount || 0;
+        const gymPercentage = transaction.gymsPTSessionPercentage || 0;
+        // Calculate gym's share: (percentage / 100) * session amount
+        const gymShare = (gymPercentage / 100) * sessionAmount;
+        console.log('the paid amount', sessionAmount);
+        console.log('the gym share', gymShare);
+        return total + gymShare;
+      }, 0);
+
     const totalExpenses = allTransactions
       .filter((t) => t.type === TransactionType.EXPENSE)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    const totalRevenue = subscriptionRevenue + additionalRevenue;
+    const totalRevenue =
+      subscriptionRevenue + additionalRevenue + personalTrainerSessionRevenue;
     const netRevenue = totalRevenue - totalExpenses;
 
     const totalMembers = await this.memberModel.countDocuments({ gym: gym.id });
@@ -219,6 +243,7 @@ export class GymService {
       totalRevenue,
       subscriptionRevenue,
       additionalRevenue,
+      personalTrainerSessionRevenue,
       totalExpenses,
       netRevenue,
       totalMembers,
@@ -227,7 +252,10 @@ export class GymService {
       revenueChange,
       memberChange,
       currentMonthMembers,
-      currentMonthRevenue: currentMonthSubscriptionRevenue,
+      currentMonthRevenue:
+        currentMonthSubscriptionRevenue + currentMonthPTSessionRevenue,
+      currentMonthSubscriptionRevenue,
+      currentMonthPTSessionRevenue,
       currentMonthTransactions: currentMonthTransactions.filter(
         (t) => t.type === TransactionType.SUBSCRIPTION,
       ).length,

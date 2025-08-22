@@ -50,10 +50,6 @@ export class TransactionService {
     private readonly expenseModel: Model<Expense>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
-    console.log('paymentDetails', paymentDetails);
-    console.log('startDate', paymentDetails.startDate);
-    console.log('endDate', paymentDetails.endDate);
-
     // Use custom dates if provided, otherwise calculate based on subscription type
     let startDate = paymentDetails.startDate
       ? new Date(paymentDetails.startDate)
@@ -277,5 +273,28 @@ export class TransactionService {
       expense: new Types.ObjectId(expenseId),
       type: TransactionType.EXPENSE,
     });
+  }
+
+  async createPersonalTrainerSessionTransaction(dto: {
+    personalTrainer: Manager;
+    gym: Gym;
+    member: Member;
+    amount: number;
+  }) {
+    const gymsPTSessionPercentage = dto.gym.gymsPTSessionPercentage;
+    const newTransaction = await this.transactionModel.create({
+      title:
+        'Personal Trainer Session With ' +
+        dto.personalTrainer.firstName +
+        ' ' +
+        dto.personalTrainer.lastName,
+      type: TransactionType.PERSONAL_TRAINER_SESSION,
+      personalTrainer: dto.personalTrainer,
+      gym: dto.gym,
+      member: dto.member,
+      paidAmount: dto.amount,
+      gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
+    });
+    return newTransaction;
   }
 }

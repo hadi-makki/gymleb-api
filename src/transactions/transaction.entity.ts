@@ -21,6 +21,7 @@ export enum TransactionType {
   OWNER_SUBSCRIPTION_ASSIGNMENT = 'owner_subscription_assignment',
   REVENUE = 'revenue',
   EXPENSE = 'expense',
+  PERSONAL_TRAINER_SESSION = 'personal_trainer_session',
 }
 
 export enum Currency {
@@ -102,6 +103,12 @@ export class Transaction extends MainEntity {
 
   @Prop({ type: Date, required: false })
   date: Date;
+
+  @Prop({ type: Types.ObjectId, required: false, ref: 'Manager' })
+  personalTrainer: Manager;
+
+  @Prop({ type: Number, required: false })
+  gymsPTSessionPercentage: number;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

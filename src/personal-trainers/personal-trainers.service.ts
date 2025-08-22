@@ -15,6 +15,8 @@ import { Member } from 'src/member/entities/member.entity';
 import { Manager } from 'src/manager/manager.entity';
 import { ManagerService } from 'src/manager/manager.service';
 import { v4 as uuidv4 } from 'uuid';
+import { TransactionType } from 'src/transactions/transaction.entity';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
 
 @Injectable()
 export class PersonalTrainersService {
@@ -32,6 +34,7 @@ export class PersonalTrainersService {
     @InjectModel(Manager.name)
     private readonly managerEntity: Model<Manager>,
     private readonly managerService: ManagerService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async create(
@@ -182,6 +185,14 @@ export class PersonalTrainersService {
         },
         { new: true },
       );
+
+      await this.transactionService.createPersonalTrainerSessionTransaction({
+        personalTrainer: checkIfPersonalTrainerInGym,
+        gym: gym,
+        member: checkIfUserInGym,
+        amount: createSessionDto.sessionPrice,
+      });
+
       setDateDone = true;
     }
 

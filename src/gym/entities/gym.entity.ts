@@ -99,6 +99,9 @@ export class Gym extends MainEntity {
     default: [],
   })
   offers: { description: string }[];
+
+  @Prop({ type: Number, default: 0, required: false })
+  gymsPTSessionPercentage: number;
 }
 
 export const GymSchema = SchemaFactory.createForClass(Gym);
