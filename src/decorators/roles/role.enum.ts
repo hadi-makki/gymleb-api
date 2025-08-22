@@ -25,5 +25,5 @@ export enum UsableEnums {
 }
 
 export const returnAllRoles = () => {
-  return Object.values(Permissions);
+  return Object.values(UsableEnums);
 };
