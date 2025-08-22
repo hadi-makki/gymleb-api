@@ -52,7 +52,7 @@ export class StaffService {
     }
 
     const staff = await this.managerModel.find({
-      gym: new Types.ObjectId(gymId),
+      gyms: { $in: [new Types.ObjectId(gymId)] },
       roles: { $ne: Permissions.GymOwner },
     });
     return staff.map((m) => returnManager(m as any));
