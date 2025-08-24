@@ -158,12 +158,14 @@ export class TokenService {
     }
   }
 
-  async getAccessTokenByDeviceId(
+  async getAccessTokenByDeviceIdAndAccessToken(
     deviceId: string,
+    accessToken: string,
   ): Promise<TokenEntity | null> {
     const getToken = await this.tokenRepository
       .findOne({
         deviceId: deviceId,
+        accessToken: accessToken,
       })
       .populate('member')
       .populate('manager');
@@ -237,8 +239,9 @@ export class TokenService {
     }
 
     // Check if token exists in database and is not expired
-    const checkToken = await this.getAccessTokenByDeviceId(
+    const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
       req.cookies.deviceId,
+      tokenToUse,
     );
 
     if (!checkToken) {
@@ -281,7 +284,10 @@ export class TokenService {
     res: Response,
   ): Promise<string | null> {
     try {
-      const checkToken = await this.getAccessTokenByDeviceId(deviceId);
+      const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
+        deviceId,
+        token,
+      );
 
       if (!checkToken) {
         return null;
