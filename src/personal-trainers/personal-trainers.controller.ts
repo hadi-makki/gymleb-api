@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -92,8 +93,16 @@ export class PersonalTrainersController {
     status: 200,
     description: 'The members have been successfully retrieved.',
   })
-  getGymMembers(@Param('gymId') gymId: string) {
-    return this.personalTrainersService.getGymMembers(gymId);
+  getGymMembers(
+    @Param('gymId') gymId: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.personalTrainersService.getGymMembers(
+      gymId,
+      search,
+      limit ? parseInt(limit) : undefined,
+    );
   }
 
   @Get(':id')

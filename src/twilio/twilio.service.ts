@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { Member } from 'src/member/entities/member.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { checkNodeEnv } from 'src/config/helper/helper-functions';
 
 export enum TwilioWhatsappTemplates {
   EXPIARY_REMINDER = 'HXcc65a0e4783fd7f892683be58ad27285',
@@ -62,22 +63,27 @@ export class TwilioService {
     const member = await this.memberModel.findOne({
       phone: memberPhone,
     });
+    console.log('member', member);
     if (member.isWelcomeMessageSent) {
+      console.log('member is already notified');
       return;
     }
     await this.memberModel.findByIdAndUpdate(member.id, {
       isWelcomeMessageSent: true,
     });
-    await this.client.messages.create({
-      from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-      to: `whatsapp:${memberPhone}`,
-      contentSid: TwilioWhatsappTemplates.WELCOME_MESSAGE,
-      contentVariables: JSON.stringify({
-        1: memberName,
-        2: gymName,
-        3: `https://gym-leb.com/${gymDashedName}/overview`,
-      }),
-    });
+
+    if (!checkNodeEnv('local')) {
+      await this.client.messages.create({
+        from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+        to: `whatsapp:${memberPhone}`,
+        contentSid: TwilioWhatsappTemplates.WELCOME_MESSAGE,
+        contentVariables: JSON.stringify({
+          1: memberName,
+          2: gymName,
+          3: `https://gym-leb.com/${gymDashedName}/overview`,
+        }),
+      });
+    }
   }
 
   async notifySingleMember(userId: string, gymId: string) {

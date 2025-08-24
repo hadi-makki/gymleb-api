@@ -20,6 +20,7 @@ import { Transaction } from '../transactions/transaction.entity';
 import { Response } from 'express';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
 import { TwilioService } from 'src/twilio/twilio.service';
+import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
 
 @Injectable()
 export class MemberService {
@@ -36,6 +37,7 @@ export class MemberService {
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
     private readonly twilioService: TwilioService,
+    private readonly personalTrainersService: PersonalTrainersService,
   ) {}
 
   async returnMember(member: Member): Promise<ReturnUserDto> {
@@ -130,27 +132,12 @@ export class MemberService {
       throw new BadRequestException('Email already exists');
     }
 
-    let username = createMemberDto.phone;
-    const phoneNumber = username.replace(/^\+961/, '').replace(/\s+/g, '');
-
-    username = phoneNumber.toLowerCase();
-
-    const checkUsername = await this.memberModel.findOne({
-      username: username,
-    });
-
-    if (checkUsername) {
-      username =
-        username.toLowerCase() + Math.floor(1000 + Math.random() * 9000);
-    }
-
     const member = await this.memberModel.create({
       name: createMemberDto.name,
       ...(createMemberDto.email && { email: createMemberDto.email }),
       phone: createMemberDto.phone,
       gym: gym.id,
       subscription: subscription.id,
-      passCode: `${phoneNumber}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
     });
     // Optional image upload and assignment
     if (image) {
@@ -314,16 +301,14 @@ export class MemberService {
       if (!member.gym) {
         throw new NotFoundException('Gym not found');
       }
-      await this.memberModel.findByIdAndUpdate(member.id, {
-        isWelcomeMessageSent: true,
-      });
+
       console.log('message sent to', member.name);
-      // await this.twilioService.sendWelcomeMessage(
-      //   member.name,
-      //   member.phone,
-      //   member.gym.name,
-      //   member.gym.gymDashedName,
-      // );
+      await this.twilioService.sendWelcomeMessage(
+        member.name,
+        member.phone,
+        member.gym.name,
+        member.gym.gymDashedName,
+      );
     }
   }
 
@@ -521,6 +506,9 @@ export class MemberService {
 
     // Delete the member
     await this.memberModel.findByIdAndDelete(id);
+
+    await this.personalTrainersService.remove(id);
+    await this.personalTrainersService.removeClientFromTrainer(id, gymId);
 
     return {
       message: `Member deleted successfully${deleteTransactions ? ' along with all related transactions' : ''}`,
@@ -774,6 +762,95 @@ export class MemberService {
     return {
       message:
         'Password reset successfully. Member logged out from all devices.',
+    };
+  }
+
+  async bulkDeleteMembers(
+    memberIds: string[],
+    gymId: string,
+    deleteTransactions: boolean = false,
+  ) {
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Validate all member IDs are valid MongoDB ObjectIds
+    for (const id of memberIds) {
+      if (!isMongoId(id)) {
+        throw new BadRequestException(`Invalid member id: ${id}`);
+      }
+    }
+
+    // Check if all members belong to this gym
+    const members = await this.memberModel
+      .find({
+        _id: { $in: memberIds },
+        gym: checkGym.id,
+      })
+      .populate('transactions');
+
+    if (members.length !== memberIds.length) {
+      throw new BadRequestException(
+        'Some members do not belong to this gym or do not exist',
+      );
+    }
+
+    let deletedCount = 0;
+    const errors: string[] = [];
+
+    // Delete each member
+    for (const member of members) {
+      await this.remove(member.id, gymId, deleteTransactions);
+      deletedCount++;
+    }
+
+    return {
+      message: `Successfully deleted ${deletedCount} members${deleteTransactions ? ' along with all related transactions' : ''}`,
+      deletedCount,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
+  async bulkNotifyMembers(memberIds: string[], gymId: string) {
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Validate all member IDs are valid MongoDB ObjectIds
+    for (const id of memberIds) {
+      if (!isMongoId(id)) {
+        throw new BadRequestException(`Invalid member id: ${id}`);
+      }
+    }
+
+    // Check if all members belong to this gym
+    const members = await this.memberModel
+      .find({
+        _id: { $in: memberIds },
+        gym: checkGym.id,
+      })
+      .populate('gym');
+
+    if (members.length !== memberIds.length) {
+      throw new BadRequestException(
+        'Some members do not belong to this gym or do not exist',
+      );
+    }
+
+    let notifiedCount = 0;
+    const errors: string[] = [];
+
+    // Notify each member
+    for (const member of members) {
+      await this.twilioService.notifySingleMember(member.id, checkGym.id);
+    }
+
+    return {
+      message: `Successfully notified ${notifiedCount} members`,
+      notifiedCount,
+      errors: errors.length > 0 ? errors : undefined,
     };
   }
 }

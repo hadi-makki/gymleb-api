@@ -37,6 +37,29 @@ export class PersonalTrainersService {
     private readonly transactionService: TransactionService,
   ) {}
 
+  async removeClientFromTrainer(memberId: string, gymId: string) {
+    const member = await this.memberEntity.findById(memberId);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const trainer = await this.managerEntity.findOne({
+      users: { $in: [member._id] },
+    });
+    if (!trainer) {
+      throw new NotFoundException('Trainer not found');
+    }
+
+    await this.sessionEntity.deleteMany({
+      member: member._id,
+      personalTrainer: trainer._id,
+    });
+
+    return {
+      message: 'Client removed from trainer',
+    };
+  }
+
   async create(
     createPersonalTrainerDto: CreatePersonalTrainerDto,
     gymId: string,
@@ -259,7 +282,7 @@ export class PersonalTrainersService {
         .populate({
           path: 'member',
         });
-      const clients = sessions.map((session) => session.member.id);
+      const clients = sessions.map((session) => session.member?.id);
       // filter out duplicates
       const uniqueClients = [...new Set(clients)];
       sessionsResult.push({
@@ -271,13 +294,34 @@ export class PersonalTrainersService {
     return sessionsResult;
   }
 
-  async getGymMembers(gymId: string) {
+  async getGymMembers(gymId: string, search?: string, limit?: number) {
     const gym = await this.gymEntity.findById(gymId);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    return await this.memberEntity.find({ gym: gym.id });
+    let query: any = { gym: gym.id };
+
+    // Add search functionality
+    if (search) {
+      query = {
+        ...query,
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ],
+      };
+    }
+
+    let membersQuery = this.memberEntity.find(query);
+
+    // Add limit if provided
+    if (limit) {
+      membersQuery = membersQuery.limit(limit);
+    }
+
+    return await membersQuery.exec();
   }
 
   async cancelSession(sessionId: string, reason: string) {
@@ -394,6 +438,9 @@ export class PersonalTrainersService {
       throw new NotFoundException('Personal trainer not found');
     }
 
+    console.log('this is the trainer', trainer);
+    console.log('this is the gym', gym);
+
     // Get all sessions for this trainer
     const sessions = await this.sessionEntity
       .find({
@@ -402,14 +449,13 @@ export class PersonalTrainersService {
       })
       .populate({
         path: 'member',
-        select: '_id name phone email',
       });
 
     // Get unique members and their session counts
     const memberMap = new Map();
 
     sessions.forEach((session) => {
-      const memberId = session.member._id.toString();
+      const memberId = session.member?._id.toString();
       if (!memberMap.has(memberId)) {
         memberMap.set(memberId, {
           member: session.member,
@@ -573,7 +619,7 @@ export class PersonalTrainersService {
     const memberMap = new Map();
 
     sessions.forEach((session) => {
-      const memberId = session.member._id.toString();
+      const memberId = session.member?._id.toString();
       if (!memberMap.has(memberId)) {
         memberMap.set(memberId, {
           member: session.member,

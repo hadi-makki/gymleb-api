@@ -18,6 +18,11 @@ import { MediaModule } from '../media/media.module';
 import { RevenueService } from 'src/revenue/revenue.service';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { TwilioService } from 'src/twilio/twilio.service';
+import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
+import {
+  PTSession,
+  PTSessionSchema,
+} from 'src/personal-trainers/entities/pt-sessions.entity';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -26,6 +31,7 @@ import { TwilioService } from 'src/twilio/twilio.service';
       { name: Expense.name, schema: ExpenseSchema },
       { name: Revenue.name, schema: RevenueSchema },
       { name: Subscription.name, schema: SubscriptionSchema },
+      { name: PTSession.name, schema: PTSessionSchema },
     ]),
     AuthenticationModule,
     TransactionModule,
@@ -39,6 +45,7 @@ import { TwilioService } from 'src/twilio/twilio.service';
     ExpensesService,
     RevenueService,
     TwilioService,
+    PersonalTrainersService,
   ],
 })
 export class GymOwnerModule {}

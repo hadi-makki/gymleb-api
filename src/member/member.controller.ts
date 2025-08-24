@@ -281,4 +281,28 @@ export class MemberController {
   async sendWelcomeMessagesToAllMembers(@Param('gymId') gymId: string) {
     return await this.memberService.sendWelcomeMessageToAllMembers(gymId);
   }
+
+  @Post('bulk-delete/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  async bulkDeleteMembers(
+    @Param('gymId') gymId: string,
+    @Body() body: { memberIds: string[]; deleteTransactions?: boolean },
+  ) {
+    return await this.memberService.bulkDeleteMembers(
+      body.memberIds,
+      gymId,
+      body.deleteTransactions || false,
+    );
+  }
+
+  @Post('bulk-notify/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  async bulkNotifyMembers(
+    @Param('gymId') gymId: string,
+    @Body() body: { memberIds: string[] },
+  ) {
+    return await this.memberService.bulkNotifyMembers(body.memberIds, gymId);
+  }
 }
