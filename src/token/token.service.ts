@@ -107,19 +107,12 @@ export class TokenService {
   async storeToken(data: GenerateTokenDTO): Promise<TokenEntity> {
     const checkToken = await this.tokenRepository
       .findOne({
-        $or: [
-          {
-            member: data?.userId,
-            deviceId: data?.deviceId,
-          },
-          {
-            manager: data?.managerId,
-            deviceId: data?.deviceId,
-          },
-        ],
+        deviceId: data.deviceId,
       })
       .populate('member')
       .populate('manager');
+
+    console.log(checkToken);
 
     if (checkToken) {
       checkToken.refreshToken = data.refreshToken;
@@ -140,13 +133,18 @@ export class TokenService {
         }
         checkToken.manager = manager;
       }
-      return await checkToken.save();
+      return await this.tokenRepository.findByIdAndUpdate(
+        checkToken.id,
+        checkToken,
+        { new: true },
+      );
     } else {
       const tokenData = {
         ...data,
         ...(data.userId ? { member: data?.userId } : {}),
         ...(data.managerId ? { manager: data?.managerId } : {}),
       };
+      console.log(tokenData);
       return await this.tokenRepository.create(tokenData);
     }
   }
