@@ -302,7 +302,6 @@ export class MemberService {
         throw new NotFoundException('Gym not found');
       }
 
-      console.log('message sent to', member.name);
       await this.twilioService.sendWelcomeMessage(
         member.name,
         member.phone,

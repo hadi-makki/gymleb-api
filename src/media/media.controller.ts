@@ -83,7 +83,7 @@ export class MediaController {
     return fileStream.pipe(res);
   }
   @Get('s3-url/:id')
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   async getS3Url(@Param('id') id: string, @User() _user: UserEntity) {
     return await this.mediaService.getS3Url(id);
     // return await this.mediaService.getS3Url(id, user.id);

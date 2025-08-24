@@ -63,16 +63,16 @@ export class TwilioService {
     const member = await this.memberModel.findOne({
       phone: memberPhone,
     });
-    console.log('member', member);
-    if (member.isWelcomeMessageSent) {
-      console.log('member is already notified');
-      return;
-    }
+    // if (member.isWelcomeMessageSent) {
+    //   console.log('member is already notified');
+    //   return;
+    // }
     await this.memberModel.findByIdAndUpdate(member.id, {
       isWelcomeMessageSent: true,
     });
 
     if (!checkNodeEnv('local')) {
+      console.log('sending notification to', memberPhone);
       await this.client.messages.create({
         from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
         to: `whatsapp:${memberPhone}`,
