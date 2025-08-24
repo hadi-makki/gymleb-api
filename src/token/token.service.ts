@@ -107,7 +107,16 @@ export class TokenService {
   async storeToken(data: GenerateTokenDTO): Promise<TokenEntity> {
     const checkToken = await this.tokenRepository
       .findOne({
-        deviceId: data.deviceId,
+        $or: [
+          {
+            member: data?.userId,
+            deviceId: data?.deviceId,
+          },
+          {
+            manager: data?.managerId,
+            deviceId: data?.deviceId,
+          },
+        ],
       })
       .populate('member')
       .populate('manager');

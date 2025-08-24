@@ -26,7 +26,7 @@ class Token extends MainEntity {
   @Prop({ type: Date, default: null })
   accessExpirationDate: Date;
 
-  @Prop({ type: String, default: null, unique: true })
+  @Prop({ type: String, default: null })
   deviceId: string;
 
   @Prop({ type: Types.ObjectId, ref: 'User', nullable: true })
