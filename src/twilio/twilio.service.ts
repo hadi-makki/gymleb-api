@@ -12,6 +12,7 @@ import { Member } from 'src/member/entities/member.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { checkNodeEnv } from 'src/config/helper/helper-functions';
+import { isPhoneNumber } from 'class-validator';
 
 export enum TwilioWhatsappTemplates {
   EXPIARY_REMINDER = 'HXcc65a0e4783fd7f892683be58ad27285',
@@ -73,7 +74,13 @@ export class TwilioService {
 
     console.log('this is the check', checkNodeEnv('local'));
 
-    if (!checkNodeEnv('local')) {
+    const excludedNumbers = ['+96176977906', '+96171280888'];
+
+    if (
+      !checkNodeEnv('local') &&
+      !excludedNumbers.includes(memberPhone) &&
+      isPhoneNumber(memberPhone)
+    ) {
       console.log('sending notification to', memberPhone);
       await this.client.messages.create({
         from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
