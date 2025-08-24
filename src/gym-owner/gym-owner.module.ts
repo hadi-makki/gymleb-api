@@ -17,6 +17,7 @@ import { MemberService } from '../member/member.service';
 import { MediaModule } from '../media/media.module';
 import { RevenueService } from 'src/revenue/revenue.service';
 import { ExpensesService } from 'src/expenses/expenses.service';
+import { TwilioService } from 'src/twilio/twilio.service';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -37,6 +38,7 @@ import { ExpensesService } from 'src/expenses/expenses.service';
     MemberService,
     ExpensesService,
     RevenueService,
+    TwilioService,
   ],
 })
 export class GymOwnerModule {}

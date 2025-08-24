@@ -17,6 +17,9 @@ import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 import { paginateModel } from '../utils/pagination';
 import { MediaService } from '../media/media.service';
 import { Transaction } from '../transactions/transaction.entity';
+import { Response } from 'express';
+import { CookieNames, cookieOptions } from 'src/utils/constants';
+import { TwilioService } from 'src/twilio/twilio.service';
 
 @Injectable()
 export class MemberService {
@@ -32,6 +35,7 @@ export class MemberService {
     private readonly mediaService: MediaService,
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
+    private readonly twilioService: TwilioService,
   ) {}
 
   async returnMember(member: Member): Promise<ReturnUserDto> {
@@ -67,8 +71,6 @@ export class MemberService {
       name: member.name,
       email: member.email,
       phone: member.phone,
-      username: member.username,
-      passCode: member.passCode,
       gym: member.gym,
       subscription: member.subscription,
       subscriptionTransactions: member.transactions,
@@ -148,7 +150,6 @@ export class MemberService {
       phone: createMemberDto.phone,
       gym: gym.id,
       subscription: subscription.id,
-      username: username,
       passCode: `${phoneNumber}${createMemberDto.name.slice(0, 1).toLowerCase()}`,
     });
     // Optional image upload and assignment
@@ -182,35 +183,78 @@ export class MemberService {
       .populate('subscription')
       .populate('transactions');
 
+    await this.twilioService.sendWelcomeMessage(
+      newMember.name,
+      newMember.phone,
+      gym.name,
+      gym.gymDashedName,
+    );
+
     return await this.returnMember(newMember);
   }
 
   async loginMember(
     loginMemberDto: LoginMemberDto,
-    // deviceId: string,
-  ): Promise<ReturnUserDto> {
+    deviceId: string,
+    res: Response,
+  ): Promise<ReturnUserDto | { hasPassword: boolean; message: string }> {
     const member = await this.memberModel
       .findOne({
-        username: loginMemberDto.username,
-        passCode: loginMemberDto.password,
+        phone: loginMemberDto.phoneNumber,
       })
       .populate('gym')
       .populate('subscription')
       .populate('transactions');
+
     if (!member) {
-      throw new BadRequestException('Invalid passcode or username');
+      throw new BadRequestException('Invalid phone number');
     }
 
-    // const token = await this.tokenService.generateTokens({
-    //   managerId: null,
-    //   userId: member.id,
-    //   deviceId,
-    // });
+    // If no password provided, return password status
+    if (!loginMemberDto.password) {
+      return {
+        hasPassword: !!member.password,
+        message: member.password
+          ? 'Please enter your password'
+          : 'Please set a password for your account',
+      };
+    }
 
-    return {
-      ...(await this.returnMember(member)),
-      // token: token.accessToken,
-    };
+    // If member doesn't have password, set it and login
+    if (!member.password) {
+      await this.memberModel.findByIdAndUpdate(member.id, {
+        password: await Member.hashPassword(loginMemberDto.password),
+      });
+
+      const token = await this.tokenService.generateTokens({
+        managerId: null,
+        userId: member.id,
+        deviceId,
+      });
+
+      res.cookie(CookieNames.MemberToken, token.accessToken, cookieOptions);
+      return await this.returnMember(member);
+    }
+
+    // If member has password, validate it
+    if (member.password) {
+      const isPasswordMatch = await Member.isPasswordMatch(
+        loginMemberDto.password,
+        member.password,
+      );
+      if (!isPasswordMatch) {
+        throw new BadRequestException('Invalid password');
+      }
+
+      const token = await this.tokenService.generateTokens({
+        managerId: null,
+        userId: member.id,
+        deviceId,
+      });
+
+      res.cookie(CookieNames.MemberToken, token.accessToken, cookieOptions);
+      return await this.returnMember(member);
+    }
   }
 
   async findAll(
@@ -228,7 +272,14 @@ export class MemberService {
     const result = await paginateModel(this.memberModel, {
       filter: {
         gym: checkGym.id,
-        ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+        ...(search
+          ? {
+              $or: [
+                { name: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } },
+              ],
+            }
+          : {}),
       },
       populate: [
         { path: 'gym' },
@@ -247,6 +298,33 @@ export class MemberService {
       ...result,
       items,
     };
+  }
+
+  async sendWelcomeMessageToAllMembers(gymId: string) {
+    const members = await this.memberModel
+      .find({
+        gym: gymId,
+      })
+      .populate('gym');
+
+    for (const member of members) {
+      if (member.isWelcomeMessageSent) {
+        continue;
+      }
+      if (!member.gym) {
+        throw new NotFoundException('Gym not found');
+      }
+      await this.memberModel.findByIdAndUpdate(member.id, {
+        isWelcomeMessageSent: true,
+      });
+      console.log('message sent to', member.name);
+      // await this.twilioService.sendWelcomeMessage(
+      //   member.name,
+      //   member.phone,
+      //   member.gym.name,
+      //   member.gym.gymDashedName,
+      // );
+    }
   }
 
   async findOne(id: string, gymId: string) {
@@ -403,7 +481,7 @@ export class MemberService {
     return await this.returnMember(member);
   }
 
-  async remove(id: string, gymId: string) {
+  async remove(id: string, gymId: string, deleteTransactions: boolean = false) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid member id');
     }
@@ -411,16 +489,42 @@ export class MemberService {
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-    const member = await this.memberModel.findOne({
-      _id: id,
-      gym: checkGym.id,
-    });
+    const member = await this.memberModel
+      .findOne({
+        _id: id,
+        gym: checkGym.id,
+      })
+      .populate('transactions');
+
     if (!member) {
       throw new NotFoundException('Member not found');
     }
 
+    // If deleteTransactions is true, delete all related transactions
+    if (
+      deleteTransactions &&
+      member.transactions &&
+      member.transactions.length > 0
+    ) {
+      // Delete all subscription instances for this member
+      await this.transactionModel.deleteMany({
+        _id: { $in: member.transactions.map((t) => t.id) },
+      });
+
+      // Remove transaction references from gym
+      checkGym.transactions = checkGym.transactions.filter(
+        (transactionId) =>
+          !member.transactions.some((t) => t.id === transactionId.toString()),
+      );
+      await checkGym.save();
+    }
+
+    // Delete the member
     await this.memberModel.findByIdAndDelete(id);
-    return { message: 'Member deleted successfully' };
+
+    return {
+      message: `Member deleted successfully${deleteTransactions ? ' along with all related transactions' : ''}`,
+    };
   }
 
   async getExpiredMembers(
@@ -581,10 +685,6 @@ export class MemberService {
       const checkIfPhoneExists = await this.memberModel.exists({
         username: member.phone,
       });
-      member.username = checkIfPhoneExists
-        ? `${member.phone}-${Math.floor(1000 + Math.random() * 9000)}`
-        : member.phone;
-      member.passCode = `${member.phone}${member.name.slice(0, 1).toLowerCase()}`;
       await member.save();
     }
   }
@@ -647,5 +747,33 @@ export class MemberService {
         await member.save();
       }
     }
+  }
+
+  async resetMemberPassword(id: string, gymId: string) {
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      _id: id,
+      gym: checkGym.id,
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Remove password from member
+    member.password = null;
+    await member.save();
+
+    // Log out from all devices by deleting all tokens for this user
+    await this.tokenService.deleteTokensByUserId(member.id);
+
+    return {
+      message:
+        'Password reset successfully. Member logged out from all devices.',
+    };
   }
 }

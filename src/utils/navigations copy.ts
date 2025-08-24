@@ -140,6 +140,14 @@ export const navItems: NavItem[] = [
     items: [],
     roles: [Permissions.SuperAdmin],
   },
+  {
+    title: 'Inbound Messages',
+    url: '/inbound-messages',
+    icon: 'cards',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
 ];
 
 export const getNavItems = (permissions: Permissions[]) => {

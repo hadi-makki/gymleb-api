@@ -67,59 +67,63 @@ export class GymOwnerService {
       email: createGymOwnerDto.email,
       password: await Manager.hashPassword(createGymOwnerDto.password),
       address: createGymOwnerDto.address,
-      phone: createGymOwnerDto.phone,
+      phoneNumber: createGymOwnerDto.phone,
       username,
       roles: [Permissions.GymOwner],
     });
-    let gymName =
-      createGymOwnerDto.firstName + ' ' + createGymOwnerDto.lastName;
-    const checkGymName = await this.gymModel.findOne({
-      name: gymName,
-    });
-    if (checkGymName) {
-      gymName = gymName + Math.floor(1000 + Math.random() * 9000);
-    }
-
-    const checkGym = await this.gymModel.create({
-      name: gymName,
-      address: createGymOwnerDto.address,
-      phone: createGymOwnerDto.phone,
-      email: createGymOwnerDto.email,
-      password: createGymOwnerDto.password,
-      openingDays: Days,
-      owner: gymOwner.id,
-      gymDashedName: gymName.toLowerCase().split(' ').join('-'),
-    });
-    gymOwner.gyms = [checkGym.id];
-    await gymOwner.save();
-
-    const gym = await this.gymModel.findById(checkGym.id).populate('owner');
-
-    await this.subscriptionService
-      .create(
-        {
-          title: 'Monthly Membership',
-          type: SubscriptionType.MONTHLY_GYM,
-          price: 50.0,
-          duration: 1,
-        },
-        gymOwner,
-        gym.id,
-      )
-      .catch(async (err) => {
-        // remove the gym owner from the gym
-        await this.gymModel.findByIdAndDelete(gym.id);
-        await this.gymOwnerModel.findByIdAndDelete(gymOwner.id);
-        console.log('this is the error', err);
-        throw new BadRequestException('Failed to create subscription', err);
-      });
-
-    // Generate mock data if requested
     if (createGymOwnerDto.generateMockData) {
-      await this.generateMockDataForGym(gymOwner, gym);
+      let gymName =
+        createGymOwnerDto.firstName + ' ' + createGymOwnerDto.lastName;
+      const checkGymName = await this.gymModel.findOne({
+        name: gymName,
+      });
+      if (checkGymName) {
+        gymName = gymName + Math.floor(1000 + Math.random() * 9000);
+      }
+
+      const checkGym = await this.gymModel.create({
+        name: gymName,
+        address: createGymOwnerDto.address,
+        phone: createGymOwnerDto.phone,
+        email: createGymOwnerDto.email,
+        password: createGymOwnerDto.password,
+        openingDays: Days,
+        owner: gymOwner.id,
+        gymDashedName: gymName.toLowerCase().split(' ').join('-'),
+      });
+      gymOwner.gyms = [checkGym.id];
+      await gymOwner.save();
+
+      const gym = await this.gymModel.findById(checkGym.id).populate('owner');
+
+      await this.subscriptionService
+        .create(
+          {
+            title: 'Monthly Membership',
+            type: SubscriptionType.MONTHLY_GYM,
+            price: 50.0,
+            duration: 1,
+          },
+          gymOwner,
+          gym.id,
+        )
+        .catch(async (err) => {
+          // remove the gym owner from the gym
+          await this.gymModel.findByIdAndDelete(gym.id);
+          await this.gymOwnerModel.findByIdAndDelete(gymOwner.id);
+          console.log('this is the error', err);
+          throw new BadRequestException('Failed to create subscription', err);
+        });
+
+      // Generate mock data if requested
+      if (createGymOwnerDto.generateMockData) {
+        await this.generateMockDataForGym(gymOwner, gym);
+      }
     }
 
-    return gym;
+    return {
+      message: 'Gym owner created successfully',
+    };
   }
 
   async generateMockDataForGym(gymOwner: Manager, gym: Gym) {
@@ -315,7 +319,11 @@ export class GymOwnerService {
   }
 
   async findAll() {
-    const gymOwners = await this.gymOwnerModel.find().populate('gyms');
+    const gymOwners = await this.gymOwnerModel
+      .find()
+      .populate('gyms')
+      .select('-password')
+      .sort({ createdAt: -1 });
     return gymOwners;
   }
 

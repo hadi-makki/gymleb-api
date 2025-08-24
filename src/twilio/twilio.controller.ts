@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
@@ -41,5 +41,14 @@ export class TwilioController {
     @Param('gymId') gymId: string,
   ) {
     return await this.twilioService.notifySingleMember(userId, gymId);
+  }
+
+  @Get('inbound-messages')
+  @ApiOperation({ summary: 'Get inbound messages' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  async getInboundMessages() {
+    return await this.twilioService.getInboundMessages();
   }
 }

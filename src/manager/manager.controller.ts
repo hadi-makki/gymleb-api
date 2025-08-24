@@ -33,7 +33,7 @@ import {
 } from '../error/api-responses.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { cookieOptions } from '../utils/constants';
+import { CookieNames, cookieOptions } from '../utils/constants';
 import { CreateManagerDto } from './dtos/create-manager.dto';
 import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
@@ -106,7 +106,11 @@ export class ManagerController {
       response.cookie('deviceId', checkDeviceId, cookieOptions);
     }
     const loginManager = await this.ManagerService.login(body, checkDeviceId);
-    response.cookie('token', loginManager.token, cookieOptions);
+    response.cookie(
+      CookieNames.ManagerToken,
+      loginManager.token,
+      cookieOptions,
+    );
 
     return loginManager;
   }
@@ -123,7 +127,7 @@ export class ManagerController {
     @Res({ passthrough: true }) response: Response,
     @GetDeviceId() deviceId: string,
   ) {
-    response.clearCookie('token', cookieOptions);
+    response.clearCookie(CookieNames.ManagerToken, cookieOptions);
     return this.ManagerService.logout(user, deviceId);
   }
 
@@ -194,13 +198,13 @@ export class ManagerController {
   ) {
     const token = req.headers.token as string;
     const refreshToken = await this.AuthService.refreshToken(token, deviceId);
-    res.cookie('token', refreshToken.token, cookieOptions);
+    res.cookie(CookieNames.ManagerToken, refreshToken.token, cookieOptions);
     return refreshToken;
   }
 
   @Get('clear-cookies')
   clearCookies(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', cookieOptions);
+    res.clearCookie(CookieNames.ManagerToken, cookieOptions);
 
     return { message: 'Cookies cleared' };
   }

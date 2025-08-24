@@ -7,14 +7,12 @@ import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
 import { PTSession } from 'src/personal-trainers/entities/pt-sessions.entity';
+import * as bcrypt from 'bcrypt';
 
 @CustomSchema()
 export class Member extends MainEntity {
   @Prop({ required: true })
   name: string;
-
-  @Prop({ required: true, unique: true })
-  username: string;
 
   @Prop({ required: false })
   email: string;
@@ -43,9 +41,6 @@ export class Member extends MainEntity {
   })
   transactions: Transaction[];
 
-  @Prop({ type: String, required: false })
-  passCode: string;
-
   @Prop({ type: Boolean, default: false })
   isNotified: boolean;
 
@@ -54,6 +49,23 @@ export class Member extends MainEntity {
 
   @Prop({ required: false, type: [{ type: Types.ObjectId, ref: 'PTSession' }] })
   sessions: PTSession[];
+
+  @Prop({ required: false, type: String })
+  password: string | null;
+
+  @Prop({ type: Boolean, default: false })
+  isWelcomeMessageSent: boolean;
+
+  static async isPasswordMatch(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+
+  static async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
 }
 
 export const MemberSchema = SchemaFactory.createForClass(Member);

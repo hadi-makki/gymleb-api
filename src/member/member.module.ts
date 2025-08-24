@@ -11,6 +11,8 @@ import { Member, MemberSchema } from './entities/member.entity';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
 import { MediaModule } from '../media/media.module';
+import { TwilioModule } from 'src/twilio/twilio.module';
+import { TwilioService } from 'src/twilio/twilio.service';
 @Module({
   imports: [
     AuthenticationModule,
@@ -23,7 +25,7 @@ import { MediaModule } from '../media/media.module';
     MediaModule,
   ],
   controllers: [MemberController],
-  providers: [MemberService],
-  exports: [MemberService],
+  providers: [MemberService, TwilioService],
+  exports: [MemberService, TwilioService],
 })
 export class MemberModule {}

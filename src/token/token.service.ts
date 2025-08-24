@@ -12,7 +12,7 @@ import { Member } from '../member/entities/member.entity';
 import { GenerateTokenDTO } from './token.dto';
 import TokenEntity from './token.entity';
 import { User } from '../user/user.entity';
-import { cookieOptions } from '../utils/constants';
+import { CookieNames, cookieOptions } from '../utils/constants';
 @Injectable()
 export class TokenService {
   constructor(
@@ -165,21 +165,22 @@ export class TokenService {
 
   async deleteTokensByUserId(
     userId: string,
-    deviceId: string,
+    deviceId?: string,
   ): Promise<SuccessMessageReturn> {
-    const tokenToDelete = await this.tokenRepository.find({
-      $or: [
-        { member: userId, deviceId: deviceId },
-        { manager: userId, deviceId: deviceId },
-      ],
-    });
+    const query = deviceId
+      ? {
+          $or: [
+            { member: userId, deviceId: deviceId },
+            { manager: userId, deviceId: deviceId },
+          ],
+        }
+      : {
+          $or: [{ member: userId }, { manager: userId }],
+        };
+
+    const tokenToDelete = await this.tokenRepository.find(query);
     if (tokenToDelete.length > 0) {
-      await this.tokenRepository.deleteMany({
-        $or: [
-          { member: userId, deviceId: deviceId },
-          { manager: userId, deviceId: deviceId },
-        ],
-      });
+      await this.tokenRepository.deleteMany(query);
     }
     return {
       message: 'Tokens deleted successfully',
@@ -203,8 +204,8 @@ export class TokenService {
     iat: number;
     exp: number;
   }> {
-    const token = req.cookies.token;
-    const memberToken = req.cookies.memberToken;
+    const token = req.cookies[CookieNames.ManagerToken];
+    const memberToken = req.cookies[CookieNames.MemberToken];
 
     const tokenToUse = isMember ? memberToken : token;
 

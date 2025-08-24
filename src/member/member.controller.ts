@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { MemberService } from './member.service';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { DeleteMemberDto } from './dto/delete-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { User } from '../decorators/users.decorator';
@@ -77,10 +78,13 @@ export class MemberController {
   async login(
     @Body() body: LoginMemberDto,
     @Res({ passthrough: true }) response: Response,
-    // @GetDeviceId() deviceId: string,
+    @GetDeviceId() deviceId: string,
   ) {
-    const loginMember = await this.memberService.loginMember(body);
-    // response.cookie('memberToken', loginMember.token, cookieOptions);
+    const loginMember = await this.memberService.loginMember(
+      body,
+      deviceId,
+      response,
+    );
     return loginMember;
   }
 
@@ -133,11 +137,19 @@ export class MemberController {
     return await this.memberService.update(id, updateMemberDto, gymId);
   }
 
-  @Delete(':gymId/:id')
+  @Post(':gymId/:id/delete')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
-  async remove(@Param('id') id: string, @Param('gymId') gymId: string) {
-    return await this.memberService.remove(id, gymId);
+  async remove(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+    @Body() deleteMemberDto: DeleteMemberDto,
+  ) {
+    return await this.memberService.remove(
+      id,
+      gymId,
+      deleteMemberDto.deleteTransactions || false,
+    );
   }
 
   @Post(':gymId/:id/renew')
@@ -178,6 +190,12 @@ export class MemberController {
   @Get('me/:id')
   async getMe(@Param('id') id: string) {
     return await this.memberService.getMe(id);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async getMyProfile(@User() member: Member) {
+    return await this.memberService.getMe(member.id);
   }
 
   @Get(':id')
@@ -245,5 +263,22 @@ export class MemberController {
   @Post('fix-gym-phone-numbers')
   async fixGymPhoneNumbers() {
     return await this.memberService.fixGymPhoneNumbers();
+  }
+
+  @Post(':gymId/:id/reset-password')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  async resetMemberPassword(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.resetMemberPassword(id, gymId);
+  }
+
+  @Post('send-welcome-messages/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  async sendWelcomeMessagesToAllMembers(@Param('gymId') gymId: string) {
+    return await this.memberService.sendWelcomeMessageToAllMembers(gymId);
   }
 }

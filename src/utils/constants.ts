@@ -5,8 +5,6 @@ dotenv.config({
   path: `.env`,
 });
 
-console.log('this is the node env', process.env.NODE_ENV);
-
 const isProduction = process.env.NODE_ENV === 'production';
 const cookieDomain = isProduction ? '.gym-leb.com' : '.localhost';
 
@@ -21,3 +19,8 @@ export const cookieOptions: CookieOptions = {
 
 export const imageTypes =
   /^image\/(jpeg|png|gif|bmp|webp|jpg|heic|heif|avif|tiff|svg|ico)$/;
+
+export enum CookieNames {
+  MemberToken = 'memberToken',
+  ManagerToken = 'token',
+}

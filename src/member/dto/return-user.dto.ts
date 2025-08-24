@@ -5,8 +5,6 @@ export class ReturnUserDto {
   name: string;
   email: string;
   phone: string;
-  username: string;
-  passCode: string;
   gym: any;
   subscription: any;
   subscriptionTransactions: any[];

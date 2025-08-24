@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../error/bad-request-error';
 import { GymService } from '../gym/gym.service';
@@ -8,10 +8,14 @@ import { MemberService } from '../member/member.service';
 import { Twilio } from 'twilio';
 import { NotFoundException } from 'src/error/not-found-error';
 import { format } from 'date-fns';
+import { Member } from 'src/member/entities/member.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 export enum TwilioWhatsappTemplates {
   EXPIARY_REMINDER = 'HXcc65a0e4783fd7f892683be58ad27285',
   SUBSCRIPTION_EXPIRED = 'HX9f136ce037cfb13b0d4daf887b331437',
+  WELCOME_MESSAGE = 'HXf94333809823fbca32b724ab35a4d50c',
 }
 
 @Injectable()
@@ -19,7 +23,10 @@ export class TwilioService {
   constructor(
     private readonly configService: ConfigService,
     private readonly gymService: GymService,
+    @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
+    @InjectModel(Member.name)
+    private readonly memberModel: Model<Member>,
   ) {}
 
   private readonly client = new Twilio(
@@ -44,6 +51,33 @@ export class TwilioService {
       }
     }
     await this.gymService.addGymMembersNotified(gymId, notifiedNumber);
+  }
+
+  async sendWelcomeMessage(
+    memberName: string,
+    memberPhone: string,
+    gymName: string,
+    gymDashedName: string,
+  ) {
+    const member = await this.memberModel.findOne({
+      phone: memberPhone,
+    });
+    if (member.isWelcomeMessageSent) {
+      return;
+    }
+    await this.memberModel.findByIdAndUpdate(member.id, {
+      isWelcomeMessageSent: true,
+    });
+    await this.client.messages.create({
+      from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+      to: `whatsapp:${memberPhone}`,
+      contentSid: TwilioWhatsappTemplates.WELCOME_MESSAGE,
+      contentVariables: JSON.stringify({
+        1: memberName,
+        2: gymName,
+        3: `https://gym-leb.com/${gymDashedName}/overview`,
+      }),
+    });
   }
 
   async notifySingleMember(userId: string, gymId: string) {
@@ -177,5 +211,10 @@ export class TwilioService {
       }
       throw new BadRequestException(error);
     }
+  }
+
+  async getInboundMessages() {
+    const messages = await this.client.messages.list();
+    return messages.filter((message) => message.direction === 'inbound');
   }
 }
