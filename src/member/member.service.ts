@@ -295,9 +295,6 @@ export class MemberService {
       .populate('gym');
 
     for (const member of members) {
-      if (member.isWelcomeMessageSent) {
-        continue;
-      }
       if (!member.gym) {
         throw new NotFoundException('Gym not found');
       }
