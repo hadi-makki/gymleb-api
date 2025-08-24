@@ -71,6 +71,8 @@ export class TwilioService {
       isWelcomeMessageSent: true,
     });
 
+    console.log('this is the check', checkNodeEnv('local'));
+
     if (!checkNodeEnv('local')) {
       console.log('sending notification to', memberPhone);
       await this.client.messages.create({
