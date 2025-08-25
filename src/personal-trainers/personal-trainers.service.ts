@@ -81,7 +81,7 @@ export class PersonalTrainersService {
       throw new BadRequestException('Personal trainer already exists');
     }
 
-    const personalTrainer = await this.managerService.createManager(
+    const personalTrainer = await this.managerService.createPersonalTrainer(
       {
         username:
           createPersonalTrainerDto.firstName +
@@ -94,6 +94,8 @@ export class PersonalTrainersService {
       },
       uuidv4(),
       gymId,
+      createPersonalTrainerDto.firstName,
+      createPersonalTrainerDto.lastName,
     );
     return personalTrainer;
   }

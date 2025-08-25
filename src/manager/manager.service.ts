@@ -83,6 +83,53 @@ export class ManagerService {
     };
   }
 
+  async createPersonalTrainer(
+    body: CreateManagerDto,
+    deviceId: string,
+    gymId: string,
+    firstName: string,
+    lastName: string,
+  ): Promise<ManagerCreatedWithTokenDto> {
+    const checkEmail = await this.managerEntity.exists({
+      email: body.email,
+    });
+    if (checkEmail && body.email) {
+      throw new BadRequestException('User with this email already exists');
+    }
+    const checkUsername = await this.managerEntity.exists({
+      username: body.username,
+    });
+    if (checkUsername) {
+      throw new BadRequestException('User with this username already exists');
+    }
+
+    const hashedPassword = await Manager.hashPassword(body.password);
+    const savedManager = await this.managerEntity.create({
+      ...(body.email && { email: body.email.trim().toLowerCase() }),
+      password: hashedPassword,
+      username: body.username.trim(),
+      roles: body.roles,
+      phoneNumber: body.phoneNumber,
+      firstName,
+      lastName,
+    });
+
+    await this.managerEntity.findByIdAndUpdate(savedManager._id, {
+      gyms: [new Types.ObjectId(gymId)],
+    });
+
+    const token = await this.tokenService.generateTokens({
+      managerId: savedManager.id,
+      userId: null,
+      deviceId,
+    });
+
+    return {
+      ...returnManager(savedManager),
+      token: token.accessToken,
+    };
+  }
+
   async findOne(id: string): Promise<ManagerCreatedDto> {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid id');
