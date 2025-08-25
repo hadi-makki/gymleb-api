@@ -34,6 +34,16 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    description: 'Product stock quantity',
+    example: 100,
+    required: true,
+  })
+  @IsNotEmpty()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  stock: number;
 }
 
 export class UpdateProductDto {
@@ -64,6 +74,16 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    description: 'Product stock quantity',
+    example: 100,
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  stock?: number;
 }
 
 export class UploadFileDto {

@@ -28,6 +28,10 @@ export class RevenueService {
       _id: dto.productId,
     });
 
+    if (product && product.stock < dto.numberSold) {
+      throw new BadRequestException('Product stock is not enough');
+    }
+
     if (!product && dto.productId)
       throw new NotFoundException('Product not found');
 
@@ -59,6 +63,12 @@ export class RevenueService {
     });
     revenue.transaction = transaction.id;
     await revenue.save();
+
+    if (product) {
+      product.stock -= dto.numberSold;
+      await product.save();
+    }
+
     return await this.revenueModel.findById(revenue.id).populate('transaction');
   }
 

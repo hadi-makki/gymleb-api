@@ -45,6 +45,9 @@ export class Product extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
   gym: Gym;
+
+  @Prop({ type: Number, default: 0 })
+  stock: number;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

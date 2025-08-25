@@ -60,6 +60,7 @@ export class ProductsService {
       ...createProductDto,
       image: imageId,
       gym: gym.id,
+      stock: createProductDto.stock,
     });
 
     return {
