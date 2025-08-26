@@ -305,4 +305,16 @@ export class MemberController {
   ) {
     return await this.memberService.bulkNotifyMembers(body.memberIds, gymId);
   }
+
+  @Get('/get/members-with-expiring-subscriptions')
+  async getMembersWithExpiringSubscriptions() {
+    return await this.memberService.getMembersWithExpiringSubscriptions({
+      days: 3,
+    });
+  }
+
+  @Get('notify/members-with-expiring-subscriptions')
+  async notifyMembersWithExpiringSubscriptions() {
+    return await this.memberService.notifyMembersWithExpiringSubscriptions();
+  }
 }

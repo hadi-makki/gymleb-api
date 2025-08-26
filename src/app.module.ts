@@ -30,6 +30,7 @@ import { OwnerSubscriptionsModule } from './owner-subscriptions/owner-subscripti
 import { GymOwnerModule } from './gym-owner/gym-owner.module';
 import { ProductsModule } from './products/products.module';
 import { StaffModule } from './staff/staff.module';
+import { CronModule } from './cron/cron.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { StaffModule } from './staff/staff.module';
     GymOwnerModule,
     ProductsModule,
     StaffModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [

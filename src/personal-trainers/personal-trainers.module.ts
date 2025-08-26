@@ -20,5 +20,6 @@ import { TransactionModule } from 'src/transactions/subscription-instance.module
   ],
   controllers: [PersonalTrainersController],
   providers: [PersonalTrainersService],
+  exports: [PersonalTrainersService, MongooseModule],
 })
 export class PersonalTrainersModule {}

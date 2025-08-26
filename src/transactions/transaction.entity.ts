@@ -40,11 +40,11 @@ export class Transaction extends MainEntity {
   @Prop({ type: String, required: false, enum: SubscriptionType })
   subscriptionType: SubscriptionType;
 
-  @Prop({ type: String, required: false })
-  endDate: string;
+  @Prop({ type: Date, required: false })
+  endDate: Date;
 
-  @Prop({ type: String, required: false })
-  startDate: string;
+  @Prop({ type: Date, required: false })
+  startDate: Date;
 
   @Prop({ type: Number, required: false })
   paidAmount: number;

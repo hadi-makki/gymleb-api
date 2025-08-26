@@ -63,7 +63,7 @@ export class TransactionService {
       endDate = new Date(paymentDetails.endDate);
     } else {
       // Calculate end date based on subscription type and start date
-      if (paymentDetails.subscriptionType === SubscriptionType.DAILY_GYM) {
+      if (paymentDetails?.subscriptionType === SubscriptionType.DAILY_GYM) {
         endDate = paymentDetails.giveFullDay
           ? addHours(startDate, 24)
           : endOfDay(startDate);
@@ -78,9 +78,9 @@ export class TransactionService {
       member: paymentDetails.member,
       gym: paymentDetails.gym,
       subscription: paymentDetails.subscription,
-      endDate: endDate.toISOString(),
+      endDate: endDate,
       paidAmount: paymentDetails.amount,
-      startDate: startDate.toISOString(),
+      startDate: startDate,
       paidBy: paymentDetails.member.name,
     });
     return newTransaction;

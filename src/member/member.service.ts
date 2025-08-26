@@ -16,11 +16,15 @@ import { TokenService } from '../token/token.service';
 import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 import { paginateModel } from '../utils/pagination';
 import { MediaService } from '../media/media.service';
-import { Transaction } from '../transactions/transaction.entity';
+import {
+  Transaction,
+  TransactionType,
+} from '../transactions/transaction.entity';
 import { Response } from 'express';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
+import { addDays, startOfDay, endOfDay } from 'date-fns';
 
 @Injectable()
 export class MemberService {
@@ -39,6 +43,80 @@ export class MemberService {
     private readonly twilioService: TwilioService,
     private readonly personalTrainersService: PersonalTrainersService,
   ) {}
+
+  async getActiveSubscription(memberId: string) {
+    const member = await this.memberModel.findById(memberId);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Use database query to find active subscription
+    const activeSubscription = await this.transactionModel.findOne({
+      member: memberId,
+      endDate: { $gt: new Date() },
+      isInvalidated: { $ne: true },
+    });
+
+    return activeSubscription;
+  }
+
+  async getMembersWithExpiringSubscriptions({
+    days,
+    isNotified = false,
+  }: {
+    days: number;
+    isNotified?: boolean;
+  }) {
+    // Calculate the target date (X days from now)
+    const targetDate = addDays(new Date(), days);
+
+    // Set time range for the target date using date-fns
+    const startOfTargetDate = startOfDay(new Date());
+    const endOfTargetDate = endOfDay(targetDate);
+
+    // Find all transactions that will expire on the target date
+    const expiringTransactions = await this.transactionModel
+      .find({
+        endDate: {
+          $gte: startOfTargetDate,
+          $lte: endOfTargetDate,
+        },
+        type: TransactionType.SUBSCRIPTION,
+        isInvalidated: { $ne: true },
+      })
+      .populate({
+        path: 'member',
+        populate: [
+          { path: 'gym', select: '_id name gymDashedName' },
+          { path: 'subscription', select: '_id name' },
+          {
+            path: 'transactions',
+            select: '_id endDate',
+            options: {
+              limit: 3,
+            },
+          },
+        ],
+        select: '_id name isNotified gym subscription transactions',
+      })
+      .populate({ path: 'gym', select: '_id name gymDashedName' })
+      .select('_id name isNotified gym subscription transactions member')
+      .lean();
+
+    const newMembers = expiringTransactions
+      .filter((t) => {
+        return t.member && t.member.isNotified === false;
+      })
+      .map((t) => {
+        return {
+          ...t,
+          expiringSubscription: t,
+        };
+      });
+
+    // Return members with their expiring subscription details
+    return newMembers;
+  }
 
   async returnMember(member: Member): Promise<ReturnUserDto> {
     if (!member) {
@@ -329,8 +407,6 @@ export class MemberService {
         options: { sort: { createdAt: -1 } },
       });
 
-    console.log('member', member.profileImage);
-
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -357,7 +433,11 @@ export class MemberService {
         _id: id,
         gym: checkGym.id,
       })
-      .populate('transactions')
+      .populate({
+        path: 'transactions',
+        populate: { path: 'subscription', select: '_id name' },
+        options: { sort: { createdAt: -1 } },
+      })
       .populate('subscription');
 
     if (!member) {
@@ -373,7 +453,7 @@ export class MemberService {
         throw new BadRequestException('Invalid subscription id');
       }
 
-      checkSubscription = await this.transactionModel.findById(subscriptionId);
+      checkSubscription = await this.subscriptionModel.findById(subscriptionId);
 
       if (!checkSubscription) {
         throw new NotFoundException('Subscription not found');
@@ -397,9 +477,15 @@ export class MemberService {
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
 
-        checkSubscription = await this.subscriptionModel.findById(
+        if (!getLatestSubscriptionInstance) {
+          throw new NotFoundException('Subscription not found');
+        }
+
+        const getCheckSubscription = await this.subscriptionModel.findById(
           getLatestSubscriptionInstance.subscription,
         );
+
+        checkSubscription = getCheckSubscription;
       } else {
         checkSubscription = await this.subscriptionModel.findOne({
           gym: checkGym.id,
@@ -408,6 +494,7 @@ export class MemberService {
         if (!checkSubscription) {
           throw new NotFoundException('Subscription not found');
         }
+
         member.subscription = checkSubscription.id;
         await member.save();
       }
@@ -418,8 +505,8 @@ export class MemberService {
         member: member,
         gym: checkGym,
         subscription: checkSubscription,
-        subscriptionType: checkSubscription.type,
-        amount: checkSubscription.price,
+        subscriptionType: checkSubscription?.type,
+        amount: checkSubscription?.price,
         giveFullDay,
       });
 
@@ -547,7 +634,6 @@ export class MemberService {
         );
       })
       .map((member) => member._id);
-    console.log('expiredMemberIds', expiredMemberIds);
 
     // Use pagination utility with the filtered IDs
     const result = await paginateModel(this.memberModel, {
@@ -847,6 +933,26 @@ export class MemberService {
       message: `Successfully notified ${notifiedCount} members`,
       notifiedCount,
       errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
+  async notifyMembersWithExpiringSubscriptions() {
+    const expiringMembers = await this.getMembersWithExpiringSubscriptions({
+      days: 3,
+      isNotified: false,
+    });
+    console.log('expiringMembers', JSON.stringify(expiringMembers, null, 2));
+    for (const member of expiringMembers) {
+      console.log('reminding member', member.member.name);
+      await this.twilioService.notifySingleMember(
+        member.member._id.toString(),
+        member.gym._id.toString(),
+        true,
+      );
+    }
+
+    return {
+      message: `Successfully notified ${expiringMembers.length} members`,
     };
   }
 }

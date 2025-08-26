@@ -32,6 +32,6 @@ import {
   ],
   controllers: [MemberController],
   providers: [MemberService, TwilioService, PersonalTrainersService],
-  exports: [MemberService, TwilioService],
+  exports: [MemberService, TwilioService, MongooseModule],
 })
 export class MemberModule {}

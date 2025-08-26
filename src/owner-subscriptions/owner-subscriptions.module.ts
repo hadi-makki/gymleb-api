@@ -27,6 +27,6 @@ import { TransactionModule } from '../transactions/subscription-instance.module'
   ],
   controllers: [OwnerSubscriptionsController],
   providers: [OwnerSubscriptionsService],
-  exports: [OwnerSubscriptionsService],
+  exports: [OwnerSubscriptionsService, MongooseModule],
 })
 export class OwnerSubscriptionsModule {}
