@@ -18,7 +18,7 @@ import { SubscriptionModule } from 'src/subscription/subscription.module';
 import {
   Subscription,
   SubscriptionSchema,
-} from 'src/subscription/entities/subscription.entity';
+} from 'src/subscription/entities/subscription.model';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
 import { MediaModule } from 'src/media/media.module';
 import { PersonalTrainersModule } from 'src/personal-trainers/personal-trainers.module';

@@ -6,7 +6,7 @@ import { GymEntity } from '../gym/entities/gym.entity';
 import { MainEntity, PgMainEntity } from '../main-classes/mainEntity';
 import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.model';
 import Token from '../token/token.model';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
 import { TokenEntity } from 'src/token/token.entity';
 import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 
@@ -36,7 +36,7 @@ export class ManagerEntity extends PgMainEntity {
   @Column({ type: 'jsonb', default: [] })
   roles: Permissions[];
 
-  @OneToMany(() => GymEntity, (gym) => gym.owner)
+  @ManyToMany(() => GymEntity, (gym) => gym.personalTrainers)
   gyms: GymEntity[];
 
   @OneToMany(

@@ -10,7 +10,7 @@ import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
 import {
   Subscription,
   SubscriptionSchema,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { MemberService } from '../member/member.service';

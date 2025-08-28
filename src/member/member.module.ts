@@ -5,7 +5,7 @@ import { Gym, GymSchema } from '../gym/entities/gym.model';
 import {
   Subscription,
   SubscriptionSchema,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 import { Member, MemberSchema } from './entities/member.entity';
 import { MemberController } from './member.controller';

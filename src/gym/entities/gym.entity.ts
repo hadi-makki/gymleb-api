@@ -3,10 +3,11 @@ import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { MainEntity, PgMainEntity } from '../../main-classes/mainEntity';
 import { Manager } from '../../manager/manager.model';
-import { Subscription } from '../../subscription/entities/subscription.entity';
+import { Subscription } from '../../subscription/entities/subscription.model';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
-import { Entity } from 'typeorm';
+import { Column, Entity, ManyToMany, ManyToOne } from 'typeorm';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Entity('gyms')
 export class GymEntity extends PgMainEntity {
@@ -22,14 +23,14 @@ export class GymEntity extends PgMainEntity {
   @Column('text')
   phone: string;
 
-  @Prop({ type: [Types.ObjectId], ref: 'Manager', required: false })
-  personalTrainers: Manager[];
+  @ManyToMany(() => ManagerEntity, (manager) => manager.gyms)
+  personalTrainers: ManagerEntity[];
 
   @Prop({ type: [Types.ObjectId], ref: 'Subscription', required: false })
   subscriptions: Subscription[];
 
-  @Prop({ type: Types.ObjectId, ref: 'Manager' })
-  owner: Manager;
+  @ManyToOne(() => ManagerEntity, (manager) => manager.gyms)
+  owner: ManagerEntity;
 
   @Prop({
     type: [Types.ObjectId],

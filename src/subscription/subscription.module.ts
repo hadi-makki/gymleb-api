@@ -6,7 +6,7 @@ import { Gym, GymSchema } from '../gym/entities/gym.model';
 import {
   Subscription,
   SubscriptionSchema,
-} from './entities/subscription.entity';
+} from './entities/subscription.model';
 import { SubscriptionController } from './subscription.controller';
 import { SubscriptionService } from './subscription.service';
 

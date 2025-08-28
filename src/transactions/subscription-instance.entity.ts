@@ -5,7 +5,7 @@ import { MainEntity } from '../main-classes/mainEntity';
 import { Product } from '../products/products.entity';
 import { User } from '../user/user.entity';
 import { Gym } from '../gym/entities/gym.model';
-import { Subscription } from '../subscription/entities/subscription.entity';
+import { Subscription } from '../subscription/entities/subscription.model';
 import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.model';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.model';

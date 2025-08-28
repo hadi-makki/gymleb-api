@@ -2,7 +2,7 @@ import { Member } from '../member/entities/member.entity';
 import {
   Subscription,
   SubscriptionType,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { Gym } from '../gym/entities/gym.model';
 
 export interface PaymentDetails {

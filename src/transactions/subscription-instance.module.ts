@@ -19,7 +19,7 @@ import { Product, ProductSchema } from '../products/products.entity';
 import {
   Subscription,
   SubscriptionSchema,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { User, UserSchema } from '../user/user.entity';
 import {
   SubscriptionInstance,

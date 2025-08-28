@@ -7,7 +7,7 @@ import { Member } from './entities/member.entity';
 import { Manager } from '../manager/manager.model';
 import { Gym } from '../gym/entities/gym.model';
 import { NotFoundException } from '../error/not-found-error';
-import { Subscription } from '../subscription/entities/subscription.entity';
+import { Subscription } from '../subscription/entities/subscription.model';
 import { TransactionService } from '../transactions/subscription-instance.service';
 import { isMongoId, isUUID } from 'class-validator';
 import { BadRequestException } from '../error/bad-request-error';

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Subscription, SubscriptionType } from './entities/subscription.entity';
+import { Subscription, SubscriptionType } from './entities/subscription.model';
 import { Model } from 'mongoose';
 import { Gym } from '../gym/entities/gym.model';
 import { Manager } from '../manager/manager.model';

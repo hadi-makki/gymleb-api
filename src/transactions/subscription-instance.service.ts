@@ -12,7 +12,7 @@ import { isAfter, subDays } from 'date-fns';
 import {
   Subscription,
   SubscriptionType,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { addDays, addHours, endOfDay } from 'date-fns';
 import { Manager } from '../manager/manager.model';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.model';

@@ -8,7 +8,7 @@ import { Gym } from '../gym/entities/gym.model';
 import {
   Subscription,
   SubscriptionType,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { Member } from '../member/entities/member.entity';
 import { Manager } from '../manager/manager.model';
 import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.model';

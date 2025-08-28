@@ -3,8 +3,6 @@ import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { Gym } from '../../gym/entities/gym.model';
 import { User } from '../../user/user.entity';
-import { Column, Entity } from 'typeorm';
-import { PgMainEntity } from 'src/main-classes/mainEntity';
 
 export enum SubscriptionType {
   PERSONAL_TRAINER = 'personal_trainer',
@@ -13,9 +11,9 @@ export enum SubscriptionType {
   DAILY_GYM = 'daily_gym',
 }
 
-@Entity('subscriptions')
-export class SubscriptionEntity extends PgMainEntity {
-  @Column('text')
+@CustomSchema()
+export class Subscription {
+  @Prop({ type: String })
   title: string;
 
   @Prop({ type: String, enum: SubscriptionType })

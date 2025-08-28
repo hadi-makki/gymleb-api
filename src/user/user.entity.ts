@@ -5,7 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import Token from '../token/token.model';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { Gym } from '../gym/entities/gym.model';
-import { Subscription } from '../subscription/entities/subscription.entity';
+import { Subscription } from '../subscription/entities/subscription.model';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { Transaction } from '../transactions/transaction.entity';
 import { Manager } from 'src/manager/manager.model';

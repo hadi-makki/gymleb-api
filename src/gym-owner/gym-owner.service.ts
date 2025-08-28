@@ -18,7 +18,7 @@ import { Days } from '../seeder/gym.seeding';
 import {
   Subscription,
   SubscriptionType,
-} from '../subscription/entities/subscription.entity';
+} from '../subscription/entities/subscription.model';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { ExpensesService } from 'src/expenses/expenses.service';

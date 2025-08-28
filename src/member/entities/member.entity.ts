@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { MainEntity } from '../../main-classes/mainEntity';
 import { Gym } from '../../gym/entities/gym.model';
 import { Types } from 'mongoose';
-import { Subscription } from '../../subscription/entities/subscription.entity';
+import { Subscription } from '../../subscription/entities/subscription.model';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
