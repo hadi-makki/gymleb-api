@@ -37,4 +37,8 @@ export class CreateMemberDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  willPayLater?: boolean;
 }

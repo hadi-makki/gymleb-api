@@ -104,6 +104,7 @@ export class GymService {
       .find({
         gym: new Types.ObjectId(gym.id),
         ...dateFilter,
+        isPaid: { $ne: false },
       })
       .populate('subscription')
       .populate('revenue')
@@ -114,6 +115,7 @@ export class GymService {
       .find({
         gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+        isPaid: { $ne: false },
       })
       .populate('subscription')
       .populate('revenue')
@@ -124,6 +126,7 @@ export class GymService {
       .find({
         gym: new Types.ObjectId(gym.id),
         createdAt: { $gte: currentMonthStart },
+        isPaid: { $ne: false },
       })
       .populate('subscription')
       .populate('revenue')

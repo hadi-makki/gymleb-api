@@ -71,7 +71,7 @@ export class TwilioService {
       isWelcomeMessageSent: true,
     });
 
-    if (checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
+    if (!checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
       console.log('sending notification to', memberPhone);
       await this.client.messages.create({
         from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,

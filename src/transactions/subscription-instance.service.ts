@@ -50,6 +50,7 @@ export class TransactionService {
     private readonly expenseModel: Model<Expense>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
+    console.log('this is the will pay later', paymentDetails.willPayLater);
     // Use custom dates if provided, otherwise calculate based on subscription type
     let startDate = paymentDetails.startDate
       ? new Date(paymentDetails.startDate)
@@ -80,6 +81,7 @@ export class TransactionService {
       paidAmount: paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
+      isPaid: paymentDetails.willPayLater ? false : true,
     });
     return newTransaction;
   }
@@ -294,5 +296,38 @@ export class TransactionService {
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
     });
     return newTransaction;
+  }
+
+  async updateTransactionPaymentStatus(
+    transactionId: string,
+    manager: Manager,
+    gymId: string,
+    isPaid: boolean,
+  ) {
+    const transaction = await this.transactionModel
+      .findById(transactionId)
+      .populate('gym');
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    const getManagerGym = await this.gymRepository.findById(gymId);
+    if (!getManagerGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    if (getManagerGym.owner.toString() !== manager._id.toString()) {
+      throw new UnauthorizedException(
+        'You do not have permission to update this transaction',
+      );
+    }
+
+    transaction.isPaid = isPaid;
+    await transaction.save();
+
+    return {
+      message: `Transaction payment status updated to ${isPaid ? 'paid' : 'unpaid'}`,
+      transaction,
+    };
   }
 }

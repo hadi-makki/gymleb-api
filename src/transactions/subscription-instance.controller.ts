@@ -1,4 +1,12 @@
-import { Controller, Delete, Get, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  UseGuards,
+  Patch,
+  Body,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
@@ -31,6 +39,27 @@ export class TransactionController {
     @Param('gymId') gymId: string,
   ) {
     return this.service.deleteSubscriptionInstance(id, manager, gymId);
+  }
+
+  @Patch(':gymId/:id/payment-status')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  async updatePaymentStatus(
+    @Param('id') id: string,
+    @User() manager: Manager,
+    @Param('gymId') gymId: string,
+    @Body() body: { isPaid: boolean },
+  ) {
+    return this.service.updateTransactionPaymentStatus(
+      id,
+      manager,
+      gymId,
+      body.isPaid,
+    );
   }
 
   @Get('currency-exchange')

@@ -17,6 +17,7 @@ export interface PaymentDetails {
   startDate?: string;
   // Optional custom end date for subscription instance
   endDate?: string;
+  willPayLater?: boolean;
 }
 
 export interface GooglePaymentsDetails {

@@ -165,6 +165,7 @@ export class MemberController {
       renewSubscriptionDto.subscriptionId,
       gymId,
       renewSubscriptionDto.giveFullDay,
+      renewSubscriptionDto.willPayLater,
     );
   }
 
