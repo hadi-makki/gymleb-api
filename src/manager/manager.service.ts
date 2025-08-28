@@ -145,7 +145,6 @@ export class ManagerService {
     body: LoginManagerDto,
     deviceId: string,
   ): Promise<ManagerCreatedWithTokenDto> {
-    console.log('this is the body', body);
     const manager = await this.managerEntity.findOne({
       $or: [{ username: body.username }, { email: body.username }],
     });
@@ -153,15 +152,11 @@ export class ManagerService {
       throw new NotFoundException('User not found');
     }
 
-    console.log('this is the manager', manager.password);
-    console.log('this is the body', body.password);
-
     const isPasswordMatch = await Manager.isPasswordMatch(
       body.password,
       manager.password,
     );
     if (!isPasswordMatch) {
-      console.log('this is the isPasswordMatch', isPasswordMatch);
       throw new BadRequestException('Password is incorrect');
     }
     const token = await this.tokenService.generateTokens({
@@ -170,7 +165,6 @@ export class ManagerService {
       deviceId,
     });
     //   ?.token;
-    console.log('this is the token', token);
     return {
       ...returnManager(manager),
       token: token.accessToken,
@@ -222,7 +216,6 @@ export class ManagerService {
     if (body.username) manager.username = body.username;
     if (body.password) {
       const hashedPassword = await Manager.hashPassword(body.password);
-      console.log('this is the hashed password', hashedPassword);
       manager.password = hashedPassword;
     }
     await manager.save();
@@ -230,7 +223,6 @@ export class ManagerService {
   }
 
   async logout(user: Manager, deviceId: string): Promise<SuccessMessageReturn> {
-    console.log('logging out a manager');
     await this.tokenService.deleteTokensByUserId(user.id, deviceId);
     return {
       message: 'Manager logged out successfully',

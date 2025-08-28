@@ -440,9 +440,6 @@ export class PersonalTrainersService {
       throw new NotFoundException('Personal trainer not found');
     }
 
-    console.log('this is the trainer', trainer);
-    console.log('this is the gym', gym);
-
     // Get all sessions for this trainer
     const sessions = await this.sessionEntity
       .find({

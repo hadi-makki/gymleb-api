@@ -121,8 +121,6 @@ export class TokenService {
       .populate('member')
       .populate('manager');
 
-    console.log(checkToken);
-
     if (checkToken) {
       checkToken.refreshToken = data.refreshToken;
       checkToken.refreshExpirationDate = data.refreshExpirationDate;
@@ -153,7 +151,6 @@ export class TokenService {
         ...(data.userId ? { member: data?.userId } : {}),
         ...(data.managerId ? { manager: data?.managerId } : {}),
       };
-      console.log(tokenData);
       return await this.tokenRepository.create(tokenData);
     }
   }

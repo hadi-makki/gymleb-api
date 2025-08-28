@@ -187,8 +187,6 @@ export class GymService {
         const gymPercentage = transaction.gymsPTSessionPercentage || 0;
         // Calculate gym's share: (percentage / 100) * session amount
         const gymShare = (gymPercentage / 100) * sessionAmount;
-        console.log('the paid amount', sessionAmount);
-        console.log('the gym share', gymShare);
         return total + gymShare;
       }, 0);
 
@@ -407,8 +405,6 @@ export class GymService {
       });
       memberIds = matchingMembers.map((m) => m._id);
     }
-
-    console.log(type);
 
     const result = await paginateModel(this.transactionModel, {
       filter: {
@@ -853,8 +849,6 @@ export class GymService {
     page: number = 1,
     search?: string,
   ) {
-    console.log('getting transactions', gymId);
-
     const result = await paginateModel(this.transactionModel, {
       filter: {
         gym: gymId,
@@ -920,7 +914,6 @@ export class GymService {
     startDate: Date;
     endDate: Date;
   }> {
-    console.log('getting revenue graph data', gymId, start, end);
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
     }
@@ -997,7 +990,6 @@ export class GymService {
     startDate: Date;
     endDate: Date;
   }> {
-    console.log('getting member growth graph data', gymId, start, end);
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
     }
@@ -1018,8 +1010,6 @@ export class GymService {
         createdAt: { $gte: startDate, $lte: endDate },
       })
       .sort({ createdAt: 1 });
-
-    console.log('these are the members', members);
 
     // Group members by date
     const membersByDate = new Map();

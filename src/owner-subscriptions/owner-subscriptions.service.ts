@@ -23,7 +23,6 @@ export class OwnerSubscriptionsService {
   ) {}
 
   async createType(dto: CreateOwnerSubscriptionTypeDto) {
-    console.log(dto);
     return await this.typeModel.create({
       title: dto.title,
       price: dto.price,

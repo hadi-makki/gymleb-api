@@ -15,9 +15,9 @@ import { checkNodeEnv } from 'src/config/helper/helper-functions';
 import { isPhoneNumber } from 'class-validator';
 
 export enum TwilioWhatsappTemplates {
-  EXPIARY_REMINDER = 'HXcc65a0e4783fd7f892683be58ad27285',
-  SUBSCRIPTION_EXPIRED = 'HX9f136ce037cfb13b0d4daf887b331437',
-  WELCOME_MESSAGE = 'HXf94333809823fbca32b724ab35a4d50c',
+  EXPIARY_REMINDER = 'HXe8f26377490ff319bae6b9c1d9538486',
+  // SUBSCRIPTION_EXPIRED = 'HX9f136ce037cfb13b0d4daf887b331437',
+  WELCOME_MESSAGE = 'HX33a3ef241f8933d43327e397663b1347',
 }
 
 @Injectable()
@@ -107,7 +107,7 @@ export class TwilioService {
       throw new BadRequestException('Member is already notified');
     }
 
-    if (checkNodeEnv('local') && isPhoneNumber(member.phone)) {
+    if (!checkNodeEnv('local') && isPhoneNumber(member.phone)) {
       console.log('sending notification to', member.phone);
       await this.client.messages
         .create({

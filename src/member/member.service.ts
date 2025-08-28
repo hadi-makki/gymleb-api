@@ -790,7 +790,6 @@ export class MemberService {
           profileImage: imageData.id,
         },
       );
-      console.log('imageData', imageData);
     } else {
       if (member.profileImage) {
         await this.mediaService.delete(member.profileImage);
@@ -941,7 +940,6 @@ export class MemberService {
       days: 3,
       isNotified: false,
     });
-    console.log('expiringMembers', JSON.stringify(expiringMembers, null, 2));
     for (const member of expiringMembers) {
       console.log('reminding member', member.member.name);
       await this.twilioService.notifySingleMember(

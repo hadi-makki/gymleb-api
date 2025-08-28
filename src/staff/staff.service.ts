@@ -38,10 +38,8 @@ export class StaffService {
       uuidv4(),
       gymId,
     );
-    console.log('this is the created in create', created._id);
 
     const staffDoc = await this.managerModel.findById(created._id);
-    console.log('this is the staffDoc in create', staffDoc);
     return returnManager(staffDoc);
   }
 

@@ -52,8 +52,6 @@ export class MediaService {
   }
   async delete(id: string) {
     try {
-      console.log(`Deleting media with ID: ${id}`); // Log the ID
-
       // Validate if the input id is a valid UUID
       if (!isMongoId(id)) {
         throw new BadRequestException('Invalid UUID format');
@@ -66,7 +64,6 @@ export class MediaService {
       }
 
       // Log the media found
-      console.log(`Found media: ${JSON.stringify(media)}`);
 
       // Delete the file from S3
       await this.s3Service.deleteFile(media.s3Key);
@@ -75,7 +72,6 @@ export class MediaService {
       await this.mediaRepository.deleteOne({ id });
 
       // Log success
-      console.log(`Successfully deleted media with ID: ${id}`);
     } catch (err) {
       throw new BadRequestException('error in deleting the message ' + err);
     }
@@ -106,7 +102,6 @@ export class MediaService {
   }
 
   async uploadUrl(url: string, userId: string): ReturnType<typeof this.upload> {
-    console.log('uploadUrl', url, userId);
     const multerFile = await this.urlToMulter(url);
     return await this.upload(multerFile, userId);
   }

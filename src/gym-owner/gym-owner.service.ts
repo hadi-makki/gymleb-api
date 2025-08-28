@@ -111,7 +111,6 @@ export class GymOwnerService {
           // remove the gym owner from the gym
           await this.gymModel.findByIdAndDelete(gym.id);
           await this.gymOwnerModel.findByIdAndDelete(gymOwner.id);
-          console.log('this is the error', err);
           throw new BadRequestException('Failed to create subscription', err);
         });
 

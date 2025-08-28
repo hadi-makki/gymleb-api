@@ -56,8 +56,6 @@ export class TransactionService {
       : new Date();
     let endDate: Date;
 
-    console.log('startDate', startDate);
-
     if (paymentDetails.endDate) {
       // Use custom end date if provided
       endDate = new Date(paymentDetails.endDate);
