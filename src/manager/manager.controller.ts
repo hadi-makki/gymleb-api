@@ -39,7 +39,7 @@ import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
-import { Manager } from './manager.entity';
+import { Manager } from './manager.model';
 import { ManagerService } from './manager.service';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { TransactionService } from '../transactions/subscription-instance.service';

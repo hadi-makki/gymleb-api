@@ -1,9 +1,6 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { MainEntity } from '../main-classes/mainEntity';
-import { Manager } from '../manager/manager.entity';
-import { Member } from '../member/entities/member.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { PgMainEntity } from '../main-classes/mainEntity';
 import { User } from '../user/user.entity';
 
 export enum TokenType {
@@ -12,32 +9,34 @@ export enum TokenType {
   ResetPassword = 'reset-password',
 }
 
-@CustomSchema()
-class Token extends MainEntity {
-  @Prop({ type: String, unique: true, default: null })
+@Entity('tokens')
+export class TokenEntity extends PgMainEntity {
+  @Column({ unique: true, default: null })
   accessToken: string;
 
-  @Prop({ type: String, unique: true, default: null })
+  @Column({ unique: true, default: null })
   refreshToken: string;
 
-  @Prop({ type: Date, default: null })
+  @Column({ type: 'timestamp with time zone', default: null })
   refreshExpirationDate: Date;
 
-  @Prop({ type: Date, default: null })
+  @Column({ type: 'timestamp with time zone', default: null })
   accessExpirationDate: Date;
 
-  @Prop({ type: String, default: null })
+  @Column({ default: null })
   deviceId: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', nullable: true })
+  @Column({ nullable: true })
   user: User;
 
-  @Prop({ type: Types.ObjectId, ref: 'Member', nullable: true })
-  member: Member;
+  // @Column({ nullable: true })
+  // member: Member;
 
-  @Prop({ type: Types.ObjectId, ref: 'Manager', nullable: true })
-  manager: Manager;
+  @ManyToOne(() => ManagerEntity, (manager) => manager.tokens, {
+    nullable: true,
+  })
+  manager: ManagerEntity;
+
+  @RelationId((token: TokenEntity) => token.manager)
+  managerId: string;
 }
-
-export const TokenSchema = SchemaFactory.createForClass(Token);
-export default Token;

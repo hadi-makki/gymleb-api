@@ -3,9 +3,9 @@ import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 
 import { Member } from 'src/member/entities/member.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
+import { Gym } from 'src/gym/entities/gym.model';
 import { MainEntity } from 'src/main-classes/mainEntity';
-import { Manager } from 'src/manager/manager.entity';
+import { Manager } from 'src/manager/manager.model';
 
 @CustomSchema()
 export class PTSession extends MainEntity {

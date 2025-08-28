@@ -7,14 +7,14 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from '../owner-subscriptions/owner-subscription.entity';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
+} from '../owner-subscriptions/owner-subscription.model';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
+import { Manager, ManagerSchema } from '../manager/manager.model';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 import {
   OwnerSubscriptionType,
   OwnerSubscriptionTypeSchema,
-} from '../owner-subscriptions/owner-subscription-type.entity';
+} from '../owner-subscriptions/owner-subscription-type.model';
 import { Product, ProductSchema } from '../products/products.entity';
 import {
   Subscription,

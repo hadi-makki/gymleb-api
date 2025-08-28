@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Expense, ExpenseSchema } from './expense.entity';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 

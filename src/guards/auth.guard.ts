@@ -4,7 +4,7 @@ import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-c
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { UnauthorizedException } from '../error/unauthorized-error';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { TokenService } from '../token/token.service';
 import { User } from '../user/user.entity';
 import { Member } from '../member/entities/member.entity';

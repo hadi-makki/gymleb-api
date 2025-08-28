@@ -11,8 +11,8 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { Transaction } from '../transactions/transaction.entity';
 import { Permissions } from '../decorators/roles/role.enum';
 import { Expense } from '../expenses/expense.entity';
-import { Gym } from '../gym/entities/gym.entity';
-import { Manager } from '../manager/manager.entity';
+import { Gym } from '../gym/entities/gym.model';
+import { Manager } from '../manager/manager.model';
 import { Revenue } from '../revenue/revenue.entity';
 import { Days } from '../seeder/gym.seeding';
 import {

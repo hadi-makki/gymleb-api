@@ -5,15 +5,15 @@ import {
 } from '@nestjs/common';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
-import { Gym } from './entities/gym.entity';
+import { Gym } from './entities/gym.model';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { Member } from '../member/entities/member.entity';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.model';
 import { paginateModel } from '../utils/pagination';
 import { AddOfferDto } from './dto/add-offer.dto';
 import {
@@ -870,9 +870,16 @@ export class GymService {
     page: number = 1,
     search?: string,
   ) {
+    const checkGym = await this.gymModel.findById(gymId);
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    console.log('this is the gym id', checkGym.transactions.length);
+
     const result = await paginateModel(this.transactionModel, {
       filter: {
-        gym: gymId,
+        gym: checkGym._id,
         ...(search
           ? {
               $or: [

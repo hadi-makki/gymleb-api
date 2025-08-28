@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthenticationModule } from '../common/AuthModule.module';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
 import {
   Subscription,
   SubscriptionSchema,

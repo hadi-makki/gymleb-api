@@ -11,7 +11,7 @@ import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { User } from 'src/decorators/users.decorator';
-import { Manager } from 'src/manager/manager.entity';
+import { Manager } from 'src/manager/manager.model';
 import { UseGuards } from '@nestjs/common';
 import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
 import { Roles } from 'src/decorators/roles/Role';

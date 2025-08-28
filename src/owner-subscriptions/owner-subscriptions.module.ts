@@ -3,16 +3,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   OwnerSubscriptionType,
   OwnerSubscriptionTypeSchema,
-} from './owner-subscription-type.entity';
+} from './owner-subscription-type.model';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from './owner-subscription.entity';
+} from './owner-subscription.model';
 import { OwnerSubscriptionsController } from './owner-subscriptions.controller';
 import { OwnerSubscriptionsService } from './owner-subscriptions.service';
 
 import { AuthenticationModule } from '../common/AuthModule.module';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
+import { Manager, ManagerSchema } from '../manager/manager.model';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 
 @Module({

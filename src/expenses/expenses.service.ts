@@ -4,8 +4,8 @@ import { Model, Types } from 'mongoose';
 import { Expense } from './expense.entity';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
-import { Manager } from '../manager/manager.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Manager } from '../manager/manager.model';
+import { Gym } from '../gym/entities/gym.model';
 import { TransactionService } from '../transactions/subscription-instance.service';
 
 @Injectable()

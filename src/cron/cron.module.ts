@@ -8,10 +8,10 @@ import {
   Transaction,
   TransactionSchema,
 } from '../transactions/transaction.entity';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
 import { TwilioModule } from '../twilio/twilio.module';
 import { MemberModule } from '../member/member.module';
-import { Manager, ManagerSchema } from 'src/manager/manager.entity';
+import { Manager, ManagerSchema } from 'src/manager/manager.model';
 import { AuthenticationModule } from 'src/common/AuthModule.module';
 import { MemberService } from 'src/member/member.service';
 import { SubscriptionModule } from 'src/subscription/subscription.module';

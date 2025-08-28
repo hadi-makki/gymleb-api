@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { S3Service } from '../s3/s3.service';
-import Token, { TokenSchema } from '../token/token.entity';
+import Token, { TokenSchema } from '../token/token.model';
 import { User, UserSchema } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 import { MediaController } from './media.controller';

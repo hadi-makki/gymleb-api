@@ -1,31 +1,29 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { MainEntity } from '../main-classes/mainEntity';
-import { OwnerSubscriptionType } from './owner-subscription-type.entity';
-import { Manager } from '../manager/manager.entity';
-import { Transaction } from '../transactions/transaction.entity';
+import { Prop } from '@nestjs/mongoose';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import { PgMainEntity } from '../main-classes/mainEntity';
+import { OwnerSubscriptionTypeEntity } from './owner-subscription-type.entity';
 
-@CustomSchema()
-export class OwnerSubscription extends MainEntity {
-  @Prop({ type: Types.ObjectId, ref: 'Manager', required: true })
-  owner: Manager;
+@Entity('owner_subscriptions')
+export class OwnerSubscriptionEntity extends PgMainEntity {
+  @ManyToOne(() => ManagerEntity, (manager) => manager.ownerSubscription)
+  owner: ManagerEntity;
 
-  @Prop({ type: Types.ObjectId, ref: 'OwnerSubscriptionType', required: true })
-  type: OwnerSubscriptionType;
+  @ManyToOne(
+    () => OwnerSubscriptionTypeEntity,
+    (type) => type.ownerSubscription,
+  )
+  type: OwnerSubscriptionTypeEntity;
 
-  @Prop({ type: Date, required: true })
+  @Column('timestamp with time zone')
   startDate: Date;
 
-  @Prop({ type: Date, required: true })
+  @Column('timestamp with time zone')
   endDate: Date;
 
-  @Prop({ type: Boolean, default: true })
+  @Column('boolean', { default: true })
   active: boolean;
 
   // @Prop({ type: Types.ObjectId, ref: 'Transaction' })
   // transaction: Transaction;
 }
-
-export const OwnerSubscriptionSchema =
-  SchemaFactory.createForClass(OwnerSubscription);

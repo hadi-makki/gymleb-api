@@ -5,9 +5,9 @@ import { User, UserSchema } from '../user/user.entity';
 
 import { TransactionService } from '../transactions/subscription-instance.service';
 import { ConfigService } from '@nestjs/config';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
+import { Manager, ManagerSchema } from '../manager/manager.model';
 import { TokenService } from '../token/token.service';
-import Token, { TokenSchema } from '../token/token.entity';
+import Token, { TokenSchema } from '../token/token.model';
 import { JwtService } from '@nestjs/jwt';
 import { Product, ProductSchema } from '../products/products.entity';
 import { ProductsService } from '../products/products.service';

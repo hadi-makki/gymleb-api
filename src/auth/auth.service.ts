@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { BadRequestException } from '../error/bad-request-error';
 import { UnauthorizedException } from '../error/unauthorized-error';
-import Token from '../token/token.entity';
+import Token from '../token/token.model';
 import { TokenService } from '../token/token.service';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';

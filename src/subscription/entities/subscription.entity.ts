@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
-import { Gym } from '../../gym/entities/gym.entity';
+import { Gym } from '../../gym/entities/gym.model';
 import { User } from '../../user/user.entity';
 
 export enum SubscriptionType {

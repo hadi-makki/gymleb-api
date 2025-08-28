@@ -3,21 +3,21 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import Token, { TokenSchema } from '../token/token.entity';
+import Token, { TokenSchema } from '../token/token.model';
 import { TokenService } from '../token/token.service';
 import { User, UserSchema } from '../user/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
 import { ManagerService } from '../manager/manager.service';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
+import { Manager, ManagerSchema } from '../manager/manager.model';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 import { GymService } from '../gym/gym.service';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
 import { Expense, ExpenseSchema } from '../expenses/expense.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from '../owner-subscriptions/owner-subscription.entity';
+} from '../owner-subscriptions/owner-subscription.model';
 import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
 import {
   Transaction,

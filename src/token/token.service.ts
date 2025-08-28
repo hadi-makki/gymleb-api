@@ -7,10 +7,10 @@ import { Request, Response } from 'express';
 import { Model } from 'mongoose';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { Member } from '../member/entities/member.entity';
 import { GenerateTokenDTO } from './token.dto';
-import TokenEntity from './token.entity';
+import TokenEntity from './token.model';
 import { User } from '../user/user.entity';
 import { CookieNames, cookieOptions } from '../utils/constants';
 @Injectable()

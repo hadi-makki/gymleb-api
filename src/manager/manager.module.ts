@@ -10,13 +10,13 @@ import { Member, MemberSchema } from '../member/entities/member.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from '../owner-subscriptions/owner-subscription.entity';
-import Token, { TokenSchema } from '../token/token.entity';
+} from '../owner-subscriptions/owner-subscription.model';
+import Token, { TokenSchema } from '../token/token.model';
 import { TokenService } from '../token/token.service';
 import { User, UserSchema } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 import { ManagerController } from './manager.controller';
-import { Manager, ManagerSchema } from './manager.entity';
+import { Manager, ManagerSchema } from './manager.model';
 import { ManagerService } from './manager.service';
 import { ManagerScript } from './managers.script';
 

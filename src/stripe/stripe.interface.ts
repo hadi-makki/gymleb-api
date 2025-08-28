@@ -3,7 +3,7 @@ import {
   Subscription,
   SubscriptionType,
 } from '../subscription/entities/subscription.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.model';
 
 export interface PaymentDetails {
   subscription: Subscription;

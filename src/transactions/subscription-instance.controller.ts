@@ -9,7 +9,7 @@ import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { TransactionService } from './subscription-instance.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { User } from '../decorators/users.decorator';
 import { Convert } from 'easy-currencies';
 

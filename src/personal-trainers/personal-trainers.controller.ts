@@ -26,7 +26,7 @@ import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { PersonalTrainersService } from './personal-trainers.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
-import { Manager } from 'src/manager/manager.entity';
+import { Manager } from 'src/manager/manager.model';
 
 @Controller('personal-trainers')
 export class PersonalTrainersController {

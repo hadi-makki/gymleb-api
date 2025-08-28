@@ -2,7 +2,7 @@ import { Prop, SchemaFactory } from '@nestjs/mongoose';
 import { Types, Document } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { MainEntity } from '../main-classes/mainEntity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.model';
 import { Transaction } from 'src/transactions/transaction.entity';
 
 export type RevenueDocument = Revenue & Document;

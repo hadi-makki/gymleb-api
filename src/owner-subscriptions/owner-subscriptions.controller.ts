@@ -17,7 +17,7 @@ import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 
 @Controller('owner-subscriptions')
 @UseGuards(ManagerAuthGuard)

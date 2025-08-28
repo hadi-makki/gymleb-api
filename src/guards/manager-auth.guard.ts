@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { TokenService } from '../token/token.service';
 import { Permissions } from '../decorators/roles/role.enum';
 import { PERMISSIONS_KEY } from '../decorators/roles/Role';

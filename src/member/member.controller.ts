@@ -19,7 +19,7 @@ import { DeleteMemberDto } from './dto/delete-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';

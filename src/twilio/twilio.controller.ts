@@ -4,7 +4,7 @@ import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { CreateTwilioDto } from './dto/create-twilio.dto';
 import { TwilioService } from './twilio.service';
 

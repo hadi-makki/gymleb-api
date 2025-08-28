@@ -7,16 +7,16 @@ import { PaymentDetails } from '../stripe/stripe.interface';
 import { User } from '../user/user.entity';
 import { SubscriptionInstance } from './subscription-instance.entity';
 import { Member } from '../member/entities/member.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.model';
 import { isAfter, subDays } from 'date-fns';
 import {
   Subscription,
   SubscriptionType,
 } from '../subscription/entities/subscription.entity';
 import { addDays, addHours, endOfDay } from 'date-fns';
-import { Manager } from '../manager/manager.entity';
-import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
+import { Manager } from '../manager/manager.model';
+import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.model';
+import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.model';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { Permissions } from '../decorators/roles/role.enum';
 import { Transaction, TransactionType } from './transaction.entity';
@@ -215,6 +215,12 @@ export class TransactionService {
         _id: subscriptionInstance.expense,
       });
     }
+
+    await this.gymRepository.updateOne(
+      { _id: subscriptionInstance.gym },
+      { $pull: { transactions: subscriptionInstance._id } },
+    );
+
     return {
       message: 'Subscription instance deleted successfully',
     };
@@ -264,6 +270,10 @@ export class TransactionService {
       revenue: new Types.ObjectId(revenueId),
       type: TransactionType.REVENUE,
     });
+    await this.gymRepository.updateOne(
+      { transactions: new Types.ObjectId(revenueId) },
+      { $pull: { transactions: new Types.ObjectId(revenueId) } },
+    );
   }
 
   async removeExpenseTransaction(expenseId: string) {

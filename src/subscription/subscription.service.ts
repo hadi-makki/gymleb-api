@@ -4,8 +4,8 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Subscription, SubscriptionType } from './entities/subscription.entity';
 import { Model } from 'mongoose';
-import { Gym } from '../gym/entities/gym.entity';
-import { Manager } from '../manager/manager.entity';
+import { Gym } from '../gym/entities/gym.model';
+import { Manager } from '../manager/manager.model';
 import { isMongoId } from 'validator';
 import { BadRequestException } from '../error/bad-request-error';
 import { TransactionService } from '../transactions/subscription-instance.service';
@@ -107,6 +107,10 @@ export class SubscriptionService {
       _id: id,
       gym: gym.id,
     });
+    await this.gymModel.updateOne(
+      { _id: gymId },
+      { $pull: { subscriptions: id } },
+    );
     return subscription;
   }
 
@@ -123,6 +127,10 @@ export class SubscriptionService {
   async deleteSubscription(subscriptionId: string) {
     const subscription =
       await this.subscriptionModel.findByIdAndDelete(subscriptionId);
+    await this.gymModel.updateOne(
+      { _id: subscription.gym },
+      { $pull: { subscriptions: subscriptionId } },
+    );
     return subscription;
   }
 

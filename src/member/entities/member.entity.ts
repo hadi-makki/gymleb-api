@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { MainEntity } from '../../main-classes/mainEntity';
-import { Gym } from '../../gym/entities/gym.entity';
+import { Gym } from '../../gym/entities/gym.model';
 import { Types } from 'mongoose';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';

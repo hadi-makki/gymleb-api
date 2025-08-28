@@ -4,9 +4,9 @@ import { TokenController } from './token.controller';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { User, UserSchema } from '../user/user.entity';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
+import { Manager, ManagerSchema } from '../manager/manager.model';
 import { MongooseModule } from '@nestjs/mongoose';
-import Token, { TokenSchema } from './token.entity';
+import Token, { TokenSchema } from './token.model';
 import { Member, MemberSchema } from '../member/entities/member.entity';
 
 @Module({

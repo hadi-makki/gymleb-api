@@ -4,8 +4,8 @@ import { Model, Types } from 'mongoose';
 import { Revenue, RevenueDocument } from './revenue.entity';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
-import { Manager } from '../manager/manager.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Manager } from '../manager/manager.model';
+import { Gym } from '../gym/entities/gym.model';
 import { Product } from '../products/products.entity';
 import { BadRequestException } from '../error/bad-request-error';
 import { TransactionType } from '../transactions/transaction.entity';
@@ -146,6 +146,11 @@ export class RevenueService {
 
     // remove transaction
     await this.transactionService.removeRevenueTransaction(id);
+
+    await this.gymModel.updateOne(
+      { _id: gym.id },
+      { $pull: { transactions: id } },
+    );
 
     return { message: 'Revenue deleted successfully' };
   }

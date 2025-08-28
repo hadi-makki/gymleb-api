@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { Media } from '../media/media.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.model';
 import { MainEntity } from '../main-classes/mainEntity';
 import { Transaction } from '../transactions/transaction.entity';
 

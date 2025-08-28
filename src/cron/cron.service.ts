@@ -9,7 +9,7 @@ import {
   Transaction,
   TransactionType,
 } from '../transactions/transaction.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.model';
 import { addDays, startOfDay, endOfDay } from 'date-fns';
 
 @Injectable()

@@ -6,7 +6,7 @@ import { PersonalTrainersController } from './personal-trainers.controller';
 import { PersonalTrainersService } from './personal-trainers.service';
 import { PTSession } from './entities/pt-sessions.entity';
 import { PTSessionSchema } from './entities/pt-sessions.entity';
-import { Manager, ManagerSchema } from 'src/manager/manager.entity';
+import { Manager, ManagerSchema } from 'src/manager/manager.model';
 import { TransactionModule } from 'src/transactions/subscription-instance.module';
 
 @Module({

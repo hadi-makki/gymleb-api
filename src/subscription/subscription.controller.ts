@@ -14,7 +14,7 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { User } from '../decorators/users.decorator';
 
 @Controller('subscription')

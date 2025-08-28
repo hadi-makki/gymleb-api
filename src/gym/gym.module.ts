@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Gym, GymSchema } from './entities/gym.entity';
+import { Gym, GymSchema } from './entities/gym.model';
 import { GymController } from './gym.controller';
 import { GymService } from './gym.service';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
+import { Manager, ManagerSchema } from '../manager/manager.model';
 import { AuthenticationModule } from '../common/AuthModule.module';
 
 import { Member, MemberSchema } from '../member/entities/member.entity';
@@ -12,7 +12,7 @@ import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from '../owner-subscriptions/owner-subscription.entity';
+} from '../owner-subscriptions/owner-subscription.model';
 import {
   Transaction,
   TransactionSchema,

@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Revenue, RevenueSchema } from './revenue.entity';
 import { RevenueController } from './revenue.controller';
 import { RevenueService } from './revenue.service';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { Product, ProductSchema } from '../products/products.entity';
 import {

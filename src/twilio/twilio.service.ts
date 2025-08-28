@@ -2,7 +2,7 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../error/bad-request-error';
 import { GymService } from '../gym/gym.service';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { MemberService } from '../member/member.service';
 
 import { Twilio } from 'twilio';

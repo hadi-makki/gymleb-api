@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import { Transaction, TransactionType } from './transaction.entity';
 import { SubscriptionInstance } from './subscription-instance.entity';
 import { Member } from '../member/entities/member.entity';
-import { Gym } from '../gym/entities/gym.entity';
+import { Gym } from '../gym/entities/gym.model';
 import { Product } from '../products/products.entity';
 
 @Injectable({ scope: Scope.DEFAULT })

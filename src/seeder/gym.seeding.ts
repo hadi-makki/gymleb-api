@@ -1,8 +1,8 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Gym } from '../gym/entities/gym.entity';
-import { Manager } from '../manager/manager.entity';
+import { Gym } from '../gym/entities/gym.model';
+import { Manager } from '../manager/manager.model';
 
 export const Days = [
   { day: 'Monday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },

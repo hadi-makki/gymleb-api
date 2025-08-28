@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { OwnerSubscriptionType } from './owner-subscription-type.entity';
-import { OwnerSubscription } from './owner-subscription.entity';
+import { OwnerSubscriptionType } from './owner-subscription-type.model';
+import { OwnerSubscription } from './owner-subscription.model';
 
 import {
   AssignOwnerSubscriptionDto,
   CreateOwnerSubscriptionTypeDto,
 } from './dto';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { TransactionService } from '../transactions/subscription-instance.service';
 
 @Injectable()

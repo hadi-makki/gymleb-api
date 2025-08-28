@@ -1,25 +1,24 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
-import { MainEntity, PgMainEntity } from '../../main-classes/mainEntity';
+import { MainEntity } from '../../main-classes/mainEntity';
 import { Manager } from '../../manager/manager.model';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
-import { Entity } from 'typeorm';
 
-@Entity('gyms')
-export class GymEntity extends PgMainEntity {
-  @Column('text')
+@CustomSchema()
+export class Gym extends MainEntity {
+  @Prop({ type: String })
   name: string;
 
-  @Column('text')
+  @Prop({ type: String })
   gymDashedName: string;
 
-  @Column('text')
+  @Prop({ type: String })
   address: string;
 
-  @Column('text')
+  @Prop({ type: String })
   phone: string;
 
   @Prop({ type: [Types.ObjectId], ref: 'Manager', required: false })
@@ -104,3 +103,5 @@ export class GymEntity extends PgMainEntity {
   @Prop({ type: Number, default: 0, required: false })
   gymsPTSessionPercentage: number;
 }
+
+export const GymSchema = SchemaFactory.createForClass(Gym);

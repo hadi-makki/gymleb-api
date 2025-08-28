@@ -5,9 +5,10 @@ import { Product } from './products.entity';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { User } from '../user/user.entity';
 import { MediaService } from '../media/media.service';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { GymService } from '../gym/gym.service';
 import { isMongoId } from 'class-validator';
+import { Gym } from 'src/gym/entities/gym.model';
 
 @Injectable()
 export class ProductsService {
@@ -16,6 +17,8 @@ export class ProductsService {
     private readonly productRepository: Model<Product>,
     private readonly mediaService: MediaService,
     private readonly gymService: GymService,
+    @InjectModel(Gym.name)
+    private readonly gymModel: Model<Gym>,
   ) {}
 
   async getProducts(gymId: string) {
@@ -139,6 +142,8 @@ export class ProductsService {
     }
 
     await this.productRepository.findByIdAndDelete(id);
+
+    await this.gymModel.updateOne({ _id: gymId }, { $pull: { products: id } });
 
     return {
       message: 'Product deleted successfully',

@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 
 @Injectable({ scope: Scope.DEFAULT })
 export class ManagerSeeding implements OnModuleInit {
