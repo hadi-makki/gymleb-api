@@ -91,7 +91,8 @@ export class PersonalTrainersService {
         username:
           createPersonalTrainerDto.firstName +
           createPersonalTrainerDto.lastName +
-          Math.random().toString(36).substring(2, 15),
+          (Math.floor(Math.random() * 10).toString() +
+            Math.floor(Math.random() * 10).toString()),
         password: createPersonalTrainerDto.password,
         phoneNumber: createPersonalTrainerDto.phone,
         roles: [Permissions.personalTrainers],
