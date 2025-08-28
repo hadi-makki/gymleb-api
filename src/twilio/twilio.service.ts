@@ -31,6 +31,8 @@ export class TwilioService {
     private readonly memberModel: Model<Member>,
   ) {}
 
+  private readonly allowedMessagesNumber = 500;
+
   private readonly client = new Twilio(
     process.env.TWILIO_ACCOUNT_SID,
     process.env.TWILIO_AUTH,
@@ -97,7 +99,7 @@ export class TwilioService {
     const isExpired = await this.memberService.checkUserSubscriptionExpired(
       member.id,
     );
-    if (gym.membersNotified > 100) {
+    if (gym.membersNotified > this.allowedMessagesNumber) {
       throw new BadRequestException('Gym members notified limit reached');
     }
     if (!isExpired && !dontCheckExpired) {

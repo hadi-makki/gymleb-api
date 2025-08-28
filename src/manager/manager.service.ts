@@ -218,7 +218,7 @@ export class ManagerService {
       const hashedPassword = await Manager.hashPassword(body.password);
       manager.password = hashedPassword;
     }
-    await manager.save();
+    await this.managerEntity.findByIdAndUpdate(id, manager);
     return returnManager(manager);
   }
 

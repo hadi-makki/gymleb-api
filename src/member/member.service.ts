@@ -25,6 +25,7 @@ import { CookieNames, cookieOptions } from 'src/utils/constants';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
 import { addDays, startOfDay, endOfDay } from 'date-fns';
+import { GymService } from 'src/gym/gym.service';
 
 @Injectable()
 export class MemberService {
@@ -42,6 +43,7 @@ export class MemberService {
     private readonly transactionModel: Model<Transaction>,
     private readonly twilioService: TwilioService,
     private readonly personalTrainersService: PersonalTrainersService,
+    private readonly gymService: GymService,
   ) {}
 
   async getActiveSubscription(memberId: string) {
@@ -254,6 +256,8 @@ export class MemberService {
       gym.name,
       gym.gymDashedName,
     );
+
+    await this.gymService.addGymMembersNotified(gym.id, 1);
 
     return await this.returnMember(newMember);
   }
