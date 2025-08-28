@@ -7,6 +7,11 @@ import { Subscription } from '../../subscription/entities/subscription.entity';
 import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
 import { Transaction } from '../../transactions/transaction.entity';
 
+export enum GymTypeEnum {
+  FITNESS = 'fitness',
+  CALISTHENICS = 'calisthenics',
+}
+
 @CustomSchema()
 export class Gym extends MainEntity {
   @Prop({ type: String })
@@ -29,6 +34,9 @@ export class Gym extends MainEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Manager' })
   owner: Manager;
+
+  @Prop({ type: String, enum: GymTypeEnum, default: GymTypeEnum.FITNESS })
+  gymType: GymTypeEnum;
 
   @Prop({
     type: [Types.ObjectId],

@@ -253,8 +253,7 @@ export class MemberService {
     await this.twilioService.sendWelcomeMessage(
       newMember.name,
       newMember.phone,
-      gym.name,
-      gym.gymDashedName,
+      gym,
     );
 
     await this.gymService.addGymMembersNotified(gym.id, 1);
@@ -384,8 +383,7 @@ export class MemberService {
       await this.twilioService.sendWelcomeMessage(
         member.name,
         member.phone,
-        member.gym.name,
-        member.gym.gymDashedName,
+        member.gym,
       );
     }
   }

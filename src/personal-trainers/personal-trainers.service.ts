@@ -52,7 +52,7 @@ export class PersonalTrainersService {
       users: { $in: [member._id] },
     });
     if (!trainer) {
-      throw new NotFoundException('Trainer not found');
+      return;
     }
 
     await this.sessionEntity.deleteMany({

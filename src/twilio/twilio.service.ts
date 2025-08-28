@@ -13,11 +13,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { checkNodeEnv } from 'src/config/helper/helper-functions';
 import { isPhoneNumber } from 'class-validator';
+import { Gym, GymTypeEnum } from 'src/gym/entities/gym.entity';
 
 export enum TwilioWhatsappTemplates {
   EXPIARY_REMINDER = 'HXe8f26377490ff319bae6b9c1d9538486',
   // SUBSCRIPTION_EXPIRED = 'HX9f136ce037cfb13b0d4daf887b331437',
   WELCOME_MESSAGE = 'HX33a3ef241f8933d43327e397663b1347',
+  WELCOME_MESSAGE_CALISTHENICS = 'HX67b2797d8b8bae74e5dd066c4db608d0',
 }
 
 @Injectable()
@@ -57,12 +59,7 @@ export class TwilioService {
     await this.gymService.addGymMembersNotified(gymId, notifiedNumber);
   }
 
-  async sendWelcomeMessage(
-    memberName: string,
-    memberPhone: string,
-    gymName: string,
-    gymDashedName: string,
-  ) {
+  async sendWelcomeMessage(memberName: string, memberPhone: string, gym: Gym) {
     const member = await this.memberModel.findOne({
       phone: memberPhone,
     });
@@ -74,16 +71,20 @@ export class TwilioService {
       isWelcomeMessageSent: true,
     });
 
-    if (!checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
+    if (checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
       console.log('sending notification to', memberPhone);
       await this.client.messages.create({
         from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
         to: `whatsapp:${memberPhone}`,
-        contentSid: TwilioWhatsappTemplates.WELCOME_MESSAGE,
+        contentSid:
+          gym.gymType === GymTypeEnum.CALISTHENICS
+            ? TwilioWhatsappTemplates.WELCOME_MESSAGE_CALISTHENICS
+            : TwilioWhatsappTemplates.WELCOME_MESSAGE,
         contentVariables: JSON.stringify({
           1: memberName,
-          2: gymName,
-          3: `https://gym-leb.com/${gymDashedName}/overview`,
+          2: gym.name,
+          3: `https://gym-leb.com/${gym.gymDashedName}/overview`,
+          4: gym.phone,
         }),
       });
     }
