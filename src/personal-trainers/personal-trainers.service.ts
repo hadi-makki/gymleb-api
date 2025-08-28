@@ -39,7 +39,12 @@ export class PersonalTrainersService {
 
   async removeClientFromTrainer(memberId: string, gymId: string) {
     const member = await this.memberEntity.findById(memberId);
+    console.log(
+      'this is the member inside the removeClientFromTrainer',
+      member,
+    );
     if (!member) {
+      console.log('we did not find the member');
       throw new NotFoundException('Member not found');
     }
 

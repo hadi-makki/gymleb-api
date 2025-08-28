@@ -591,11 +591,11 @@ export class MemberService {
       await checkGym.save();
     }
 
-    // Delete the member
-    await this.memberModel.findByIdAndDelete(id);
+    if (member.sessions.length > 0) {
+      await this.personalTrainersService.removeClientFromTrainer(id, gymId);
+    }
 
-    await this.personalTrainersService.remove(id);
-    await this.personalTrainersService.removeClientFromTrainer(id, gymId);
+    await this.memberModel.findByIdAndDelete(id);
 
     return {
       message: `Member deleted successfully${deleteTransactions ? ' along with all related transactions' : ''}`,
