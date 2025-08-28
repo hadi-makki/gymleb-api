@@ -148,6 +148,11 @@ export class GymService {
         return total + gymShare;
       }, 0);
 
+    console.log(
+      'this is the current month p t session revenue',
+      currentMonthPTSessionRevenue,
+    );
+
     // Calculate percentage change in subscription revenue
     const revenueChange = lastMonthSubscriptionRevenue
       ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
@@ -175,10 +180,6 @@ export class GymService {
       .filter((t) => t.type === TransactionType.SUBSCRIPTION)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    const additionalRevenue = allTransactions
-      .filter((t) => t.type === TransactionType.REVENUE)
-      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
-
     // Calculate personal trainer session revenue based on gym percentage
     const personalTrainerSessionRevenue = allTransactions
       .filter((t) => t.type === TransactionType.PERSONAL_TRAINER_SESSION)
@@ -189,6 +190,13 @@ export class GymService {
         const gymShare = (gymPercentage / 100) * sessionAmount;
         return total + gymShare;
       }, 0);
+
+    const additionalRevenue = allTransactions
+      .filter((t) => t.type === TransactionType.REVENUE)
+      .reduce(
+        (total, transaction) => total + (transaction.paidAmount || 0),
+        personalTrainerSessionRevenue,
+      );
 
     const totalExpenses = allTransactions
       .filter((t) => t.type === TransactionType.EXPENSE)
@@ -363,6 +371,19 @@ export class GymService {
     }
     gym.note = note;
     await gym.save();
+    return gym;
+  }
+
+  async updatePTSessionPercentage(gymId: string, percentage: number) {
+    const gym = await this.gymModel.findById(gymId);
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    if (percentage < 0 || percentage > 100) {
+      throw new BadRequestException('Percentage must be between 0 and 100');
+    }
+    gym.gymsPTSessionPercentage = percentage;
+    await this.gymModel.findByIdAndUpdate(gymId, gym);
     return gym;
   }
 

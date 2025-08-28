@@ -25,6 +25,7 @@ import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
 import { AddOfferDto } from './dto/add-offer.dto';
 import { TransactionType } from '../transactions/transaction.entity';
+import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -263,6 +264,18 @@ export class GymController {
   })
   addGymOffer(@Param('gymId') gymId: string, @Body() addOfferDto: AddOfferDto) {
     return this.gymService.addGymOffer(gymId, addOfferDto);
+  }
+
+  @Patch('pt-percentage/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  @ApiOperation({ summary: "Update gym's PT session cut percentage" })
+  @ApiOkResponse({ description: 'Updated gym', type: Gym })
+  updatePTPercentage(
+    @Param('gymId') gymId: string,
+    @Body() body: UpdatePTPercentageDto,
+  ) {
+    return this.gymService.updatePTSessionPercentage(gymId, body.percentage);
   }
 
   @Get('owner/:ownerId/gyms')
