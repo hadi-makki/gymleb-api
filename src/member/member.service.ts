@@ -242,6 +242,7 @@ export class MemberService {
         giveFullDay: createMemberDto.giveFullDay,
         startDate: createMemberDto.startDate,
         endDate: createMemberDto.endDate,
+        willPayLater: createMemberDto.willPayLater,
       });
 
     member.transactions = [subscriptionInstance];
@@ -433,6 +434,7 @@ export class MemberService {
     subscriptionId: string,
     gymId: string,
     giveFullDay?: boolean,
+    willPayLater?: boolean,
   ) {
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -529,6 +531,7 @@ export class MemberService {
         subscriptionType: checkSubscription?.type,
         amount: checkSubscription?.price,
         giveFullDay,
+        willPayLater,
       });
 
     member.transactions.push(createSubscriptionInstance);

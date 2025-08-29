@@ -81,6 +81,7 @@ export class TransactionService {
       paidAmount: paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
+      willPayLater: paymentDetails.willPayLater,
     });
     const createdTransaction = await this.transactionModel.save(newTransaction);
     return createdTransaction;

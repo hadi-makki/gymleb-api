@@ -25,4 +25,8 @@ export class RenewSubscriptionDto {
     return value;
   })
   giveFullDay?: boolean;
+
+  @IsOptional()
+  @IsBoolean({ message: 'willPayLater must be a boolean value' })
+  willPayLater?: boolean;
 }

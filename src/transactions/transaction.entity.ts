@@ -149,4 +149,7 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isSubscription: boolean;
+
+  @Column('boolean', { default: false })
+  willPayLater: boolean;
 }
