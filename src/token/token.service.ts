@@ -17,6 +17,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TokenEntity } from './token.entity';
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class TokenService {
   constructor(
@@ -155,6 +156,7 @@ export class TokenService {
         ...data,
         ...(data.userId ? { member: { id: data?.userId } } : {}),
         ...(data.managerId ? { manager: { id: data?.managerId } } : {}),
+        mongoId: uuidv4(),
       };
       return await this.tokenRepository.save(tokenData);
     }

@@ -68,7 +68,7 @@ export class GymOwnerService {
     if (checkUsername) {
       username = username + Math.floor(1000 + Math.random() * 9000);
     }
-    const gymOwner = await this.gymOwnerModel.create({
+    const gymOwnerModel = await this.gymOwnerModel.create({
       firstName: createGymOwnerDto.firstName,
       lastName: createGymOwnerDto.lastName,
       email: createGymOwnerDto.email,
@@ -78,6 +78,7 @@ export class GymOwnerService {
       username,
       permissions: [Permissions.GymOwner],
     });
+    const gymOwner = await this.gymOwnerModel.save(gymOwnerModel);
     if (createGymOwnerDto.generateMockData) {
       let gymName =
         createGymOwnerDto.firstName + ' ' + createGymOwnerDto.lastName;
@@ -88,7 +89,7 @@ export class GymOwnerService {
         gymName = gymName + Math.floor(1000 + Math.random() * 9000);
       }
 
-      const checkGym = await this.gymModel.create({
+      const gymModel = this.gymModel.create({
         name: gymName,
         address: createGymOwnerDto.address,
         phone: createGymOwnerDto.phone,
@@ -98,13 +99,9 @@ export class GymOwnerService {
         owner: gymOwner,
         gymDashedName: gymName.toLowerCase().split(' ').join('-'),
       });
-
-      await this.gymOwnerModel.save(gymOwner);
-
-      const gym = await this.gymModel.findOne({
-        where: { id: checkGym.id },
-        relations: ['owner'],
-      });
+      const gym = await this.gymModel.save(gymModel);
+      gym.owner = gymOwner;
+      await this.gymModel.save(gym);
 
       await this.subscriptionService
         .create(
@@ -323,9 +320,12 @@ export class GymOwnerService {
   async generateMockData() {
     const gymOwners = await this.gymOwnerModel.find();
     for (const gymOwner of gymOwners) {
-      const gym = await this.gymModel.create({
+      const gymModel = this.gymModel.create({
         name: gymOwner.firstName + ' ' + gymOwner.lastName,
       });
+      const gym = await this.gymModel.save(gymModel);
+      gym.owner = gymOwner;
+      await this.gymModel.save(gym);
     }
   }
 
@@ -391,7 +391,7 @@ export class GymOwnerService {
       gymName = gymName + Math.floor(1000 + Math.random() * 9000);
     }
 
-    const gym = await this.gymModel.create({
+    const gym = this.gymModel.create({
       name: gymName,
       address,
       phone,
@@ -400,7 +400,7 @@ export class GymOwnerService {
       owner: gymOwner,
       gymDashedName: gymName.toLowerCase().split(' ').join('-'),
     });
-    gymOwner.gyms.push(gym);
+    gymOwner.ownedGyms.push(gym);
     await this.gymOwnerModel.save(gymOwner);
 
     return gym;

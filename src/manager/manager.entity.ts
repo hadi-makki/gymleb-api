@@ -43,6 +43,10 @@ export class ManagerEntity extends PgMainEntity {
   @JoinTable()
   gyms: GymEntity[];
 
+  // Gyms owned by this manager (inverse side of GymEntity.owner)
+  @OneToMany(() => GymEntity, (gym) => gym.owner)
+  ownedGyms: GymEntity[];
+
   @OneToMany(
     () => OwnerSubscriptionEntity,
     (ownerSubscription) => ownerSubscription.owner,

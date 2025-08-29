@@ -3,9 +3,10 @@ import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { User } from '../user/user.model';
 import { Manager } from '../manager/manager.model';
+import { MainEntity } from 'src/main-classes/mainEntity';
 
 @CustomSchema()
-export class Media extends Document {
+export class Media extends MainEntity {
   @Prop({ required: true })
   s3Key: string;
 

@@ -48,7 +48,7 @@ export class TwilioService {
     );
 
     let notifiedNumber = 0;
-    for (const member of members.items) {
+    for (const member of members.data) {
       if (member.phone && !member.isNotified) {
         await this.memberService.toggleNotified(member.id, true);
         notifiedNumber++;

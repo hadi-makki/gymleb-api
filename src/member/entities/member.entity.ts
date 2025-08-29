@@ -7,6 +7,7 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { TokenEntity } from 'src/token/token.entity';
+import { MediaEntity } from 'src/media/media.entity';
 
 @Entity('members')
 export class MemberEntity extends PgMainEntity {
@@ -40,8 +41,11 @@ export class MemberEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isNotified: boolean;
 
-  @Column('text', { nullable: true })
-  profileImage: string;
+  @ManyToOne(() => MediaEntity, (media) => media.members)
+  profileImage: MediaEntity;
+
+  @RelationId((member: MemberEntity) => member.profileImage)
+  profileImageId: string | null;
 
   @OneToMany(() => PTSessionEntity, (session) => session.member)
   ptSessions: PTSessionEntity[];

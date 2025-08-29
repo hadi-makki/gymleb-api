@@ -29,7 +29,7 @@ export const dataSourceOptions: DataSourceOptions = {
         rejectUnauthorized: false, // Use this with caution
       },
   synchronize: true,
-  logging: true,
+  // logging: true,
 };
 
 const dataSource = new DataSource(dataSourceOptions);

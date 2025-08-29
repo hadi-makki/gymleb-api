@@ -109,6 +109,9 @@ export class Transaction extends MainEntity {
 
   @Prop({ type: Number, required: false })
   gymsPTSessionPercentage: number;
+
+  @Prop({ type: Boolean, required: false, default: false })
+  isPaid: boolean;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

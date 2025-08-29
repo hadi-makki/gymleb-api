@@ -24,10 +24,7 @@ import {
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
-import {
-  paginateRepository,
-  paginateRepositorySimple,
-} from '../utils/pagination';
+import { paginate, FilterOperator } from 'nestjs-paginate';
 
 @Injectable()
 export class GymService {
@@ -116,7 +113,7 @@ export class GymService {
 
     // Fetch all transactions for the gym in the specified range
     const allTransactions = await this.transactionModel.find({
-      where: { gym: gym.id, ...dateFilter },
+      where: { gym: { id: gym.id }, ...dateFilter },
       relations: ['subscription', 'revenue', 'expense'],
     });
 
@@ -319,7 +316,6 @@ export class GymService {
   async getGymByGymName(gymName: string) {
     const gym = await this.gymModel.findOne({
       where: { gymDashedName: gymName },
-      relations: ['openingDays'],
     });
 
     if (!gym) {
@@ -485,31 +481,40 @@ export class GymService {
     let memberIds = [];
     if (search) {
       const matchingMembers = await this.memberModel.find({
-        where: { gym: gym, name: ILike(`%${search}%`) },
+        where: { gym: { id: gym.id }, name: ILike(`%${search}%`) },
       });
       memberIds = matchingMembers.map((m) => m.id);
     }
 
-    const result = await paginateRepositorySimple(this.transactionModel, {
-      filter: {
-        gym: gym,
-        ...(search ? { member: { id: In(memberIds) } } : {}),
-        ...(type ? { type: type as TransactionType } : {}),
+    return paginate(
+      {
+        page,
+        limit,
+        search: search || undefined,
+        path: '/gyms/admin/:ownerId/transactions',
       },
-      relations: [
-        'subscription',
-        'member',
-        'gym',
-        'product',
-        'revenue',
-        'expense',
-      ],
-      page,
-      limit,
-      order: { createdAt: 'DESC' }, // Sort by most recent first
-    });
-
-    return result;
+      this.transactionModel,
+      {
+        relations: [
+          'subscription',
+          'member',
+          'gym',
+          'product',
+          'revenue',
+          'expense',
+        ],
+        sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
+        searchableColumns: ['title', 'paidBy'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: {
+          gym: { id: gym.id },
+          ...(search ? { member: { id: In(memberIds) } } : {}),
+          ...(type ? { type: type as TransactionType } : {}),
+        },
+        filterableColumns: { type: [FilterOperator.EQ] },
+        maxLimit: 100,
+      },
+    );
   }
 
   async getGymAnalyticsByOwnerId(
@@ -699,32 +704,41 @@ export class GymService {
     if (search) {
       const matchingMembers = await this.memberModel.find({
         where: {
-          gym: gym,
+          gym: { id: gym.id },
           name: ILike(`%${search}%`),
         },
       });
       memberIds = matchingMembers.map((m) => m.id);
     }
 
-    const result = await paginateRepositorySimple(this.transactionModel, {
-      filter: {
-        gym: gym,
-        ...(search ? { member: { id: In(memberIds) } } : {}),
+    return paginate(
+      {
+        page,
+        limit,
+        search: search || undefined,
+        path: '/gyms/admin/:ownerId/transactions',
       },
-      relations: [
-        'subscription',
-        'member',
-        'gym',
-        'product',
-        'revenue',
-        'expense',
-      ],
-      page,
-      limit,
-      order: { createdAt: 'DESC' },
-    });
-
-    return result;
+      this.transactionModel,
+      {
+        relations: [
+          'subscription',
+          'member',
+          'gym',
+          'product',
+          'revenue',
+          'expense',
+        ],
+        sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
+        searchableColumns: ['title', 'paidBy'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: {
+          gym: { id: gym.id },
+          ...(search ? { member: { id: In(memberIds) } } : {}),
+        },
+        filterableColumns: { type: [FilterOperator.EQ] },
+        maxLimit: 100,
+      },
+    );
   }
 
   async getMembersByOwnerId(
@@ -745,15 +759,28 @@ export class GymService {
       filter.name = ILike(`%${search}%`);
     }
 
-    const result = await paginateRepositorySimple(this.memberModel, {
-      filter,
-      relations: ['subscription', 'transactions'],
-      page,
-      limit,
-      order: { createdAt: 'DESC' },
-    });
-
-    return result;
+    return paginate(
+      {
+        page,
+        limit,
+        search: search || undefined,
+        path: '/gyms/admin/:ownerId/members',
+      },
+      this.memberModel,
+      {
+        relations: ['subscription', 'transactions'],
+        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
+        searchableColumns: ['name', 'phone', 'email'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: filter,
+        filterableColumns: {
+          name: [FilterOperator.ILIKE],
+          phone: [FilterOperator.ILIKE],
+          email: [FilterOperator.ILIKE],
+        },
+        maxLimit: 100,
+      },
+    );
   }
 
   async getGymOwnerSummary(ownerId: string) {
@@ -977,25 +1004,24 @@ export class GymService {
 
     console.log('this is the gym id', checkGym.transactions.length);
 
-    const result = await paginateRepositorySimple(this.transactionModel, {
-      filter: {
-        gym: checkGym,
-        // ...(search
-        //   ? {
-        //       $or: [
-        //         { type: { $regex: search, $options: 'i' } },
-        //         { 'member.name': { $regex: search, $options: 'i' } },
-        //       ],
-        //     }
-        //   : {}),
+    return paginate(
+      {
+        page,
+        limit,
+        search: search || undefined,
+        path: '/gyms/admin/:ownerId/transactions',
       },
-      relations: ['member', 'subscription', 'gym', 'revenue', 'expense'],
-      page,
-      limit,
-      order: { createdAt: 'DESC' },
-    });
-
-    return result;
+      this.transactionModel,
+      {
+        relations: ['member', 'subscription', 'gym', 'revenue', 'expense'],
+        sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
+        searchableColumns: ['title', 'paidBy'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: { gym: { id: checkGym.id } },
+        filterableColumns: { type: [FilterOperator.EQ] },
+        maxLimit: 100,
+      },
+    );
   }
 
   async getGymMembers(
@@ -1004,18 +1030,31 @@ export class GymService {
     page: number = 1,
     search?: string,
   ) {
-    const result = await paginateRepositorySimple(this.memberModel, {
-      filter: {
-        gym: { id: gymId },
-        ...(search ? { name: Like(`%${search}%`) } : {}),
+    return paginate(
+      {
+        page,
+        limit,
+        search: search || undefined,
+        path: '/gyms/admin/:ownerId/members',
       },
-      relations: ['gym', 'subscription', 'transactions'],
-      page,
-      limit,
-      order: { createdAt: 'DESC' },
-    });
-
-    return result;
+      this.memberModel,
+      {
+        relations: ['gym', 'subscription', 'transactions'],
+        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
+        searchableColumns: ['name', 'phone', 'email'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: {
+          gym: { id: gymId },
+          ...(search ? { name: Like(`%${search}%`) } : {}),
+        },
+        filterableColumns: {
+          name: [FilterOperator.ILIKE],
+          phone: [FilterOperator.ILIKE],
+          email: [FilterOperator.ILIKE],
+        },
+        maxLimit: 100,
+      },
+    );
   }
 
   async getGymRevenueGraphData(

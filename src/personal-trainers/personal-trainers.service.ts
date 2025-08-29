@@ -19,7 +19,7 @@ import { TransactionService } from 'src/transactions/subscription-instance.servi
 import { InjectRepository } from '@nestjs/typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { UserEntity } from 'src/user/user.entity';
-import { ILike, In, Repository } from 'typeorm';
+import { ILike, In, Raw, Repository } from 'typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { PTSessionEntity } from './entities/pt-sessions.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -191,13 +191,14 @@ export class PersonalTrainersService {
     let setDateDone = false;
 
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
-      const session = await this.sessionEntity.create({
+      const createSessionModel = this.sessionEntity.create({
         member: checkIfUserInGym,
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
         sessionPrice: createSessionDto.sessionPrice,
         sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
       });
+      const session = await this.sessionEntity.save(createSessionModel);
       checkIfUserInGym.ptSessions.push(session);
       await this.memberEntity.save(checkIfUserInGym);
 
@@ -247,7 +248,9 @@ export class PersonalTrainersService {
     const personalTrainers = await this.personalTrainerEntity.find({
       where: {
         gyms: { id: gymId },
-        permissions: In([Permissions.personalTrainers]),
+        permissions: Raw(
+          (alias) => `${alias} @> '["${Permissions.personalTrainers}"]'::jsonb`,
+        ),
       },
       relations: ['gyms'],
     });
@@ -260,8 +263,8 @@ export class PersonalTrainersService {
     for (const personalTrainer of personalTrainers) {
       const sessions = await this.sessionEntity.find({
         where: {
-          personalTrainer: personalTrainer,
-          gym: gym,
+          personalTrainer: { id: personalTrainer.id },
+          gym: { id: gym.id },
         },
         relations: ['member'],
       });

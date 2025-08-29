@@ -1,6 +1,14 @@
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
-import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  RelationId,
+} from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 
 @Entity('revenues')
@@ -26,6 +34,7 @@ export class RevenueEntity extends PgMainEntity {
   @RelationId((revenue: RevenueEntity) => revenue.gym)
   gymId: string | null;
 
-  @OneToMany(() => TransactionEntity, (transaction) => transaction.revenue)
+  @OneToOne(() => TransactionEntity, (transaction) => transaction.revenue)
+  @JoinColumn()
   transaction: TransactionEntity;
 }

@@ -78,7 +78,7 @@ export class ManagerService {
     }
 
     const hashedPassword = await Manager.hashPassword(body.password);
-    const savedManager = await this.managerEntity.create({
+    const savedManager = this.managerEntity.create({
       ...(body.email && { email: body.email.trim().toLowerCase() }),
       password: hashedPassword,
       username: body.username.trim(),
@@ -132,7 +132,7 @@ export class ManagerService {
       throw new NotFoundException('Gym not found');
     }
     const hashedPassword = await Manager.hashPassword(body.password);
-    const savedManager = await this.managerEntity.create({
+    const savedManagerModel = this.managerEntity.create({
       ...(body.email && { email: body.email.trim().toLowerCase() }),
       password: hashedPassword,
       username: body.username.trim(),
@@ -142,8 +142,8 @@ export class ManagerService {
       lastName,
     });
 
-    savedManager.gyms.push(checkGym);
-    await this.managerEntity.save(savedManager);
+    savedManagerModel.gyms.push(checkGym);
+    const savedManager = await this.managerEntity.save(savedManagerModel);
 
     const token = await this.tokenService.generateTokens({
       managerId: savedManager.id,
@@ -337,7 +337,9 @@ export class ManagerService {
   async getMe(manager: Manager): Promise<ManagerCreatedDto> {
     const checkManager = await this.managerEntity.findOne({
       where: { id: manager.id },
-      relations: ['gyms'],
+      relations: {
+        ownedGyms: true,
+      },
     });
 
     if (!checkManager) {

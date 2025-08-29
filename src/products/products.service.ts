@@ -68,13 +68,13 @@ export class ProductsService {
       image = uploadResult;
     }
 
-    const product = await this.productRepository.create({
+    const createProductModel = this.productRepository.create({
       ...createProductDto,
       images: [image],
       gym: gym,
       stock: createProductDto.stock,
     });
-
+    const product = await this.productRepository.save(createProductModel);
     return {
       message: 'Product created successfully',
       data: product,

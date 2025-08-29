@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
-import { isMongoId } from 'class-validator';
+import { isMongoId, isUUID } from 'class-validator';
 import { Response } from 'express';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,7 +38,7 @@ export class MediaService {
     const extension = file.originalname.split('.').pop();
     const key = uuidv4() + '.' + extension;
 
-    const media = await this.mediaRepository.create({
+    const media = this.mediaRepository.create({
       s3Key: key,
       originalName: file.originalname,
       fileName: file.filename,
@@ -46,10 +46,10 @@ export class MediaService {
       size: file.size,
       // userId: userId,
     });
-
+    const savedMedia = await this.mediaRepository.save(media);
     await this.s3Service.uploadFile(file, key);
 
-    return media;
+    return savedMedia;
   }
   async delete(id: string) {
     try {
@@ -92,8 +92,14 @@ export class MediaService {
   }
 
   async getFileStreamById(id: string, res: Response) {
+    console.log('id', id);
+    console.log('isMongoId', isMongoId(id));
+    console.log('isUUID', isUUID(id));
     const media = await this.mediaRepository.findOne({
-      where: { id },
+      where: {
+        ...(isMongoId(id) && { mongoId: id }),
+        ...(isUUID(id) && { id }),
+      },
     });
     if (!media) {
       throw new NotFoundException('Media not found');

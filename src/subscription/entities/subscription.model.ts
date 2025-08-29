@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { Gym } from '../../gym/entities/gym.model';
 import { User } from '../../user/user.model';
+import { MainEntity } from 'src/main-classes/mainEntity';
 
 export enum SubscriptionType {
   PERSONAL_TRAINER = 'personal_trainer',
@@ -12,7 +13,7 @@ export enum SubscriptionType {
 }
 
 @CustomSchema()
-export class Subscription {
+export class Subscription extends MainEntity {
   @Prop({ type: String })
   title: string;
 

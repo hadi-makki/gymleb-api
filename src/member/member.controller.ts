@@ -109,6 +109,7 @@ export class MemberController {
     @Query('limit') limit = '5',
     @Param('gymId') gymId: string,
   ) {
+    console.log('reachint the controller');
     return await this.memberService.findAll(
       manager,
       search,

@@ -11,7 +11,7 @@ import { SubscriptionEntity } from 'src/subscription/entities/subscription.entit
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
-import { paginateRepositorySimple } from 'src/utils/pagination';
+import { paginate, PaginateQuery } from 'nestjs-paginate';
 import { ILike, In, LessThan, MoreThan, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
@@ -25,6 +25,7 @@ import { ReturnUserDto } from './dto/return-user.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberEntity } from './entities/member.entity';
 import { Member } from './entities/member.model';
+import { FilterOperator, PaginateConfig } from 'nestjs-paginate';
 
 @Injectable()
 export class MemberService {
@@ -158,7 +159,7 @@ export class MemberService {
       currentActiveSubscription: currentActiveSubscription,
       lastSubscription: lastSubscription,
       isNotified: member.isNotified,
-      profileImage: member.profileImage,
+      profileImage: member.profileImage?.id,
     };
   }
 
@@ -217,13 +218,14 @@ export class MemberService {
       throw new BadRequestException('Email already exists');
     }
 
-    const member = await this.memberModel.create({
+    const createMemberModel = this.memberModel.create({
       name: createMemberDto.name,
       ...(createMemberDto.email && { email: createMemberDto.email }),
       phone: createMemberDto.phone,
       gym: gym,
       subscription: subscription,
     });
+    const member = await this.memberModel.save(createMemberModel);
     // Optional image upload and assignment
     if (image) {
       const imageData = await this.mediaService.upload(image, manager.id);
@@ -339,30 +341,29 @@ export class MemberService {
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-
-    const result = await paginateRepositorySimple(this.memberModel, {
-      filter: {
-        gym: checkGym,
-        ...(search
-          ? {
-              name: ILike(`%${search}%`),
-              phone: ILike(`%${search}%`),
-            }
-          : {}),
+    return await paginate(
+      {
+        limit,
+        page,
+        search,
+        path: 'phone',
       },
-      relations: ['gym', 'subscription', 'transactions'],
-      page,
-      limit,
-    });
-
-    const items = await Promise.all(
-      result.items.map(async (m: any) => this.returnMember(m as MemberEntity)),
+      this.memberModel,
+      {
+        relations: ['gym', 'subscription', 'transactions', 'profileImage'],
+        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
+        searchableColumns: ['name', 'phone', 'email'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: { gym: { id: checkGym.id } },
+        filterableColumns: {
+          name: [FilterOperator.ILIKE],
+          phone: [FilterOperator.ILIKE],
+          email: [FilterOperator.ILIKE],
+        },
+        // select: ['id', 'name', 'email', 'phone', 'createdAt', 'updatedAt'],
+        maxLimit: 100,
+      },
     );
-
-    return {
-      ...result,
-      items,
-    };
   }
 
   async sendWelcomeMessageToAllMembers(gymId: string) {
@@ -386,7 +387,7 @@ export class MemberService {
   }
 
   async findOne(id: string, gymId: string) {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid member id');
     }
     const checkGym = await this.gymModel.findOne({
@@ -396,8 +397,8 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
-      relations: ['gym', 'subscription', 'transactions'],
+      where: { id, gym: { id: checkGym.id } },
+      relations: ['gym', 'subscription', 'transactions', 'profileImage'],
     });
 
     if (!member) {
@@ -599,7 +600,7 @@ export class MemberService {
 
     // First get all members to check expiration
     const allMembers = await this.memberModel.find({
-      where: { gym: gym, ...(search ? { name: ILike(`%${search}%`) } : {}) },
+      where: { gym: { id: gym.id } },
       relations: ['gym', 'subscription', 'transactions'],
     });
 
@@ -618,19 +619,29 @@ export class MemberService {
       .map((member) => member.id);
 
     // Use pagination utility with the filtered IDs
-    const result = await paginateRepositorySimple(this.memberModel, {
-      filter: {
-        id: In(expiredMemberIds),
-        ...(search ? { name: ILike(`%${search}%`) } : {}),
+    return paginate(
+      {
+        limit,
+        page,
+        search,
+        path: 'phone',
       },
-      relations: ['gym', 'subscription', 'transactions'],
-      page,
-      limit,
-      transform: async (member) =>
-        await this.returnMember(member as MemberEntity),
-    });
-
-    return result;
+      this.memberModel,
+      {
+        relations: ['gym', 'subscription', 'transactions'],
+        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
+        searchableColumns: ['name', 'phone', 'email'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: { id: In(expiredMemberIds) },
+        filterableColumns: {
+          name: [FilterOperator.ILIKE],
+          phone: [FilterOperator.ILIKE],
+          email: [FilterOperator.ILIKE],
+        },
+        select: ['id', 'name', 'email', 'phone', 'createdAt', 'updatedAt'],
+        maxLimit: 100,
+      },
+    );
   }
 
   async getMe(id: string) {
@@ -763,14 +774,14 @@ export class MemberService {
     }
     if (image) {
       if (member.profileImage) {
-        await this.mediaService.delete(member.profileImage);
+        await this.mediaService.delete(member.profileImage.id);
       }
       const imageData = await this.mediaService.upload(image, manager.id);
-      member.profileImage = imageData.id;
+      member.profileImage = imageData;
       await this.memberModel.save(member);
     } else {
       if (member.profileImage) {
-        await this.mediaService.delete(member.profileImage);
+        await this.mediaService.delete(member.profileImage.id);
       }
       member.profileImage = null;
       await this.memberModel.save(member);

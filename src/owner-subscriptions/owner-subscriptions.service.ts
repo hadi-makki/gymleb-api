@@ -29,12 +29,13 @@ export class OwnerSubscriptionsService {
   ) {}
 
   async createType(dto: CreateOwnerSubscriptionTypeDto) {
-    return await this.typeModel.create({
+    const createTypeModel = this.typeModel.create({
       title: dto.title,
       price: dto.price,
       durationDays: dto.durationDays,
       description: dto.description,
     });
+    return await this.typeModel.save(createTypeModel);
   }
 
   async listTypes() {
@@ -54,13 +55,14 @@ export class OwnerSubscriptionsService {
       { owner: owner, active: true },
       { active: false },
     );
-    const created = await this.subModel.create({
+    const createdModel = this.subModel.create({
       owner: owner,
       type: type,
       startDate: start,
       endDate: end,
       active: true,
     });
+    const created = await this.subModel.save(createdModel);
     // create transaction for the assignment so super admin can see it later
     await this.transactionService.createOwnerSubscriptionAssignmentInstance({
       ownerId: owner.id,

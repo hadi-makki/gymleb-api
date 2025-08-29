@@ -1,7 +1,8 @@
 import { PgMainEntity } from 'src/main-classes/mainEntity';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
 import { ProductEntity } from 'src/products/products.entity';
-import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
 
 @Entity('media')
 export class MediaEntity extends PgMainEntity {
@@ -31,4 +32,7 @@ export class MediaEntity extends PgMainEntity {
 
   @RelationId((media: MediaEntity) => media.product)
   productId: string | null;
+
+  @OneToMany(() => MemberEntity, (member) => member.profileImage)
+  members: MemberEntity[];
 }

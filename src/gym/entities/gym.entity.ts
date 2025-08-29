@@ -10,6 +10,7 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import {
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -42,7 +43,8 @@ export class GymEntity extends PgMainEntity {
   @OneToMany(() => SubscriptionEntity, (subscription) => subscription.gym)
   subscriptions: SubscriptionEntity[];
 
-  @ManyToOne(() => ManagerEntity, (manager) => manager.gyms)
+  @ManyToOne(() => ManagerEntity, (manager) => manager.ownedGyms)
+  @JoinColumn({ name: 'ownerId' })
   owner: ManagerEntity;
 
   @RelationId((gym: GymEntity) => gym.owner)

@@ -6210,6 +6210,13 @@ nest@^0.1.6:
   resolved "https://registry.yarnpkg.com/nest/-/nest-0.1.6.tgz#81aa0236f0ebc996523e5d3855c73dd382a2b255"
   integrity sha512-21378J/6pHB9EZMId5yz9DaxVj778pCHhzfXhRLLrLWZydpLgbsyxL5B5QyTSWJBk5L8XbiGgMvNZMb/qBySYg==
 
+nestjs-paginate@^12.8.1:
+  version "12.8.1"
+  resolved "https://registry.yarnpkg.com/nestjs-paginate/-/nestjs-paginate-12.8.1.tgz#e01c89074e3ceea5638801bddb7c0a4c2591ad4d"
+  integrity sha512-b3SCIKUFBg3cLbEW5eF2ZvkR0KytkXb9M7MEZqYCoGdqjiQS2iQbBNViUw/p86qb5vsX15H1dC8HzMRYz3O4SA==
+  dependencies:
+    lodash "^4.17.21"
+
 node-abort-controller@^3.0.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/node-abort-controller/-/node-abort-controller-3.1.1.tgz#a94377e964a9a37ac3976d848cb5c765833b8548"

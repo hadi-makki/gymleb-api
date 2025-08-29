@@ -5,7 +5,7 @@ import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subsc
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToOne, RelationId } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 
@@ -110,7 +110,7 @@ export class TransactionEntity extends PgMainEntity {
   @Column('int', { nullable: true })
   numberSold: number;
 
-  @ManyToOne(() => RevenueEntity, (revenue) => revenue.transaction)
+  @OneToOne(() => RevenueEntity, (revenue) => revenue.transaction)
   revenue: RevenueEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.revenue)

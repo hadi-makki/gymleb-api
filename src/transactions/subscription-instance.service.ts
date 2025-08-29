@@ -71,7 +71,7 @@ export class TransactionService {
       }
     }
 
-    const newTransaction = await this.transactionModel.create({
+    const newTransaction = this.transactionModel.create({
       title: paymentDetails.subscription.title,
       type: TransactionType.SUBSCRIPTION,
       member: paymentDetails.member,
@@ -82,7 +82,8 @@ export class TransactionService {
       startDate: startDate,
       paidBy: paymentDetails.member.name,
     });
-    return newTransaction;
+    const createdTransaction = await this.transactionModel.save(newTransaction);
+    return createdTransaction;
   }
 
   async createAiPhoneNumberTransaction(paymentDetails: PaymentDetails) {}
@@ -106,7 +107,7 @@ export class TransactionService {
       throw new NotFoundException('Owner subscription type not found');
     }
     const endDate = params.endDateIso ?? undefined;
-    const trx = await this.transactionModel.create({
+    const trxModel = this.transactionModel.create({
       title: type.title,
       type: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
       owner,
@@ -117,7 +118,7 @@ export class TransactionService {
       startDate: new Date().toISOString(),
       paidBy: owner.firstName + ' ' + owner.lastName,
     });
-
+    const trx = await this.transactionModel.save(trxModel);
     const findTransaction = await this.transactionModel.findOne({
       where: { id: trx.id },
     });
@@ -245,7 +246,7 @@ export class TransactionService {
     date: Date;
     revenue: RevenueEntity;
   }) {
-    const newTransaction = await this.transactionModel.create({
+    const newTransactionModel = this.transactionModel.create({
       title: dto.revenue.title,
       type: TransactionType.REVENUE,
       paidAmount: dto.paidAmount,
@@ -255,6 +256,8 @@ export class TransactionService {
       revenue: dto.revenue,
       date: dto.date,
     });
+    const newTransaction =
+      await this.transactionModel.save(newTransactionModel);
     return newTransaction;
   }
 
@@ -265,7 +268,7 @@ export class TransactionService {
     title: string;
     date: Date;
   }) {
-    const newTransaction = await this.transactionModel.create({
+    const newTransactionModel = this.transactionModel.create({
       title: dto.expense.title,
       type: TransactionType.EXPENSE,
       paidAmount: dto.paidAmount,
@@ -273,6 +276,8 @@ export class TransactionService {
       expense: dto.expense,
       date: dto.date,
     });
+    const newTransaction =
+      await this.transactionModel.save(newTransactionModel);
     return newTransaction;
   }
 
@@ -297,7 +302,7 @@ export class TransactionService {
     amount: number;
   }) {
     const gymsPTSessionPercentage = dto.gym.gymsPTSessionPercentage;
-    const newTransaction = await this.transactionModel.create({
+    const newTransactionModel = this.transactionModel.create({
       title:
         'Personal Trainer Session With ' +
         dto.personalTrainer.firstName +
@@ -310,6 +315,8 @@ export class TransactionService {
       paidAmount: dto.amount,
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
     });
+    const newTransaction =
+      await this.transactionModel.save(newTransactionModel);
     return newTransaction;
   }
 }

@@ -53,7 +53,7 @@ export class RevenueService {
         ? `Sold ${dto.numberSold} ${product.name}`
         : dto.title;
 
-    const revenue = await this.revenueModel.create({
+    const createRevenueModel = this.revenueModel.create({
       title,
       amount,
       category: dto.category,
@@ -61,6 +61,8 @@ export class RevenueService {
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: gym,
     });
+    const revenue = await this.revenueModel.save(createRevenueModel);
+
     const transaction = await this.transactionService.createRevenueTransaction({
       paidAmount: amount,
       gym: gym,

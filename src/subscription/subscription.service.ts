@@ -40,13 +40,16 @@ export class SubscriptionService {
           ? createSubscriptionDto.duration * 30
           : createSubscriptionDto.duration;
 
-    const subscription = await this.subscriptionModel.create({
+    const createSubscriptionModel = this.subscriptionModel.create({
       title: createSubscriptionDto.title,
       type: createSubscriptionDto.type,
       price: createSubscriptionDto.price,
       gym: gym,
       duration: subscriptionDuration,
     });
+    const subscription = await this.subscriptionModel.save(
+      createSubscriptionModel,
+    );
     return subscription;
   }
 
@@ -56,7 +59,7 @@ export class SubscriptionService {
       throw new NotFoundException('Gym not found');
     }
     const subscriptions = await this.subscriptionModel.find({
-      where: { gym: gym },
+      where: { gym: { id: gym.id } },
     });
     return subscriptions;
   }
