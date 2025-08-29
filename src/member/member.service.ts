@@ -341,7 +341,7 @@ export class MemberService {
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-    return await paginate(
+    const res = await paginate(
       {
         limit,
         page,
@@ -364,6 +364,15 @@ export class MemberService {
         maxLimit: 100,
       },
     );
+
+    const items = await Promise.all(
+      res.data.map(async (m: any) => this.returnMember(m)),
+    );
+
+    return {
+      ...res,
+      data: items,
+    };
   }
 
   async sendWelcomeMessageToAllMembers(gymId: string) {
@@ -619,7 +628,7 @@ export class MemberService {
       .map((member) => member.id);
 
     // Use pagination utility with the filtered IDs
-    return paginate(
+    const res = await paginate(
       {
         limit,
         page,
@@ -642,6 +651,15 @@ export class MemberService {
         maxLimit: 100,
       },
     );
+
+    const items = await Promise.all(
+      res.data.map(async (m: any) => this.returnMember(m)),
+    );
+
+    return {
+      ...res,
+      data: items,
+    };
   }
 
   async getMe(id: string) {

@@ -108,7 +108,7 @@ import { PTSessionEntity } from './personal-trainers/entities/pt-sessions.entity
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    DatabaseMigration,
+    // DatabaseMigration,
   ],
 })
 export class AppModule implements NestModule {
