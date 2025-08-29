@@ -270,6 +270,23 @@ export class PersonalTrainersController {
     );
   }
 
+  @Delete('sessions/:sessionId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.personalTrainers,
+  )
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a session' })
+  @ApiResponse({
+    status: 200,
+    description: 'The session has been successfully deleted.',
+  })
+  deleteSession(@Param('sessionId') sessionId: string) {
+    return this.personalTrainersService.deleteSession(sessionId);
+  }
+
   @Get('trainer/:trainerId/sessions/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)

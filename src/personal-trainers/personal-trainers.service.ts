@@ -672,4 +672,32 @@ export class PersonalTrainersService {
       return 0;
     });
   }
+
+  async deleteSession(sessionId: string) {
+    console.log('this is the sessionId', sessionId);
+    const session = await this.sessionEntity.findOne({
+      where: { id: sessionId },
+      relations: ['transaction'],
+    });
+
+    console.log('this is the session', session);
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    // Delete the associated transaction if it exists
+    if (session.transaction) {
+      await this.transactionService.deletePtSessionTransaction(
+        session.transaction.id,
+      );
+    }
+
+    // Delete the session
+    await this.sessionEntity.delete(sessionId);
+
+    return {
+      message: 'Session deleted successfully',
+    };
+  }
 }

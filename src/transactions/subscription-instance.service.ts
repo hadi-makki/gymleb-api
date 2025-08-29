@@ -297,6 +297,18 @@ export class TransactionService {
     await this.transactionModel.remove(getTransaction);
   }
 
+  async deletePtSessionTransaction(ptSessionId: string) {
+    const getTransaction = await this.transactionModel.findOne({
+      where: {
+        id: ptSessionId,
+      },
+    });
+    if (!getTransaction) {
+      throw new NotFoundException('pt session transaction not found');
+    }
+    await this.transactionModel.remove(getTransaction);
+  }
+
   async removeExpenseTransaction(expenseId: string) {
     const getTransaction = await this.transactionModel.findOne({
       where: {
