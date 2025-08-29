@@ -28,7 +28,7 @@ import { Request } from 'express';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { User } from '../decorators/users.decorator';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { User as UserEntity } from '../user/user.entity';
+import { User as UserEntity } from '../user/user.model';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -37,11 +37,11 @@ import {
 import { ProductsService } from './products.service';
 import { Permissions } from '../decorators/roles/role.enum';
 import { Roles } from '../decorators/roles/Role';
-import { Manager } from '../manager/manager.model';
 import { WebpPipe } from '../pipes/webp.pipe';
 import { imageTypes } from '../utils/constants';
 import { validateImage } from '../utils/helprt-functions';
 import { BadRequestException } from '../error/bad-request-error';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @ApiTags('Products')
 @Controller('products')
@@ -110,7 +110,7 @@ export class ProductsController {
     )
     file: Express.Multer.File,
     @Req() req: Request,
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Body() body: CreateProductDto,
   ) {
     if (!validateImage(file, false)) {

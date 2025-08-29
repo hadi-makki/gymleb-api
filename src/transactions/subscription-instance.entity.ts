@@ -1,56 +1,77 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { MainEntity } from '../main-classes/mainEntity';
-import { Product } from '../products/products.entity';
-import { User } from '../user/user.entity';
-import { Gym } from '../gym/entities/gym.model';
-import { Subscription } from '../subscription/entities/subscription.model';
-import { Member } from '../member/entities/member.entity';
-import { Manager } from '../manager/manager.model';
-import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.model';
-export type SubscriptionInstanceDocument = SubscriptionInstance & Document;
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { PgMainEntity } from '../main-classes/mainEntity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 
-@CustomSchema()
-export class SubscriptionInstance extends MainEntity {
-  @Prop({ type: String, required: false })
+@Entity('subscription_instances')
+export class SubscriptionInstanceEntity extends PgMainEntity {
+  @Column('timestamp with time zone')
   endDate: string;
 
-  @Prop({ type: String, required: false })
+  @Column('timestamp with time zone', { nullable: true })
   startDate: string;
 
-  @Prop({ type: Number, required: false })
+  @Column('float')
   paidAmount: number;
 
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Gym' })
-  gym: Gym;
+  @ManyToOne(() => GymEntity, (gym) => gym.subscriptionInstances)
+  gym: GymEntity;
 
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Subscription' })
-  subscription: Subscription;
+  @RelationId(
+    (subscriptionInstance: SubscriptionInstanceEntity) =>
+      subscriptionInstance.gym,
+  )
+  gymId: string | null;
 
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Member' })
-  member: Member;
+  @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.instances)
+  subscription: SubscriptionEntity;
+
+  @RelationId(
+    (subscriptionInstance: SubscriptionInstanceEntity) =>
+      subscriptionInstance.subscription,
+  )
+  subscriptionId: string | null;
+
+  @ManyToOne(() => MemberEntity, (member) => member.subscriptionInstances)
+  member: MemberEntity;
+
+  @RelationId(
+    (subscriptionInstance: SubscriptionInstanceEntity) =>
+      subscriptionInstance.member,
+  )
+  memberId: string | null;
 
   // Owner subscription assignment transaction
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Manager' })
-  owner: Manager;
+  @ManyToOne(() => ManagerEntity, (manager) => manager.ownerSubscription)
+  owner: ManagerEntity;
 
-  @Prop({
-    type: Types.ObjectId,
-    required: false,
-    ref: 'OwnerSubscriptionType',
-  })
-  ownerSubscriptionType: OwnerSubscriptionType;
+  @RelationId(
+    (subscriptionInstance: SubscriptionInstanceEntity) =>
+      subscriptionInstance.owner,
+  )
+  ownerId: string | null;
 
-  @Prop({ type: Boolean, required: false, default: false })
+  @ManyToOne(
+    () => OwnerSubscriptionTypeEntity,
+    (ownerSubscriptionType) => ownerSubscriptionType.instances,
+  )
+  ownerSubscriptionType: OwnerSubscriptionTypeEntity;
+
+  @RelationId(
+    (subscriptionInstance: SubscriptionInstanceEntity) =>
+      subscriptionInstance.ownerSubscriptionType,
+  )
+  ownerSubscriptionTypeId: string | null;
+
+  @Column('boolean', { default: false })
   isOwnerSubscriptionAssignment: boolean;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   paidBy: string;
 
-  @Prop({ type: Boolean, required: false, default: false })
+  @Column('boolean', { default: false })
   isInvalidated: boolean;
 }
-
-export const SubscriptionInstanceSchema =
-  SchemaFactory.createForClass(SubscriptionInstance);

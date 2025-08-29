@@ -1,28 +1,32 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Expense } from './expense.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
+import { TransactionService } from '../transactions/subscription-instance.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
-import { Manager } from '../manager/manager.model';
-import { Gym } from '../gym/entities/gym.model';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { ExpenseEntity } from './expense.entity';
 
 @Injectable()
 export class ExpensesService {
   constructor(
-    @InjectModel(Expense.name) private expenseModel: Model<Expense>,
-    @InjectModel(Gym.name) private gymModel: Model<Gym>,
+    @InjectRepository(ExpenseEntity)
+    private expenseModel: Repository<ExpenseEntity>,
+    @InjectRepository(GymEntity)
+    private gymModel: Repository<GymEntity>,
     private readonly transactionService: TransactionService,
   ) {}
 
-  async create(manager: Manager, dto: CreateExpenseDto) {
-    const gym = await this.gymModel.findById(dto.gymId);
+  async create(manager: ManagerEntity, dto: CreateExpenseDto) {
+    const gym = await this.gymModel.findOne({
+      where: { id: dto.gymId },
+    });
     if (!gym) throw new NotFoundException('Gym not found');
-    const expense = new this.expenseModel({
+    const expense = this.expenseModel.create({
       ...dto,
       date: dto.date ? new Date(dto.date) : new Date(),
-      gym: new Types.ObjectId(gym.id),
+      gym: gym,
     });
     const transaction = await this.transactionService.createExpenseTransaction({
       paidAmount: dto.amount,
@@ -31,54 +35,68 @@ export class ExpensesService {
       title: expense.title,
       date: expense.date,
     });
-    expense.transaction = transaction.id;
-    await expense.save();
-    return await this.expenseModel.findById(expense.id).populate('transaction');
+    expense.transaction = transaction;
+    await this.expenseModel.save(expense);
+    return await this.expenseModel.findOne({
+      where: { id: expense.id },
+      relations: ['transaction'],
+    });
   }
 
   async findAll(
-    manager: Manager,
+    manager: ManagerEntity,
     start?: string,
     end?: string,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) throw new NotFoundException('Gym not found');
-    const filter: any = { gym: new Types.ObjectId(gym.id) };
+    const filter: any = { gym: gym };
     if (start || end) {
       filter.date = {};
       if (start) filter.date.$gte = new Date(start);
       if (end) filter.date.$lte = new Date(end);
     }
-    return this.expenseModel
-      .find(filter)
-      .sort({ date: -1 })
-      .populate('transaction');
+    return this.expenseModel.find({
+      where: filter,
+      order: { date: 'DESC' },
+      relations: ['transaction'],
+    });
   }
 
   async update(
-    manager: Manager,
+    manager: ManagerEntity,
     id: string,
     dto: UpdateExpenseDto,
     gymId: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) throw new NotFoundException('Gym not found');
-    const expense = await this.expenseModel.findOneAndUpdate(
-      { _id: id, gym: new Types.ObjectId(gym.id) },
-      { ...dto, ...(dto.date ? { date: new Date(dto.date) } : {}) },
-      { new: true },
+
+    const expense = await this.expenseModel.update(
+      { id: id, gym: gym },
+      {
+        ...dto,
+        ...(dto.date ? { date: new Date(dto.date) } : {}),
+        gym: gym,
+      },
     );
     if (!expense) throw new NotFoundException('Expense not found');
     return expense;
   }
 
-  async remove(manager: Manager, id: string, gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+  async remove(manager: ManagerEntity, id: string, gymId: string) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) throw new NotFoundException('Gym not found');
-    const expense = await this.expenseModel.findOneAndDelete({
-      _id: id,
-      gym: new Types.ObjectId(gym.id),
+    const expense = await this.expenseModel.delete({
+      id: id,
+      gym: gym,
     });
     if (!expense) throw new NotFoundException('Expense not found');
 

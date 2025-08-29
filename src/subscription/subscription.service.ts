@@ -9,22 +9,27 @@ import { Manager } from '../manager/manager.model';
 import { isMongoId } from 'validator';
 import { BadRequestException } from '../error/bad-request-error';
 import { TransactionService } from '../transactions/subscription-instance.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { SubscriptionEntity } from './entities/subscription.entity';
+import { Repository } from 'typeorm';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
 @Injectable()
 export class SubscriptionService {
   constructor(
-    @InjectModel(Subscription.name)
-    private subscriptionModel: Model<Subscription>,
-    @InjectModel(Gym.name)
-    private gymModel: Model<Gym>,
+    @InjectRepository(SubscriptionEntity)
+    private subscriptionModel: Repository<SubscriptionEntity>,
+    @InjectRepository(GymEntity)
+    private gymModel: Repository<GymEntity>,
     private readonly transactionService: TransactionService,
   ) {}
   async create(
     createSubscriptionDto: CreateSubscriptionDto,
-    manager: Manager,
+    manager: ManagerEntity,
     gymId: string,
   ) {
     console.log(gymId);
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -39,18 +44,20 @@ export class SubscriptionService {
       title: createSubscriptionDto.title,
       type: createSubscriptionDto.type,
       price: createSubscriptionDto.price,
-      gym: gym.id,
+      gym: gym,
       duration: subscriptionDuration,
     });
     return subscription;
   }
 
   async findAll(gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    const subscriptions = await this.subscriptionModel.find({ gym: gym.id });
+    const subscriptions = await this.subscriptionModel.find({
+      where: { gym: gym },
+    });
     return subscriptions;
   }
 
@@ -58,7 +65,9 @@ export class SubscriptionService {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid subscription id');
     }
-    const subscription = await this.subscriptionModel.findById(id);
+    const subscription = await this.subscriptionModel.findOne({
+      where: { id: id },
+    });
     return subscription;
   }
 
@@ -67,7 +76,7 @@ export class SubscriptionService {
     updateSubscriptionDto: UpdateSubscriptionDto,
     gymId: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -81,36 +90,26 @@ export class SubscriptionService {
         : updateSubscriptionDto.type === SubscriptionType.MONTHLY_GYM
           ? updateSubscriptionDto.duration * 30
           : updateSubscriptionDto.duration;
-    const subscription = await this.subscriptionModel.findOneAndUpdate(
-      {
-        _id: id,
-        gym: gym.id,
-      },
-      {
-        ...updateSubscriptionDto,
-        duration: subscriptionDuration,
-      },
-    );
+
+    const subscription = await this.subscriptionModel.update(id, {
+      ...updateSubscriptionDto,
+      duration: subscriptionDuration,
+    });
     if (!subscription) {
       throw new NotFoundException('Subscription not found');
     }
-    const newSubscription = await this.subscriptionModel.findById(id);
+    const newSubscription = await this.subscriptionModel.findOne({
+      where: { id: id },
+    });
     return newSubscription;
   }
 
   async remove(id: string, gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    const subscription = await this.subscriptionModel.findOneAndDelete({
-      _id: id,
-      gym: gym.id,
-    });
-    await this.gymModel.updateOne(
-      { _id: gymId },
-      { $pull: { subscriptions: id } },
-    );
+    const subscription = await this.subscriptionModel.delete(id);
     return subscription;
   }
 
@@ -125,18 +124,14 @@ export class SubscriptionService {
   }
 
   async deleteSubscription(subscriptionId: string) {
-    const subscription =
-      await this.subscriptionModel.findByIdAndDelete(subscriptionId);
-    await this.gymModel.updateOne(
-      { _id: subscription.gym },
-      { $pull: { subscriptions: subscriptionId } },
-    );
+    const subscription = await this.subscriptionModel.delete(subscriptionId);
+
     return subscription;
   }
 
   async deleteSubscriptionInstance(
     subscriptionId: string,
-    manager: Manager,
+    manager: ManagerEntity,
     gymId: string,
   ) {
     return await this.transactionService.deleteSubscriptionInstance(

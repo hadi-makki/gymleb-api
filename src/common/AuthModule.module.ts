@@ -5,24 +5,32 @@ import { JwtService } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import Token, { TokenSchema } from '../token/token.model';
 import { TokenService } from '../token/token.service';
-import { User, UserSchema } from '../user/user.entity';
+import { User, UserSchema } from '../user/user.model';
 import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
 import { ManagerService } from '../manager/manager.service';
 import { Manager, ManagerSchema } from '../manager/manager.model';
-import { Member, MemberSchema } from '../member/entities/member.entity';
+import { Member, MemberSchema } from '../member/entities/member.model';
 import { GymService } from '../gym/gym.service';
 import { Gym, GymSchema } from '../gym/entities/gym.model';
-import { Expense, ExpenseSchema } from '../expenses/expense.entity';
+import { Expense, ExpenseSchema } from '../expenses/expense.model';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
 } from '../owner-subscriptions/owner-subscription.model';
-import { Revenue, RevenueSchema } from '../revenue/revenue.entity';
+import { Revenue, RevenueSchema } from '../revenue/revenue.model';
 import {
   Transaction,
   TransactionSchema,
-} from '../transactions/transaction.entity';
+} from '../transactions/transaction.model';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { TokenEntity } from 'src/token/token.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -35,6 +43,15 @@ import {
       { name: Expense.name, schema: ExpenseSchema },
       { name: Revenue.name, schema: RevenueSchema },
       { name: OwnerSubscription.name, schema: OwnerSubscriptionSchema },
+    ]),
+    TypeOrmModule.forFeature([
+      TokenEntity,
+      MemberEntity,
+      TransactionEntity,
+      GymEntity,
+      ManagerEntity,
+      OwnerSubscriptionEntity,
+      ExpenseEntity,
     ]),
   ],
   providers: [
@@ -55,6 +72,7 @@ import {
     MongooseModule,
     TokenService,
     GymService,
+    TypeOrmModule,
   ],
 })
 export class AuthenticationModule {}

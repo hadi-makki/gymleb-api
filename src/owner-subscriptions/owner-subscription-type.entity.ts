@@ -1,8 +1,9 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { MainEntity, PgMainEntity } from '../main-classes/mainEntity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import { OwnerSubscriptionEntity } from './owner-subscription.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 
 @Entity('owner_subscription_types')
 export class OwnerSubscriptionTypeEntity extends PgMainEntity {
@@ -23,4 +24,16 @@ export class OwnerSubscriptionTypeEntity extends PgMainEntity {
     (ownerSubscription) => ownerSubscription.type,
   )
   ownerSubscription: OwnerSubscriptionEntity[];
+
+  @OneToMany(
+    () => TransactionEntity,
+    (transaction) => transaction.ownerSubscriptionType,
+  )
+  transactions: TransactionEntity[];
+
+  @OneToMany(
+    () => SubscriptionInstanceEntity,
+    (subscriptionInstance) => subscriptionInstance.ownerSubscriptionType,
+  )
+  instances: SubscriptionInstanceEntity[];
 }

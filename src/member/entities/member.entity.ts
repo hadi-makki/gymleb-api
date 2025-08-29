@@ -1,71 +1,60 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { MainEntity } from '../../main-classes/mainEntity';
-import { Gym } from '../../gym/entities/gym.model';
-import { Types } from 'mongoose';
-import { Subscription } from '../../subscription/entities/subscription.model';
-import { CustomSchema } from '../../decorators/custom-schema.decorator';
-import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
-import { Transaction } from '../../transactions/transaction.entity';
-import { PTSession } from 'src/personal-trainers/entities/pt-sessions.entity';
-import * as bcrypt from 'bcrypt';
+import { PgMainEntity } from '../../main-classes/mainEntity';
+import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { TokenEntity } from 'src/token/token.entity';
 
-@CustomSchema()
-export class Member extends MainEntity {
-  @Prop({ required: true })
+@Entity('members')
+export class MemberEntity extends PgMainEntity {
+  @Column('text')
   name: string;
 
-  @Prop({ required: false })
+  @Column('text', { nullable: true })
   email: string;
 
-  @Prop({ required: true })
+  @Column('text')
   phone: string;
 
-  @Prop({ ref: 'Gym', type: Types.ObjectId, required: true })
-  gym: Gym;
+  @ManyToOne(() => GymEntity, (gym) => gym.members)
+  gym: GymEntity;
 
-  @Prop({ required: true, type: Types.ObjectId, ref: 'Subscription' })
-  subscription: Subscription;
+  @RelationId((member: MemberEntity) => member.gym)
+  gymId: string | null;
 
-  @Prop({
-    ref: 'SubscriptionInstance',
-    type: [Types.ObjectId],
-    required: false,
-  })
-  subscriptionInstances: SubscriptionInstance[];
+  @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.members)
+  subscription: SubscriptionEntity;
 
-  @Prop({
-    ref: 'Transaction',
-    type: [Types.ObjectId],
-    required: false,
-    default: [],
-  })
-  transactions: Transaction[];
+  @RelationId((member: MemberEntity) => member.subscription)
+  subscriptionId: string | null;
 
-  @Prop({ type: Boolean, default: false })
+  @OneToMany(() => SubscriptionInstanceEntity, (instance) => instance.member)
+  subscriptionInstances: SubscriptionInstanceEntity[];
+
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.member)
+  transactions: TransactionEntity[];
+
+  @Column('boolean', { default: false })
   isNotified: boolean;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   profileImage: string;
 
-  @Prop({ required: false, type: [{ type: Types.ObjectId, ref: 'PTSession' }] })
-  sessions: PTSession[];
+  @OneToMany(() => PTSessionEntity, (session) => session.member)
+  ptSessions: PTSessionEntity[];
 
-  @Prop({ required: false, type: String })
+  @Column('text', { nullable: true })
   password: string | null;
 
-  @Prop({ type: Boolean, default: false })
+  @Column('boolean', { default: false })
   isWelcomeMessageSent: boolean;
 
-  static async isPasswordMatch(
-    password: string,
-    hashedPassword: string,
-  ): Promise<boolean> {
-    return bcrypt.compare(password, hashedPassword);
-  }
+  @ManyToOne(() => ManagerEntity, (manager) => manager.members)
+  personalTrainer: ManagerEntity;
 
-  static async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
-  }
+  @OneToMany(() => TokenEntity, (token) => token.member)
+  tokens: TokenEntity[];
 }
-
-export const MemberSchema = SchemaFactory.createForClass(Member);

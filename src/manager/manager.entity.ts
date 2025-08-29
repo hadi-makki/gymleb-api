@@ -1,14 +1,14 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
-import { Types } from 'mongoose';
-import { Permissions } from '../decorators/roles/role.enum';
-import { GymEntity } from '../gym/entities/gym.entity';
-import { MainEntity, PgMainEntity } from '../main-classes/mainEntity';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.model';
-import Token from '../token/token.model';
-import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
-import { TokenEntity } from 'src/token/token.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { MediaEntity } from 'src/media/media.entity';
 import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { TokenEntity } from 'src/token/token.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Column, Entity, JoinTable, ManyToMany, OneToMany } from 'typeorm';
+import { Permissions } from '../decorators/roles/role.enum';
+import { PgMainEntity } from '../main-classes/mainEntity';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
 @Entity('managers')
 export class ManagerEntity extends PgMainEntity {
@@ -24,7 +24,10 @@ export class ManagerEntity extends PgMainEntity {
   @Column()
   password: string;
 
-  @Column()
+  @Column('text', { nullable: true })
+  address: string;
+
+  @Column('text', { nullable: true })
   phoneNumber: string;
 
   @Column({ nullable: true })
@@ -34,9 +37,10 @@ export class ManagerEntity extends PgMainEntity {
   tokens: TokenEntity[];
 
   @Column({ type: 'jsonb', default: [] })
-  roles: Permissions[];
+  permissions: Permissions[];
 
   @ManyToMany(() => GymEntity, (gym) => gym.personalTrainers)
+  @JoinTable()
   gyms: GymEntity[];
 
   @OneToMany(
@@ -44,6 +48,18 @@ export class ManagerEntity extends PgMainEntity {
     (ownerSubscription) => ownerSubscription.owner,
   )
   ownerSubscription?: OwnerSubscriptionEntity;
+
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.owner)
+  transactions: TransactionEntity[];
+
+  @OneToMany(() => MediaEntity, (media) => media.manager)
+  media: MediaEntity[];
+
+  @OneToMany(() => PTSessionEntity, (session) => session.personalTrainer)
+  ptSessions: PTSessionEntity[];
+
+  @OneToMany(() => MemberEntity, (member) => member.personalTrainer)
+  members: MemberEntity[];
 
   static async isPasswordMatch(
     password: string,

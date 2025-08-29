@@ -16,8 +16,8 @@ import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.model';
 import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('revenue')
 @Roles(Permissions.GymOwner, Permissions.revenue)
@@ -28,7 +28,7 @@ export class RevenueController {
   @Post(':gymId')
   @ApiOperation({ summary: 'Create a revenue entry' })
   create(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Body() dto: CreateRevenueDto,
   ) {
@@ -42,7 +42,7 @@ export class RevenueController {
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
   findAll(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -55,7 +55,7 @@ export class RevenueController {
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
   getTotalRevenue(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -68,7 +68,7 @@ export class RevenueController {
   @Patch(':gymId/:id')
   @ApiOperation({ summary: 'Update a revenue entry' })
   update(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Param('id') id: string,
     @Body() dto: UpdateRevenueDto,
@@ -79,7 +79,7 @@ export class RevenueController {
   @Delete(':gymId/:id')
   @ApiOperation({ summary: 'Delete a revenue entry' })
   remove(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Param('id') id: string,
   ) {

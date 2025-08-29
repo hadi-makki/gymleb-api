@@ -1,7 +1,8 @@
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
 export enum TokenType {
   Access = 'access',
@@ -26,11 +27,13 @@ export class TokenEntity extends PgMainEntity {
   @Column({ default: null })
   deviceId: string;
 
-  @Column({ nullable: true })
-  user: User;
-
   // @Column({ nullable: true })
-  // member: Member;
+  // user: User;
+
+  @ManyToOne(() => MemberEntity, (member) => member.tokens, {
+    nullable: true,
+  })
+  member: MemberEntity;
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.tokens, {
     nullable: true,

@@ -4,8 +4,8 @@ import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { MainEntity } from '../../main-classes/mainEntity';
 import { Manager } from '../../manager/manager.model';
 import { Subscription } from '../../subscription/entities/subscription.model';
-import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
-import { Transaction } from '../../transactions/transaction.entity';
+import { SubscriptionInstance } from '../../transactions/subscription-instance.model';
+import { Transaction } from '../../transactions/transaction.model';
 
 @CustomSchema()
 export class Gym extends MainEntity {

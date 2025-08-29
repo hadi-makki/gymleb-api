@@ -2,27 +2,32 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Member } from '../member/entities/member.entity';
+import { Member } from '../member/entities/member.model';
 import { TwilioService } from '../twilio/twilio.service';
 import { MemberService } from '../member/member.service';
 import {
   Transaction,
   TransactionType,
-} from '../transactions/transaction.entity';
+} from '../transactions/transaction.model';
 import { Gym } from '../gym/entities/gym.model';
 import { addDays, startOfDay, endOfDay } from 'date-fns';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { Repository } from 'typeorm';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
 
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
 
   constructor(
-    @InjectModel(Member.name)
-    private readonly memberModel: Model<Member>,
-    @InjectModel(Transaction.name)
-    private readonly transactionModel: Model<Transaction>,
-    @InjectModel(Gym.name)
-    private readonly gymModel: Model<Gym>,
+    @InjectRepository(MemberEntity)
+    private readonly memberModel: Repository<MemberEntity>,
+    @InjectRepository(TransactionEntity)
+    private readonly transactionModel: Repository<TransactionEntity>,
+    @InjectRepository(GymEntity)
+    private readonly gymModel: Repository<GymEntity>,
     private readonly twilioService: TwilioService,
     private readonly memberService: MemberService,
   ) {}

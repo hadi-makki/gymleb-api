@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Expense, ExpenseSchema } from './expense.entity';
+import { Expense, ExpenseSchema } from './expense.model';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
 import { Gym, GymSchema } from '../gym/entities/gym.model';

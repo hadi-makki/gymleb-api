@@ -1,46 +1,45 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
+  MaxFileSizeValidator,
   Param,
-  Delete,
-  UseGuards,
-  Res,
+  ParseFilePipe,
+  Patch,
+  Post,
   Query,
-  UseInterceptors,
+  Res,
   UploadedFile,
-  BadRequestException,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { MemberService } from './member.service';
-import { CreateMemberDto } from './dto/create-member.dto';
-import { DeleteMemberDto } from './dto/delete-member.dto';
-import { UpdateMemberDto } from './dto/update-member.dto';
-import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
-import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.model';
-import { Roles } from '../decorators/roles/Role';
-import { Permissions } from '../decorators/roles/role.enum';
-import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { AuthGuard } from '../guards/auth.guard';
-import { Member } from './entities/member.entity';
-import { LoginMemberDto } from './dto/login-member.dto';
-import { Request, Response } from 'express';
-import { cookieOptions } from '../utils/constants';
-import { GetDeviceId } from '../decorators/get-device-id.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ParseFilePipe, MaxFileSizeValidator } from '@nestjs/common';
 import {
   ApiConsumes,
-  ApiOperation,
-  ApiBody,
   ApiCreatedResponse,
   ApiNotFoundResponse,
+  ApiOperation,
 } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { GetDeviceId } from '../decorators/get-device-id.decorator';
+import { Roles } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
+import { AuthGuard } from '../guards/auth.guard';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { WebpPipe } from '../pipes/webp.pipe';
+import { cookieOptions } from '../utils/constants';
 import { validateImage } from '../utils/helprt-functions';
+import { CreateMemberDto } from './dto/create-member.dto';
+import { DeleteMemberDto } from './dto/delete-member.dto';
+import { LoginMemberDto } from './dto/login-member.dto';
+import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
+import { MemberEntity } from './entities/member.entity';
+import { MemberService } from './member.service';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -52,7 +51,7 @@ export class MemberController {
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createMemberDto: CreateMemberDto,
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
     @UploadedFile(
       new ParseFilePipe({
@@ -91,7 +90,7 @@ export class MemberController {
   @Post('logout')
   @UseGuards(AuthGuard)
   async logout(
-    @User() member: Member,
+    @User() member: MemberEntity,
     @Res({ passthrough: true }) response: Response,
     @GetDeviceId() deviceId: string,
   ) {
@@ -104,7 +103,7 @@ export class MemberController {
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   async findAll(
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Query('search') search: string,
     @Query('page') page = '1',
     @Query('limit') limit = '5',
@@ -172,7 +171,7 @@ export class MemberController {
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   async getExpiredMembers(
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Query('page') page = '1',
     @Query('limit') limit = '5',
     @Query('search') search: string,
@@ -194,7 +193,7 @@ export class MemberController {
 
   @Get('me')
   @UseGuards(AuthGuard)
-  async getMyProfile(@User() member: Member) {
+  async getMyProfile(@User() member: MemberEntity) {
     return await this.memberService.getMe(member.id);
   }
 
@@ -235,7 +234,7 @@ export class MemberController {
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(ManagerAuthGuard)
   async updateProfileImage(
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('id') id: string,
     @Param('gymId') gymId: string,
     @UploadedFile(

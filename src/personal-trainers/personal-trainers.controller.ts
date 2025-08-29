@@ -26,7 +26,7 @@ import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { PersonalTrainersService } from './personal-trainers.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
-import { Manager } from 'src/manager/manager.model';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('personal-trainers')
 export class PersonalTrainersController {
@@ -43,7 +43,7 @@ export class PersonalTrainersController {
   @ApiResponse({
     status: 201,
     description: 'The personal trainer has been successfully created.',
-    type: Manager,
+    type: ManagerEntity,
   })
   create(
     @Param('gymId') gymId: string,
@@ -60,7 +60,7 @@ export class PersonalTrainersController {
   @ApiResponse({
     status: 200,
     description: 'The personal trainers have been successfully retrieved.',
-    type: [Manager],
+    type: [ManagerEntity],
   })
   findAll() {
     return this.personalTrainersService.findAll();
@@ -74,7 +74,7 @@ export class PersonalTrainersController {
   @ApiResponse({
     status: 200,
     description: 'The personal trainers have been successfully retrieved.',
-    type: [Manager],
+    type: [ManagerEntity],
   })
   findByGym(@Param('gymId') gymId: string) {
     return this.personalTrainersService.findByGym(gymId);
@@ -113,7 +113,7 @@ export class PersonalTrainersController {
   @ApiResponse({
     status: 200,
     description: 'The personal trainer has been successfully retrieved.',
-    type: Manager,
+    type: ManagerEntity,
   })
   findOne(@Param('id') id: string) {
     return this.personalTrainersService.findOne(id);
@@ -127,7 +127,7 @@ export class PersonalTrainersController {
   @ApiResponse({
     status: 200,
     description: 'The personal trainer has been successfully updated.',
-    type: Manager,
+    type: ManagerEntity,
   })
   update(
     @Param('id') id: string,
@@ -159,7 +159,7 @@ export class PersonalTrainersController {
     description: 'The users have been successfully retrieved.',
     type: [User],
   })
-  findAllUsers(@User() personalTrainer: Manager) {
+  findAllUsers(@User() personalTrainer: ManagerEntity) {
     return this.personalTrainersService.findAllUsers(personalTrainer);
   }
 
@@ -175,7 +175,7 @@ export class PersonalTrainersController {
   })
   addUserToPersonalTrainer(
     @Body() addUserToPersonalTrainerDto: AddPersonalTrainerDto,
-    @User() personalTrainer: Manager,
+    @User() personalTrainer: ManagerEntity,
   ) {
     return this.personalTrainersService.addUserToPersonalTrainer(
       addUserToPersonalTrainerDto,
@@ -221,7 +221,7 @@ export class PersonalTrainersController {
   })
   findAllSessions(
     @Param('gymId') gymId: string,
-    @User() personalTrainer: Manager,
+    @User() personalTrainer: ManagerEntity,
   ) {
     return this.personalTrainersService.findAllSessions(gymId, personalTrainer);
   }
@@ -342,7 +342,7 @@ export class PersonalTrainersController {
   })
   async mySessions(
     @Param('gymId') gymId: string,
-    @User() personalTrainer: Manager,
+    @User() personalTrainer: ManagerEntity,
   ) {
     return await this.personalTrainersService.mySessions(
       gymId,
@@ -368,7 +368,7 @@ export class PersonalTrainersController {
   })
   async myClients(
     @Param('gymId') gymId: string,
-    @User() personalTrainer: Manager,
+    @User() personalTrainer: ManagerEntity,
   ) {
     return await this.personalTrainersService.myClients(gymId, personalTrainer);
   }
@@ -391,7 +391,7 @@ export class PersonalTrainersController {
   async getClientSessions(
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
-    @User() personalTrainer: Manager,
+    @User() personalTrainer: ManagerEntity,
   ) {
     return await this.personalTrainersService.getClientSessions(
       memberId,

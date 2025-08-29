@@ -6,7 +6,7 @@ import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { ProductsService } from '../products/products.service';
 import { TransactionService } from '../transactions/subscription-instance.service';
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
 import Stripe from 'stripe';
 import {
   CallWith,

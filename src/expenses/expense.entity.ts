@@ -1,34 +1,34 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
-import { Types, Document } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { MainEntity } from '../main-classes/mainEntity';
-import { Gym } from '../gym/entities/gym.model';
-import { Transaction } from 'src/transactions/transaction.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { PgMainEntity } from '../main-classes/mainEntity';
 
-export type ExpenseDocument = Expense & Document;
-
-@CustomSchema()
-export class Expense extends MainEntity {
-  @Prop({ type: String, required: true })
+@Entity('expenses')
+export class ExpenseEntity extends PgMainEntity {
+  @Column('text')
   title: string;
 
-  @Prop({ type: Number, required: true, min: 0 })
+  @Column('int')
   amount: number;
 
-  @Prop({ type: Date, required: true, default: Date.now })
+  @Column('timestamp with time zone')
   date: Date;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   category?: string;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   notes?: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Gym', required: true })
-  gym: Gym;
+  @ManyToOne(() => GymEntity, (gym) => gym.expenses)
+  gym: GymEntity;
 
-  @Prop({ type: Types.ObjectId, ref: 'Transaction', required: true })
-  transaction: Transaction;
+  @RelationId((expense: ExpenseEntity) => expense.gym)
+  gymId: string | null;
+
+  @ManyToOne(() => TransactionEntity, (transaction) => transaction.expense)
+  transaction: TransactionEntity;
+
+  @RelationId((expense: ExpenseEntity) => expense.transaction)
+  transactionId: string | null;
 }
-
-export const ExpenseSchema = SchemaFactory.createForClass(Expense);

@@ -18,6 +18,7 @@ import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.model';
 import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('expenses')
 @Roles(Permissions.GymOwner, Permissions.expenses)
@@ -27,7 +28,7 @@ export class ExpensesController {
 
   @Post()
   @ApiOperation({ summary: 'Create an expense' })
-  create(@User() user: Manager, @Body() dto: CreateExpenseDto) {
+  create(@User() user: ManagerEntity, @Body() dto: CreateExpenseDto) {
     return this.expensesService.create(user, dto);
   }
 
@@ -38,7 +39,7 @@ export class ExpensesController {
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
   findAll(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -49,7 +50,7 @@ export class ExpensesController {
   @Patch(':gymId/:id')
   @ApiOperation({ summary: 'Update an expense' })
   update(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Param('id') id: string,
     @Body() dto: UpdateExpenseDto,
@@ -60,7 +61,7 @@ export class ExpensesController {
   @Delete(':gymId/:id')
   @ApiOperation({ summary: 'Delete an expense' })
   remove(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Param('id') id: string,
   ) {

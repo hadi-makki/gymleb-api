@@ -41,7 +41,7 @@ import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.model';
 import { ManagerService } from './manager.service';
-import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.model';
 import { TransactionService } from '../transactions/subscription-instance.service';
 import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
 import { GymService } from '../gym/gym.service';

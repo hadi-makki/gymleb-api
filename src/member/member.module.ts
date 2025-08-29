@@ -7,7 +7,7 @@ import {
   SubscriptionSchema,
 } from '../subscription/entities/subscription.model';
 import { TransactionModule } from '../transactions/subscription-instance.module';
-import { Member, MemberSchema } from './entities/member.entity';
+import { Member, MemberSchema } from './entities/member.model';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
 import { MediaModule } from '../media/media.module';
@@ -17,7 +17,12 @@ import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers
 import {
   PTSession,
   PTSessionSchema,
-} from 'src/personal-trainers/entities/pt-sessions.entity';
+} from 'src/personal-trainers/entities/pt-sessions.model';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { MemberEntity } from './entities/member.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 @Module({
   imports: [
     AuthenticationModule,
@@ -26,6 +31,12 @@ import {
       { name: Gym.name, schema: GymSchema },
       { name: Subscription.name, schema: SubscriptionSchema },
       { name: PTSession.name, schema: PTSessionSchema },
+    ]),
+    TypeOrmModule.forFeature([
+      MemberEntity,
+      GymEntity,
+      SubscriptionEntity,
+      PTSessionEntity,
     ]),
     TransactionModule,
     MediaModule,

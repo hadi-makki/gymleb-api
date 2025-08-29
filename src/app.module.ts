@@ -31,6 +31,22 @@ import { GymOwnerModule } from './gym-owner/gym-owner.module';
 import { ProductsModule } from './products/products.module';
 import { StaffModule } from './staff/staff.module';
 import { CronModule } from './cron/cron.module';
+import { DatabaseMigration } from './database.migration';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ManagerEntity } from './manager/manager.entity';
+import { GymEntity } from './gym/entities/gym.entity';
+import { OwnerSubscriptionTypeEntity } from './owner-subscriptions/owner-subscription-type.entity';
+import { OwnerSubscriptionEntity } from './owner-subscriptions/owner-subscription.entity';
+import { TokenEntity } from './token/token.entity';
+import { MemberEntity } from './member/entities/member.entity';
+import { MediaEntity } from './media/media.entity';
+import { ExpenseEntity } from './expenses/expense.entity';
+import { RevenueEntity } from './revenue/revenue.entity';
+import { ProductEntity } from './products/products.entity';
+import { SubscriptionEntity } from './subscription/entities/subscription.entity';
+import { SubscriptionInstanceEntity } from './transactions/subscription-instance.entity';
+import { TransactionEntity } from './transactions/transaction.entity';
+import { PTSessionEntity } from './personal-trainers/entities/pt-sessions.entity';
 
 @Module({
   imports: [
@@ -43,6 +59,22 @@ import { CronModule } from './cron/cron.module';
     MongooseModule.forFeature([
       { name: Manager.name, schema: ManagerSchema },
       { name: Gym.name, schema: GymSchema },
+    ]),
+    TypeOrmModule.forFeature([
+      ManagerEntity,
+      GymEntity,
+      OwnerSubscriptionTypeEntity,
+      OwnerSubscriptionEntity,
+      TokenEntity,
+      MemberEntity,
+      MediaEntity,
+      ExpenseEntity,
+      RevenueEntity,
+      ProductEntity,
+      SubscriptionEntity,
+      SubscriptionInstanceEntity,
+      TransactionEntity,
+      PTSessionEntity,
     ]),
     ConfigModule,
     DatabaseModule,
@@ -76,6 +108,7 @@ import { CronModule } from './cron/cron.module';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    DatabaseMigration,
   ],
 })
 export class AppModule implements NestModule {

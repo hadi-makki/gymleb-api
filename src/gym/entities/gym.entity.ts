@@ -1,66 +1,63 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
-import { CustomSchema } from '../../decorators/custom-schema.decorator';
-import { MainEntity, PgMainEntity } from '../../main-classes/mainEntity';
-import { Manager } from '../../manager/manager.model';
-import { Subscription } from '../../subscription/entities/subscription.model';
-import { SubscriptionInstance } from '../../transactions/subscription-instance.entity';
-import { Transaction } from '../../transactions/transaction.entity';
-import { Column, Entity, ManyToMany, ManyToOne } from 'typeorm';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { ProductEntity } from 'src/products/products.entity';
+import { RevenueEntity } from 'src/revenue/revenue.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import {
+  Column,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  RelationId,
+} from 'typeorm';
+import { PgMainEntity } from '../../main-classes/mainEntity';
 
 @Entity('gyms')
 export class GymEntity extends PgMainEntity {
   @Column('text')
   name: string;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   gymDashedName: string;
 
   @Column('text')
   address: string;
 
+  @Column('text', { nullable: true })
+  email: string;
+
   @Column('text')
   phone: string;
 
   @ManyToMany(() => ManagerEntity, (manager) => manager.gyms)
+  @JoinTable()
   personalTrainers: ManagerEntity[];
 
-  @Prop({ type: [Types.ObjectId], ref: 'Subscription', required: false })
-  subscriptions: Subscription[];
+  @OneToMany(() => SubscriptionEntity, (subscription) => subscription.gym)
+  subscriptions: SubscriptionEntity[];
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.gyms)
   owner: ManagerEntity;
 
-  @Prop({
-    type: [Types.ObjectId],
-    ref: 'SubscriptionInstance',
-    required: false,
-  })
-  subscriptionInstances: SubscriptionInstance[];
+  @RelationId((gym: GymEntity) => gym.owner)
+  ownerId: string | null;
 
-  @Prop({
-    type: [Types.ObjectId],
-    ref: 'Transaction',
-    required: false,
-    default: [],
-  })
-  transactions: Transaction[];
+  @OneToMany(() => SubscriptionInstanceEntity, (instance) => instance.gym)
+  subscriptionInstances: SubscriptionInstanceEntity[];
 
-  @Prop({ type: Boolean, default: false })
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.gym)
+  transactions: TransactionEntity[];
+
+  @Column('boolean', { default: false })
   finishedPageSetup: boolean;
 
-  @Prop({
-    type: [
-      {
-        day: String,
-        openingTime: String,
-        closingTime: String,
-        isOpen: Boolean,
-      },
-    ],
-    required: false,
-  })
+  @Column('jsonb')
   openingDays: {
     day: string;
     openingTime: string;
@@ -68,40 +65,40 @@ export class GymEntity extends PgMainEntity {
     isOpen: boolean;
   }[];
 
-  @Prop({ type: Number, default: 0 })
+  @Column('int', { default: 0 })
   membersNotified: number;
 
-  @Prop({
-    type: [
-      {
-        day: String,
-        from: String,
-        to: String,
-      },
-    ],
-    required: false,
-    default: [],
-  })
+  @Column('jsonb')
   womensTimes: {
     day: string;
     from: string;
     to: string;
   }[];
 
-  @Prop({ type: String, required: false, default: '' })
+  @Column('text')
   note: string;
 
-  @Prop({
-    type: [
-      {
-        description: String,
-      },
-    ],
-    required: false,
-    default: [],
-  })
+  @Column('jsonb')
   offers: { description: string }[];
 
-  @Prop({ type: Number, default: 0, required: false })
+  @Column('int', { default: 0 })
   gymsPTSessionPercentage: number;
+
+  @Column('boolean', { default: false })
+  isDeactivated: boolean;
+
+  @OneToMany(() => ProductEntity, (product) => product.gym)
+  products: ProductEntity[];
+
+  @OneToMany(() => MemberEntity, (member) => member.gym)
+  members: MemberEntity[];
+
+  @OneToMany(() => RevenueEntity, (revenue) => revenue.gym)
+  revenues: RevenueEntity[];
+
+  @OneToMany(() => ExpenseEntity, (expense) => expense.gym)
+  expenses: ExpenseEntity[];
+
+  @OneToMany(() => PTSessionEntity, (session) => session.gym)
+  ptSessions: PTSessionEntity[];
 }

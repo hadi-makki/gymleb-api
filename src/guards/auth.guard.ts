@@ -6,22 +6,26 @@ import { Model } from 'mongoose';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { Manager } from '../manager/manager.model';
 import { TokenService } from '../token/token.service';
-import { User } from '../user/user.entity';
-import { Member } from '../member/entities/member.entity';
+import { User } from '../user/user.model';
+import { Member } from '../member/entities/member.model';
 import { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
-    @InjectModel(Member.name)
-    private memberRepository: Model<Member>,
-    @InjectModel(Manager.name)
-    private managerRepository: Model<Manager>,
+    @InjectRepository(MemberEntity)
+    private memberRepository: Repository<MemberEntity>,
+    @InjectRepository(ManagerEntity)
+    private managerRepository: Repository<ManagerEntity>,
     private tokenService: TokenService,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user: User | Manager | Member }>();
+      .getRequest<Request & { user: User | Manager | Member | MemberEntity }>();
 
     const validatedData = await this.tokenService.validateJwt(
       request,
@@ -36,7 +40,9 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const member = await this.memberRepository.findById(userId);
+    const member = await this.memberRepository.findOne({
+      where: { id: userId },
+    });
 
     if (member) {
       request.user = member;

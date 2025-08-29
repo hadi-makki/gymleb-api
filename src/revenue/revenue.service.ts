@@ -1,31 +1,39 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Revenue, RevenueDocument } from './revenue.entity';
+import { Revenue, RevenueDocument } from './revenue.model';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
-import { Manager } from '../manager/manager.model';
 import { Gym } from '../gym/entities/gym.model';
-import { Product } from '../products/products.entity';
+import { Product } from '../products/products.model';
 import { BadRequestException } from '../error/bad-request-error';
-import { TransactionType } from '../transactions/transaction.entity';
+import { TransactionType } from '../transactions/transaction.model';
 import { TransactionService } from '../transactions/subscription-instance.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RevenueEntity } from './revenue.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ProductEntity } from 'src/products/products.entity';
+import { Repository } from 'typeorm';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Injectable()
 export class RevenueService {
   constructor(
-    @InjectModel(Revenue.name) private revenueModel: Model<RevenueDocument>,
-    @InjectModel(Gym.name) private gymModel: Model<Gym>,
-    @InjectModel(Product.name) private productModel: Model<Product>,
+    @InjectRepository(RevenueEntity)
+    private revenueModel: Repository<RevenueEntity>,
+    @InjectRepository(GymEntity)
+    private gymModel: Repository<GymEntity>,
+    @InjectRepository(ProductEntity)
+    private productModel: Repository<ProductEntity>,
     private readonly transactionService: TransactionService,
   ) {}
 
-  async create(manager: Manager, dto: CreateRevenueDto, gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+  async create(manager: ManagerEntity, dto: CreateRevenueDto, gymId: string) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
     const product = await this.productModel.findOne({
-      _id: dto.productId,
+      where: { id: dto.productId },
     });
 
     if (product && product.stock < dto.numberSold) {
@@ -45,13 +53,13 @@ export class RevenueService {
         ? `Sold ${dto.numberSold} ${product.name}`
         : dto.title;
 
-    const revenue = new this.revenueModel({
+    const revenue = await this.revenueModel.create({
       title,
       amount,
       category: dto.category,
       notes: dto.notes,
       date: dto.date ? new Date(dto.date) : new Date(),
-      gym: new Types.ObjectId(gym.id),
+      gym: gym,
     });
     const transaction = await this.transactionService.createRevenueTransaction({
       paidAmount: amount,
@@ -61,27 +69,26 @@ export class RevenueService {
       revenue: revenue,
       date: dto.date ? new Date(dto.date) : new Date(),
     });
-    revenue.transaction = transaction.id;
-    await revenue.save();
+    revenue.transaction = transaction;
 
     if (product) {
       product.stock -= dto.numberSold;
-      await product.save();
+      await this.productModel.save(product);
     }
 
-    return await this.revenueModel.findById(revenue.id).populate('transaction');
+    return revenue;
   }
 
   async findAll(
-    manager: Manager,
+    manager: ManagerEntity,
     start?: string,
     end?: string,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const filter: any = { gym: new Types.ObjectId(gym.id) };
+    const filter: any = { gym: gym };
 
     if (start && end) {
       filter.date = {
@@ -94,24 +101,24 @@ export class RevenueService {
       filter.date = { $lte: new Date(end) };
     }
 
-    return await this.revenueModel
-      .find(filter)
-      .sort({ date: -1 })
-      .populate('transaction');
+    return await this.revenueModel.find({
+      where: filter,
+      relations: ['transaction'],
+      order: { date: 'DESC' },
+    });
   }
 
   async update(
-    manager: Manager,
+    manager: ManagerEntity,
     id: string,
     dto: UpdateRevenueDto,
     gymId: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
     const revenue = await this.revenueModel.findOne({
-      _id: id,
-      gym: new Types.ObjectId(gym.id),
+      where: { id: id, gym: gym },
     });
 
     if (!revenue) throw new NotFoundException('Revenue not found');
@@ -121,50 +128,37 @@ export class RevenueService {
       date: dto.date ? new Date(dto.date) : revenue.date,
     });
 
-    return revenue.save();
+    return await this.revenueModel.save(revenue);
   }
 
-  async remove(manager: Manager, id: string, gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+  async remove(manager: ManagerEntity, id: string, gymId: string) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
     const revenue = await this.revenueModel.findOne({
-      _id: id,
-      gym: new Types.ObjectId(gym.id),
+      where: { id: id, gym: gym },
     });
 
     if (!revenue) throw new NotFoundException('Revenue not found');
 
-    const result = await this.revenueModel.deleteOne({
-      _id: id,
-      gym: new Types.ObjectId(gym.id),
-    });
-
-    if (result.deletedCount === 0) {
-      throw new NotFoundException('Revenue not found');
-    }
+    await this.revenueModel.delete(id);
 
     // remove transaction
     await this.transactionService.removeRevenueTransaction(id);
-
-    await this.gymModel.updateOne(
-      { _id: gym.id },
-      { $pull: { transactions: id } },
-    );
 
     return { message: 'Revenue deleted successfully' };
   }
 
   async getTotalRevenue(
-    manager: Manager,
+    manager: ManagerEntity,
     start?: Date,
     end?: Date,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const filter: any = { gym: new Types.ObjectId(gym.id) };
+    const filter: any = { gym: gym };
 
     if (start && end) {
       filter.date = { $gte: start, $lte: end };
@@ -174,11 +168,10 @@ export class RevenueService {
       filter.date = { $lte: end };
     }
 
-    const result = await this.revenueModel.aggregate([
-      { $match: filter },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]);
+    const result = await this.revenueModel.find({
+      where: filter,
+    });
 
-    return result[0]?.total || 0;
+    return result.reduce((acc, curr) => acc + curr.amount, 0);
   }
 }

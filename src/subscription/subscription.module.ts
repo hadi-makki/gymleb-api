@@ -9,6 +9,9 @@ import {
 } from './entities/subscription.model';
 import { SubscriptionController } from './subscription.controller';
 import { SubscriptionService } from './subscription.service';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { SubscriptionEntity } from './entities/subscription.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
@@ -17,6 +20,7 @@ import { SubscriptionService } from './subscription.service';
       { name: Subscription.name, schema: SubscriptionSchema },
       { name: Gym.name, schema: GymSchema },
     ]),
+    TypeOrmModule.forFeature([SubscriptionEntity, GymEntity]),
     TransactionModule,
   ],
   controllers: [SubscriptionController],

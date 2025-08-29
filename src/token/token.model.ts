@@ -3,8 +3,8 @@ import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { MainEntity } from '../main-classes/mainEntity';
 import { Manager } from '../manager/manager.model';
-import { Member } from '../member/entities/member.entity';
-import { User } from '../user/user.entity';
+import { Member } from '../member/entities/member.model';
+import { User } from '../user/user.model';
 
 export enum TokenType {
   Access = 'access',

@@ -5,62 +5,75 @@ import {
 } from '@nestjs/common';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
-import { Gym } from './entities/gym.model';
-import { InjectModel } from '@nestjs/mongoose';
-import { isValidObjectId, Model } from 'mongoose';
-import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
-import { Member } from '../member/entities/member.entity';
-import { Manager } from '../manager/manager.model';
-import { Types } from 'mongoose';
 import { subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.model';
-import { paginateModel } from '../utils/pagination';
 import { AddOfferDto } from './dto/add-offer.dto';
+import { GymEntity } from './entities/gym.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 import {
-  Transaction,
+  ILike,
+  In,
+  LessThanOrEqual,
+  Like,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import {
+  TransactionEntity,
   TransactionType,
-} from '../transactions/transaction.entity';
+} from 'src/transactions/transaction.entity';
+import {
+  paginateRepository,
+  paginateRepositorySimple,
+} from '../utils/pagination';
 
 @Injectable()
 export class GymService {
   constructor(
-    @InjectModel(Gym.name) private gymModel: Model<Gym>,
-    @InjectModel(Manager.name) private gymOwnerModel: Model<Manager>,
-    @InjectModel(Member.name) private memberModel: Model<Member>,
-    @InjectModel(OwnerSubscription.name)
-    private ownerSubscriptionModel: Model<OwnerSubscription>,
-    @InjectModel(Manager.name) private managerModel: Model<Manager>,
-    @InjectModel(Transaction.name)
-    private transactionModel: Model<Transaction>,
+    @InjectRepository(GymEntity)
+    private gymModel: Repository<GymEntity>,
+    @InjectRepository(ManagerEntity)
+    private gymOwnerModel: Repository<ManagerEntity>,
+    @InjectRepository(MemberEntity)
+    private memberModel: Repository<MemberEntity>,
+    @InjectRepository(OwnerSubscriptionEntity)
+    private ownerSubscriptionModel: Repository<OwnerSubscriptionEntity>,
+    @InjectRepository(ManagerEntity)
+    private managerModel: Repository<ManagerEntity>,
+    @InjectRepository(TransactionEntity)
+    private transactionModel: Repository<TransactionEntity>,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
-    const checkGym = await this.gymModel.exists({
-      name: createGymDto.name,
+    const checkGym = await this.gymModel.findOne({
+      where: { name: createGymDto.name },
     });
     if (checkGym) {
       throw new BadRequestException('Gym already exists');
     }
-    const gymOwner = await this.gymOwnerModel.findById(createGymDto.gymOwner);
+    const gymOwner = await this.gymOwnerModel.findOne({
+      where: { id: createGymDto.gymOwner },
+    });
     if (!gymOwner) {
       throw new NotFoundException('Gym owner not found');
     }
-    const gym = new this.gymModel({ ...createGymDto, gymOwner });
-    return gym.save();
+    const gym = this.gymModel.create(createGymDto);
+    gym.owner = gymOwner;
+    return this.gymModel.save(gym);
   }
 
   async findAll() {
-    return await this.gymModel.find().populate({
-      path: 'owner',
-      select: '_id firstName lastName username phoneNumber',
+    return await this.gymModel.find({
+      relations: ['owner'],
     });
   }
 
   async findOne(id: string) {
-    if (!isValidObjectId(id)) {
-      throw new BadRequestException('Invalid gym id');
-    }
-    const gym = await this.gymModel.findById(id);
+    const gym = await this.gymModel.findOne({
+      where: { id },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -68,7 +81,7 @@ export class GymService {
   }
 
   async remove(id: string) {
-    const gym = await this.gymModel.findByIdAndDelete(id);
+    const gym = await this.gymModel.delete(id);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -76,12 +89,14 @@ export class GymService {
   }
 
   async getGymAnalytics(
-    manager: Manager,
+    manager: ManagerEntity,
     start?: string,
     end?: string,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -100,34 +115,42 @@ export class GymService {
     }
 
     // Fetch all transactions for the gym in the specified range
-    const allTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        ...dateFilter,
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const allTransactions = await this.transactionModel.find({
+      where: { gym: gym.id, ...dateFilter },
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Fetch transactions for last month comparison
-    const lastMonthTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const lastMonthTransactions = await this.transactionModel.find({
+      where: [
+        {
+          gym: {
+            id: gym.id,
+          },
+
+          createdAt: MoreThanOrEqual(lastMonthStart),
+        },
+        {
+          gym: {
+            id: gym.id,
+          },
+
+          createdAt: LessThanOrEqual(lastMonthEnd),
+        },
+      ],
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Fetch transactions for current month comparison
-    const currentMonthTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        createdAt: { $gte: currentMonthStart },
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const currentMonthTransactions = await this.transactionModel.find({
+      where: {
+        gym: {
+          id: gym.id,
+        },
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Calculate subscription revenue for both periods
     const lastMonthSubscriptionRevenue = lastMonthTransactions
@@ -161,13 +184,29 @@ export class GymService {
       : 0;
 
     // Fetch member count for both periods
-    const lastMonthMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
-      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+    const lastMonthMembers = await this.memberModel.count({
+      where: [
+        {
+          gym: {
+            id: gym.id,
+          },
+          createdAt: MoreThanOrEqual(lastMonthStart),
+        },
+        {
+          gym: {
+            id: gym.id,
+          },
+          createdAt: LessThanOrEqual(lastMonthEnd),
+        },
+      ],
     });
-    const currentMonthMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
-      createdAt: { $gte: currentMonthStart },
+    const currentMonthMembers = await this.memberModel.count({
+      where: {
+        gym: {
+          id: gym.id,
+        },
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
     });
 
     // Calculate percentage change in members
@@ -206,13 +245,18 @@ export class GymService {
       subscriptionRevenue + additionalRevenue + personalTrainerSessionRevenue;
     const netRevenue = totalRevenue - totalExpenses;
 
-    const totalMembers = await this.memberModel.countDocuments({ gym: gym.id });
-    const members = await this.memberModel
-      .find({ gym: gym.id })
-      .populate('subscription')
-      .populate('transactions')
-      .populate('gym')
-      .sort({ createdAt: -1 });
+    const totalMembers = await this.memberModel.count({
+      where: {
+        gym: {
+          id: gym.id,
+        },
+      },
+    });
+    const members = await this.memberModel.find({
+      where: { gym: { id: gym.id } },
+      relations: ['subscription', 'transactions', 'gym'],
+      order: { createdAt: 'DESC' },
+    });
 
     const membersWithActiveSubscription = members.map((member) => {
       const checkActiveSubscription = member.transactions.some(
@@ -273,9 +317,10 @@ export class GymService {
   }
 
   async getGymByGymName(gymName: string) {
-    const gym = await this.gymModel
-      .findOne({ gymDashedName: gymName })
-      .populate('openingDays');
+    const gym = await this.gymModel.findOne({
+      where: { gymDashedName: gymName },
+      relations: ['openingDays'],
+    });
 
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -284,7 +329,9 @@ export class GymService {
   }
 
   async getGymById(gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -292,7 +339,9 @@ export class GymService {
   }
 
   async updateGymDay(gymId: string, dayToUpdate: string) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -303,25 +352,26 @@ export class GymService {
       throw new NotFoundException('Day not found');
     }
     gym.openingDays[dayIndex].isOpen = !gym.openingDays[dayIndex].isOpen;
-    return gym.save();
+    return this.gymModel.save(gym);
   }
 
   async getAllGyms() {
-    const gyms = await this.gymModel.find().populate({
-      path: 'owner',
-      select: '_id firstName lastName username phoneNumber',
+    const gyms = await this.gymModel.find({
+      relations: ['owner'],
     });
     const data = await Promise.all(
       gyms.map(async (gym) => {
         const ownerSubscriptions = await this.ownerSubscriptionModel.find({
-          owner: gym.owner?._id,
+          where: {
+            owner: gym.owner,
+          },
         });
         const gymHasActiveSubscription = ownerSubscriptions.find(
           (subscription) =>
             subscription.active && new Date(subscription.endDate) > new Date(),
         );
         return {
-          ...gym.toJSON(),
+          ...gym,
           activeSubscription: gymHasActiveSubscription,
         };
       }),
@@ -331,23 +381,27 @@ export class GymService {
   }
 
   async updateGymName(gymId: string, gymName: string) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.name = gymName;
     gym.gymDashedName = gymName.toLowerCase().split(' ').join('-');
-    await gym.save();
+    await this.gymModel.save(gym);
     return gym;
   }
 
-  async setGymFinishedPageSetup(manager: Manager, gymId: string) {
-    const gym = await this.gymModel.findById(gymId);
+  async setGymFinishedPageSetup(manager: ManagerEntity, gymId: string) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.finishedPageSetup = true;
-    await gym.save();
+    await this.gymModel.save(gym);
     return gym;
   }
 
@@ -355,27 +409,33 @@ export class GymService {
     gymId: string,
     womensTimes: { day: string; from: string; to: string }[],
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.womensTimes = womensTimes;
-    await gym.save();
+    await this.gymModel.save(gym);
     return gym;
   }
 
   async updateGymNote(gymId: string, note: string) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.note = note;
-    await gym.save();
+    await this.gymModel.save(gym);
     return gym;
   }
 
   async updatePTSessionPercentage(gymId: string, percentage: number) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -383,36 +443,40 @@ export class GymService {
       throw new BadRequestException('Percentage must be between 0 and 100');
     }
     gym.gymsPTSessionPercentage = percentage;
-    await this.gymModel.findByIdAndUpdate(gymId, gym);
+    await this.gymModel.save(gym);
     return gym;
   }
 
   async addGymMembersNotified(gymId: string, number: number) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.membersNotified += number;
-    await gym.save();
+    await this.gymModel.save(gym);
     return gym;
   }
 
-  async getGymByManager(manager: Manager) {
+  async getGymByManager(manager: ManagerEntity) {
     const gym = await this.gymModel.findOne({
-      owner: manager.id,
+      where: { owner: manager },
     });
     return gym;
   }
 
   async getTransactionHistory(
-    manager: Manager,
+    manager: ManagerEntity,
     limit: number,
     page: number,
     search: string,
     type: TransactionType,
     gymId: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -421,29 +485,28 @@ export class GymService {
     let memberIds = [];
     if (search) {
       const matchingMembers = await this.memberModel.find({
-        gym: gym.id,
-        name: { $regex: search, $options: 'i' },
+        where: { gym: gym, name: ILike(`%${search}%`) },
       });
-      memberIds = matchingMembers.map((m) => m._id);
+      memberIds = matchingMembers.map((m) => m.id);
     }
 
-    const result = await paginateModel(this.transactionModel, {
+    const result = await paginateRepositorySimple(this.transactionModel, {
       filter: {
-        gym: new Types.ObjectId(gym.id),
-        ...(search ? { member: { $in: memberIds } } : {}),
+        gym: gym,
+        ...(search ? { member: { id: In(memberIds) } } : {}),
         ...(type ? { type: type as TransactionType } : {}),
       },
-      populate: [
-        { path: 'subscription' },
-        { path: 'member' },
-        { path: 'gym' },
-        { path: 'product' },
-        { path: 'revenue' },
-        { path: 'expense' },
+      relations: [
+        'subscription',
+        'member',
+        'gym',
+        'product',
+        'revenue',
+        'expense',
       ],
       page,
       limit,
-      sort: { createdAt: -1 }, // Sort by most recent first
+      order: { createdAt: 'DESC' }, // Sort by most recent first
     });
 
     return result;
@@ -455,7 +518,7 @@ export class GymService {
     end?: string,
   ) {
     const gym = await this.gymModel.findOne({
-      owner: ownerId,
+      where: { owner: { id: ownerId } },
     });
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -475,34 +538,34 @@ export class GymService {
     }
 
     // Fetch all transactions for the gym in the specified range
-    const allTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        ...dateFilter,
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const allTransactions = await this.transactionModel.find({
+      where: { gym: gym, ...dateFilter },
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Fetch transactions for last month comparison
-    const lastMonthTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const lastMonthTransactions = await this.transactionModel.find({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(lastMonthStart),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(lastMonthEnd),
+        },
+      ],
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Fetch transactions for current month comparison
-    const currentMonthTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        createdAt: { $gte: currentMonthStart },
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const currentMonthTransactions = await this.transactionModel.find({
+      where: {
+        gym: gym,
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Calculate subscription revenue for both periods
     const lastMonthSubscriptionRevenue = lastMonthTransactions
@@ -520,13 +583,23 @@ export class GymService {
         100
       : 0;
 
-    const lastMonthMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
-      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+    const lastMonthMembers = await this.memberModel.count({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(lastMonthStart),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(lastMonthEnd),
+        },
+      ],
     });
-    const currentMonthMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
-      createdAt: { $gte: currentMonthStart },
+    const currentMonthMembers = await this.memberModel.count({
+      where: {
+        gym: gym,
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
     });
     const memberChange = lastMonthMembers
       ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
@@ -548,14 +621,17 @@ export class GymService {
     const totalRevenue = subscriptionRevenue + additionalRevenue;
     const netRevenue = totalRevenue - totalExpenses;
 
-    const totalMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
+    const totalMembers = await this.memberModel.count({
+      where: {
+        gym: gym,
+      },
     });
-    const members = await this.memberModel
-      .find({ gym: gym.id })
-      .populate('subscription')
-      .populate('transactions')
-      .populate('gyms');
+    const members = await this.memberModel.find({
+      where: {
+        gym: gym,
+      },
+      relations: ['subscription', 'transactions', 'gyms'],
+    });
 
     const membersWithActiveSubscription = members.map((member) => {
       const checkActiveSubscription = member.transactions.some(
@@ -613,37 +689,39 @@ export class GymService {
     search: string,
   ) {
     const gym = await this.gymModel.findOne({
-      owner: ownerId,
+      where: { owner: { id: ownerId } },
     });
     if (!gym) {
       throw new NotFoundException('Owner subscription not found');
     }
 
-    let memberIds: Types.ObjectId[] = [] as any;
+    let memberIds: string[] = [] as any;
     if (search) {
       const matchingMembers = await this.memberModel.find({
-        gym: gym._id,
-        name: { $regex: search, $options: 'i' },
+        where: {
+          gym: gym,
+          name: ILike(`%${search}%`),
+        },
       });
-      memberIds = matchingMembers.map((m) => m._id as Types.ObjectId);
+      memberIds = matchingMembers.map((m) => m.id);
     }
 
-    const result = await paginateModel(this.transactionModel, {
+    const result = await paginateRepositorySimple(this.transactionModel, {
       filter: {
-        gym: gym._id,
-        ...(search ? { member: { $in: memberIds } } : {}),
+        gym: gym,
+        ...(search ? { member: { id: In(memberIds) } } : {}),
       },
-      populate: [
-        { path: 'subscription' },
-        { path: 'member' },
-        { path: 'gym' },
-        { path: 'product' },
-        { path: 'revenue' },
-        { path: 'expense' },
+      relations: [
+        'subscription',
+        'member',
+        'gym',
+        'product',
+        'revenue',
+        'expense',
       ],
       page,
       limit,
-      sort: { createdAt: -1 },
+      order: { createdAt: 'DESC' },
     });
 
     return result;
@@ -656,33 +734,33 @@ export class GymService {
     search?: string,
   ) {
     const gym = await this.gymModel.findOne({
-      owner: ownerId,
+      where: { owner: { id: ownerId } },
     });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const filter: any = { gym: gym.id };
+    const filter: any = { gym: gym };
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filter.name = ILike(`%${search}%`);
     }
 
-    const result = await paginateModel(this.memberModel as any, {
+    const result = await paginateRepositorySimple(this.memberModel, {
       filter,
-      populate: [{ path: 'subscription' }, { path: 'transactions' }],
+      relations: ['subscription', 'transactions'],
       page,
       limit,
-      sort: { createdAt: -1 },
+      order: { createdAt: 'DESC' },
     });
 
     return result;
   }
 
   async getGymOwnerSummary(ownerId: string) {
-    const owner = await this.gymOwnerModel
-      .findById(ownerId)
-      .populate('gyms')
-      .populate('ownerSubscription');
+    const owner = await this.gymOwnerModel.findOne({
+      where: { id: ownerId },
+      relations: ['gyms', 'ownerSubscription'],
+    });
     if (!owner) {
       throw new NotFoundException('Owner not found');
     }
@@ -692,19 +770,21 @@ export class GymService {
   }
 
   async addGymOffer(gymId: string, { offers }: AddOfferDto) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
     gym.offers = offers.map((offer) => ({ description: offer.description }));
-    await gym.save();
+    await this.gymModel.save(gym);
     return gym;
   }
 
   async getGymsByOwner(ownerId: string) {
-    const gyms = await this.gymModel.find({ owner: ownerId }).populate({
-      path: 'owner',
-      select: '_id firstName lastName username phoneNumber',
+    const gyms = await this.gymModel.find({
+      where: { owner: { id: ownerId } },
+      relations: ['owner'],
     });
     return gyms;
   }
@@ -714,7 +794,9 @@ export class GymService {
     start?: string,
     end?: string,
   ) {
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -733,34 +815,37 @@ export class GymService {
     }
 
     // Fetch all transactions for the gym in the specified range
-    const allTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
+    const allTransactions = await this.transactionModel.find({
+      where: {
+        gym: gym,
         ...dateFilter,
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+      },
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Fetch transactions for last month comparison
-    const lastMonthTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const lastMonthTransactions = await this.transactionModel.find({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(lastMonthStart),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(lastMonthEnd),
+        },
+      ],
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Fetch transactions for current month comparison
-    const currentMonthTransactions = await this.transactionModel
-      .find({
-        gym: new Types.ObjectId(gym.id),
-        createdAt: { $gte: currentMonthStart },
-      })
-      .populate('subscription')
-      .populate('revenue')
-      .populate('expense');
+    const currentMonthTransactions = await this.transactionModel.find({
+      where: {
+        gym: gym,
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
+      relations: ['subscription', 'revenue', 'expense'],
+    });
 
     // Calculate subscription revenue for both periods
     const lastMonthSubscriptionRevenue = lastMonthTransactions
@@ -778,13 +863,23 @@ export class GymService {
         100
       : 0;
 
-    const lastMonthMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
-      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+    const lastMonthMembers = await this.memberModel.count({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(lastMonthStart),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(lastMonthEnd),
+        },
+      ],
     });
-    const currentMonthMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
-      createdAt: { $gte: currentMonthStart },
+    const currentMonthMembers = await this.memberModel.count({
+      where: {
+        gym: gym,
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
     });
     const memberChange = lastMonthMembers
       ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
@@ -806,14 +901,17 @@ export class GymService {
     const totalRevenue = subscriptionRevenue + additionalRevenue;
     const netRevenue = totalRevenue - totalExpenses;
 
-    const totalMembers = await this.memberModel.countDocuments({
-      gym: gym.id,
+    const totalMembers = await this.memberModel.count({
+      where: {
+        gym: gym,
+      },
     });
-    const members = await this.memberModel
-      .find({ gym: gym.id })
-      .populate('subscription')
-      .populate('transactions')
-      .populate('gyms');
+    const members = await this.memberModel.find({
+      where: {
+        gym: gym,
+      },
+      relations: ['subscription', 'transactions', 'gyms'],
+    });
 
     const membersWithActiveSubscription = members.map((member) => {
       const checkActiveSubscription = member.transactions.some(
@@ -870,35 +968,31 @@ export class GymService {
     page: number = 1,
     search?: string,
   ) {
-    const checkGym = await this.gymModel.findById(gymId);
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
 
     console.log('this is the gym id', checkGym.transactions.length);
 
-    const result = await paginateModel(this.transactionModel, {
+    const result = await paginateRepositorySimple(this.transactionModel, {
       filter: {
-        gym: checkGym._id,
-        ...(search
-          ? {
-              $or: [
-                { type: { $regex: search, $options: 'i' } },
-                { 'member.name': { $regex: search, $options: 'i' } },
-              ],
-            }
-          : {}),
+        gym: checkGym,
+        // ...(search
+        //   ? {
+        //       $or: [
+        //         { type: { $regex: search, $options: 'i' } },
+        //         { 'member.name': { $regex: search, $options: 'i' } },
+        //       ],
+        //     }
+        //   : {}),
       },
-      populate: [
-        { path: 'member' },
-        { path: 'subscription' },
-        { path: 'gym' },
-        { path: 'revenue' },
-        { path: 'expense' },
-      ],
+      relations: ['member', 'subscription', 'gym', 'revenue', 'expense'],
       page,
       limit,
-      sort: { createdAt: -1 },
+      order: { createdAt: 'DESC' },
     });
 
     return result;
@@ -910,19 +1004,15 @@ export class GymService {
     page: number = 1,
     search?: string,
   ) {
-    const result = await paginateModel(this.memberModel, {
+    const result = await paginateRepositorySimple(this.memberModel, {
       filter: {
-        gym: gymId,
-        ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
+        gym: { id: gymId },
+        ...(search ? { name: Like(`%${search}%`) } : {}),
       },
-      populate: [
-        { path: 'gym' },
-        { path: 'subscription' },
-        { path: 'transactions' },
-      ],
+      relations: ['gym', 'subscription', 'transactions'],
       page,
       limit,
-      sort: { createdAt: -1 },
+      order: { createdAt: 'DESC' },
     });
 
     return result;
@@ -946,7 +1036,9 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -956,13 +1048,20 @@ export class GymService {
       ? new Date(start)
       : subDays(new Date(), isMobile ? 7 : 30);
 
-    const transactions = await this.transactionModel
-      .find({
-        gym: gym._id,
-        createdAt: { $gte: startDate, $lte: endDate },
-      })
-      .populate('member')
-      .sort({ createdAt: 1 });
+    const transactions = await this.transactionModel.find({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(startDate),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(endDate),
+        },
+      ],
+      relations: ['member'],
+      order: { createdAt: 'ASC' },
+    });
 
     // Group transactions by date
     const revenueByDate = new Map();
@@ -1022,7 +1121,9 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -1032,12 +1133,19 @@ export class GymService {
       ? new Date(start)
       : subDays(new Date(), isMobile ? 7 : 30);
 
-    const members = await this.memberModel
-      .find({
-        gym: gym.id,
-        createdAt: { $gte: startDate, $lte: endDate },
-      })
-      .sort({ createdAt: 1 });
+    const members = await this.memberModel.find({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(startDate),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(endDate),
+        },
+      ],
+      order: { createdAt: 'ASC' },
+    });
 
     // Group members by date
     const membersByDate = new Map();
@@ -1099,7 +1207,9 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
-    const gym = await this.gymModel.findById(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
@@ -1109,13 +1219,20 @@ export class GymService {
       ? new Date(start)
       : subDays(new Date(), isMobile ? 7 : 30);
 
-    const transactions = await this.transactionModel
-      .find({
-        gym: gym._id,
-        createdAt: { $gte: startDate, $lte: endDate },
-      })
-      .populate('member')
-      .sort({ createdAt: 1 });
+    const transactions = await this.transactionModel.find({
+      where: [
+        {
+          gym: gym,
+          createdAt: MoreThanOrEqual(startDate),
+        },
+        {
+          gym: gym,
+          createdAt: LessThanOrEqual(endDate),
+        },
+      ],
+      relations: ['member'],
+      order: { createdAt: 'ASC' },
+    });
 
     // Group transactions by date and type
     const transactionsByDate = new Map();
@@ -1163,10 +1280,13 @@ export class GymService {
   }
 
   async deleteGym(gymId: string) {
-    const gym = await this.gymModel.findByIdAndDelete(gymId);
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    return gym;
+    await this.gymModel.remove(gym);
+    return { message: 'Gym deleted successfully' };
   }
 }

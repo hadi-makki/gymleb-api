@@ -1,20 +1,13 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { MainEntity } from '../main-classes/mainEntity';
-import { Product } from '../products/products.entity';
-import { User } from '../user/user.entity';
-import { Gym } from '../gym/entities/gym.model';
-import {
-  Subscription,
-  SubscriptionType,
-} from '../subscription/entities/subscription.model';
-import { Member } from '../member/entities/member.entity';
-import { Manager } from '../manager/manager.model';
-import { OwnerSubscriptionType } from '../owner-subscriptions/owner-subscription-type.model';
-import { Revenue } from '../revenue/revenue.entity';
-import { Expense } from '../expenses/expense.entity';
-export type TransactionDocument = Transaction & Document;
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
+import { ProductEntity } from 'src/products/products.entity';
+import { RevenueEntity } from 'src/revenue/revenue.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { PgMainEntity } from '../main-classes/mainEntity';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -29,86 +22,121 @@ export enum Currency {
   LBP = 'LBP',
 }
 
-@CustomSchema()
-export class Transaction extends MainEntity {
-  @Prop({ type: String, required: false })
-  title: string;
-
-  @Prop({ type: String, required: false, enum: TransactionType })
-  type: TransactionType;
-
-  @Prop({ type: String, required: false, enum: SubscriptionType })
-  subscriptionType: SubscriptionType;
-
-  @Prop({ type: Date, required: false })
-  endDate: Date;
-
-  @Prop({ type: Date, required: false })
-  startDate: Date;
-
-  @Prop({ type: Number, required: false })
-  paidAmount: number;
-
-  @Prop({
-    type: String,
-    required: false,
-    enum: Currency,
-    default: Currency.USD,
-  })
-  currency: Currency;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Gym' })
-  gym: Gym;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Subscription' })
-  subscription: Subscription;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Member' })
-  member: Member;
-
-  // Owner subscription assignment transaction
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Manager' })
-  owner: Manager;
-
-  @Prop({
-    type: Types.ObjectId,
-    required: false,
-    ref: 'OwnerSubscriptionType',
-  })
-  ownerSubscriptionType: OwnerSubscriptionType;
-
-  @Prop({ type: Boolean, required: false, default: false })
-  isOwnerSubscriptionAssignment: boolean;
-
-  @Prop({ type: String, required: false })
-  paidBy: string;
-
-  @Prop({ type: Boolean, required: false, default: false })
-  isInvalidated: boolean;
-
-  @Prop({ type: Date, required: false })
-  invalidatedAt: Date;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Product' })
-  product: Product;
-
-  @Prop({ type: Number, required: false })
-  numberSold: number;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Revenue' })
-  revenue: Revenue;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Expense' })
-  expense: Expense;
-
-  @Prop({ type: Date, required: false })
-  date: Date;
-
-  @Prop({ type: Types.ObjectId, required: false, ref: 'Manager' })
-  personalTrainer: Manager;
-
-  @Prop({ type: Number, required: false })
-  gymsPTSessionPercentage: number;
+export enum SubscriptionType {
+  DAILY_GYM = 'daily_gym',
+  WEEKLY_GYM = 'weekly_gym',
+  MONTHLY_GYM = 'monthly_gym',
+  YEARLY_GYM = 'yearly_gym',
 }
 
-export const TransactionSchema = SchemaFactory.createForClass(Transaction);
+@Entity('transactions')
+export class TransactionEntity extends PgMainEntity {
+  @Column('text', { nullable: true })
+  title: string;
+
+  @Column('text', { nullable: true, default: TransactionType.SUBSCRIPTION })
+  type: TransactionType;
+
+  @Column('text', { nullable: true })
+  subscriptionType: SubscriptionType;
+
+  @Column('timestamp with time zone', { nullable: true })
+  endDate: Date;
+
+  @Column('timestamp with time zone', { nullable: true })
+  startDate: Date;
+
+  @Column('float')
+  paidAmount: number;
+
+  @Column('text', { default: Currency.USD })
+  currency: Currency;
+
+  @ManyToOne(() => GymEntity, (gym) => gym.transactions)
+  gym: GymEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.gym)
+  gymId: string | null;
+
+  @ManyToOne(
+    () => SubscriptionEntity,
+    (subscription) => subscription.transactions,
+  )
+  subscription: SubscriptionEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.subscription)
+  subscriptionId: string | null;
+
+  @ManyToOne(() => MemberEntity, (member) => member.transactions)
+  member: MemberEntity;
+
+  // Owner subscription assignment transaction
+  @ManyToOne(() => ManagerEntity, (manager) => manager.transactions)
+  owner: ManagerEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.owner)
+  ownerId: string | null;
+
+  @ManyToOne(
+    () => OwnerSubscriptionTypeEntity,
+    (ownerSubscriptionType) => ownerSubscriptionType.transactions,
+    { nullable: true },
+  )
+  ownerSubscriptionType: OwnerSubscriptionTypeEntity;
+
+  @RelationId(
+    (transaction: TransactionEntity) => transaction.ownerSubscriptionType,
+  )
+  ownerSubscriptionTypeId: string | null;
+
+  @Column('boolean', { default: false })
+  isOwnerSubscriptionAssignment: boolean;
+
+  @Column('text', { nullable: true })
+  paidBy: string;
+
+  @Column('boolean', { default: false })
+  isInvalidated: boolean;
+
+  @Column('timestamp with time zone', { nullable: true })
+  invalidatedAt: Date;
+
+  @ManyToOne(() => ProductEntity, (product) => product.transactions)
+  product: ProductEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.product)
+  productId: string | null;
+
+  @Column('int', { nullable: true })
+  numberSold: number;
+
+  @ManyToOne(() => RevenueEntity, (revenue) => revenue.transaction)
+  revenue: RevenueEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.revenue)
+  revenueId: string | null;
+
+  @ManyToOne(() => ExpenseEntity, (expense) => expense.transaction)
+  expense: ExpenseEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.expense)
+  expenseId: string | null;
+
+  @Column('timestamp with time zone', { nullable: true })
+  date: Date;
+
+  @ManyToOne(() => ManagerEntity, (manager) => manager.transactions)
+  personalTrainer: ManagerEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.personalTrainer)
+  personalTrainerId: string | null;
+
+  @Column('float', { nullable: true })
+  gymsPTSessionPercentage: number;
+
+  @Column('boolean', { default: true })
+  isPaid: boolean;
+
+  @Column('boolean', { default: false })
+  isSubscription: boolean;
+}

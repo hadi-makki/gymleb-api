@@ -1,33 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { isMongoId } from 'class-validator';
-import { CreateStaffDto } from './dto/create-staff.dto';
-import { UpdateStaffDto } from './dto/update-staff.dto';
-import { ManagerService } from 'src/manager/manager.service';
-import { Manager } from 'src/manager/manager.model';
-import { v4 as uuidv4 } from 'uuid';
-import { GymService } from 'src/gym/gym.service';
+import { Permissions } from 'src/decorators/roles/role.enum';
 import { BadRequestException } from 'src/error/bad-request-error';
 import { NotFoundException } from 'src/error/not-found-error';
-import { Permissions } from 'src/decorators/roles/role.enum';
 import { returnManager } from 'src/functions/returnUser';
-import { Gym } from 'src/gym/entities/gym.model';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { GymService } from 'src/gym/gym.service';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { ManagerService } from 'src/manager/manager.service';
+import { Not, Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+import { CreateStaffDto } from './dto/create-staff.dto';
+import { UpdateStaffDto } from './dto/update-staff.dto';
 
 @Injectable()
 export class StaffService {
   constructor(
     private readonly managerService: ManagerService,
     private readonly gymService: GymService,
-    @InjectModel(Manager.name)
-    private readonly managerModel: Model<Manager>,
-    @InjectModel(Gym.name)
-    private readonly gymModel: Model<Gym>,
+    @InjectRepository(ManagerEntity)
+    private readonly managerModel: Repository<ManagerEntity>,
+    @InjectRepository(GymEntity)
+    private readonly gymModel: Repository<GymEntity>,
   ) {}
 
   async create(
     createStaffDto: CreateStaffDto,
-    manager: Manager,
+    manager: ManagerEntity,
     gymId: string,
   ) {
     const created = await this.managerService.createManager(
@@ -42,24 +42,28 @@ export class StaffService {
       gymId,
     );
 
-    const staffDoc = await this.managerModel.findById(created._id);
+    const staffDoc = await this.managerModel.findOne({
+      where: { id: created.id },
+    });
     return returnManager(staffDoc);
   }
 
-  async findAll(manager: Manager, gymId: string) {
+  async findAll(manager: ManagerEntity, gymId: string) {
     const gym = await this.gymService.getGymByManager(manager);
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
     const staff = await this.managerModel.find({
-      gyms: { $in: [new Types.ObjectId(gymId)] },
-      roles: { $ne: Permissions.GymOwner },
+      where: {
+        gyms: { id: gymId },
+        permissions: Not(Permissions.GymOwner),
+      },
     });
-    return staff.map((m) => returnManager(m as any));
+    return staff.map((m) => returnManager(m));
   }
 
-  async findOne(id: string, manager: Manager) {
+  async findOne(id: string, manager: ManagerEntity) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid id');
     }
@@ -67,7 +71,9 @@ export class StaffService {
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    const staff = await this.managerModel.findById(id);
+    const staff = await this.managerModel.findOne({
+      where: { id },
+    });
     if (!staff || staff.gyms?.some((gym) => gym.id === gym.id)) {
       throw new NotFoundException('Staff not found');
     }
@@ -76,7 +82,7 @@ export class StaffService {
 
   async update(
     id: string,
-    manager: Manager,
+    manager: ManagerEntity,
     gymId: string,
     updateStaffDto: UpdateStaffDto,
   ) {
@@ -87,7 +93,9 @@ export class StaffService {
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    const staff = await this.managerModel.findById(id);
+    const staff = await this.managerModel.findOne({
+      where: { id },
+    });
     if (!staff || staff.gyms?.some((gym) => gym.id === gymId)) {
       throw new NotFoundException('Staff not found');
     }
@@ -96,16 +104,19 @@ export class StaffService {
       staff.username = updateStaffDto.username.trim();
     staff.email = updateStaffDto.email?.trim();
     if (updateStaffDto.password) {
-      staff.password = await Manager.hashPassword(updateStaffDto.password);
+      staff.password = await ManagerEntity.hashPassword(
+        updateStaffDto.password,
+      );
     }
-    if (updateStaffDto.permissions) staff.roles = updateStaffDto.permissions;
+    if (updateStaffDto.permissions)
+      staff.permissions = updateStaffDto.permissions;
     if (updateStaffDto.phoneNumber)
       staff.phoneNumber = updateStaffDto.phoneNumber;
-    await staff.save();
+    await this.managerModel.save(staff);
     return returnManager(staff as any);
   }
 
-  async remove(id: string, manager: Manager, gymId: string) {
+  async remove(id: string, manager: ManagerEntity, gymId: string) {
     if (!isMongoId(id)) {
       throw new BadRequestException('Invalid id');
     }
@@ -113,15 +124,14 @@ export class StaffService {
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    const staff = await this.managerModel.findById(id);
+    const staff = await this.managerModel.findOne({
+      where: { id },
+    });
     if (!staff || staff.gyms?.some((gym) => gym.id === gymId)) {
       throw new NotFoundException('Staff not found');
     }
-    await this.managerModel.deleteOne({ _id: new Types.ObjectId(id) });
-    await this.gymModel.updateOne(
-      { _id: gymId },
-      { $pull: { personalTrainers: id } },
-    );
+    await this.managerModel.delete(id);
+
     return { message: 'Staff removed successfully' } as any;
   }
 }

@@ -14,8 +14,8 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Manager } from '../manager/manager.model';
 import { User } from '../decorators/users.decorator';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('subscription')
 @UseGuards(ManagerAuthGuard)
@@ -26,7 +26,7 @@ export class SubscriptionController {
   @Roles(Permissions.GymOwner, Permissions.subscriptions)
   async create(
     @Body() createSubscriptionDto: CreateSubscriptionDto,
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
   ) {
     return await this.subscriptionService.create(
@@ -78,7 +78,7 @@ export class SubscriptionController {
   @Roles(Permissions.GymOwner, Permissions.subscriptions)
   async deleteSubscriptionInstance(
     @Param('id') id: string,
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
   ) {
     return await this.subscriptionService.deleteSubscriptionInstance(

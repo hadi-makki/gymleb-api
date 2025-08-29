@@ -22,10 +22,11 @@ import { User } from '../decorators/users.decorator';
 import { Manager } from '../manager/manager.model';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
-import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
+import { SubscriptionInstance } from '../transactions/subscription-instance.model';
 import { AddOfferDto } from './dto/add-offer.dto';
-import { TransactionType } from '../transactions/transaction.entity';
+import { TransactionType } from '../transactions/transaction.model';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
+import { ManagerEntity } from 'src/manager/manager.entity';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -81,7 +82,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get gym analytics' })
   getGymAnalytics(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -199,7 +200,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set gym finished page setup' })
   async setGymFinishedPageSetup(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
   ) {
     return await this.gymService.setGymFinishedPageSetup(user, gymId);
@@ -238,7 +239,7 @@ export class GymController {
     type: [SubscriptionInstance],
   })
   getTransactionHistory(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Query('page') page = '1',
     @Query('limit') limit = '5',
     @Query('search') search: string,

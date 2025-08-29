@@ -1,11 +1,6 @@
 import * as dotenv from 'dotenv';
 import { join } from 'path';
 import { isLocalEnv } from 'src/config/helper/helper-functions';
-import { GymEntity } from 'src/gym/entities/gym.entity';
-import { ManagerEntity } from 'src/manager/manager.entity';
-import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
-import { TokenEntity } from 'src/token/token.entity';
 
 import { DataSource, DataSourceOptions } from 'typeorm';
 
@@ -15,7 +10,7 @@ dotenv.config({
 
 const isLocal = isLocalEnv();
 
-const local = isLocal ? 'LOCAL_' : '';
+const local = isLocal ? 'LOCAL_' : 'LOCAL_';
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
@@ -25,13 +20,9 @@ export const dataSourceOptions: DataSourceOptions = {
   password: process.env[local + 'DB_PASSWORD'],
   database: process.env[local + 'DB_NAME'],
   entities: [
-    ManagerEntity,
-    GymEntity,
-    TokenEntity,
-    OwnerSubscriptionEntity,
-    OwnerSubscriptionTypeEntity,
+    join(__dirname, 'dist/src/**', '*.entity.{ts,js}'),
+    join(__dirname, 'src/**', '*.entity.{ts,js}'),
   ],
-  migrations: [join(__dirname, 'src/database', 'migrations', '*.{ts,js}')],
   ssl: isLocal
     ? false
     : {

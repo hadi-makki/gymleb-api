@@ -1,10 +1,10 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
-import { Gym } from '../../gym/entities/gym.model';
-import { User } from '../../user/user.entity';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
 import { PgMainEntity } from 'src/main-classes/mainEntity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
 export enum SubscriptionType {
   PERSONAL_TRAINER = 'personal_trainer',
@@ -18,20 +18,33 @@ export class SubscriptionEntity extends PgMainEntity {
   @Column('text')
   title: string;
 
-  @Prop({ type: String, enum: SubscriptionType })
+  @Column('text')
   type: SubscriptionType;
 
-  @Prop({ type: Number })
+  @Column('float')
   price: number;
 
-  @Prop({ type: Number })
+  @Column('int')
   duration: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
-  user: User;
+  @Column('text', { nullable: true })
+  user: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
-  gym: Gym;
+  @ManyToOne(() => GymEntity, (gym) => gym.subscriptions, { nullable: true })
+  gym: GymEntity;
+
+  @RelationId((subscription: SubscriptionEntity) => subscription.gym)
+  gymId: string | null;
+
+  @OneToMany(
+    () => SubscriptionInstanceEntity,
+    (instance) => instance.subscription,
+  )
+  instances: SubscriptionInstanceEntity[];
+
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.subscription)
+  transactions: TransactionEntity[];
+
+  @OneToMany(() => MemberEntity, (member) => member.subscription)
+  members: MemberEntity[];
 }
-
-export const SubscriptionSchema = SchemaFactory.createForClass(Subscription);

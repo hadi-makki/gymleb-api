@@ -4,7 +4,7 @@ import { CustomSchema } from '../decorators/custom-schema.decorator';
 import { MainEntity } from '../main-classes/mainEntity';
 import { OwnerSubscriptionType } from './owner-subscription-type.model';
 import { Manager } from '../manager/manager.model';
-import { Transaction } from '../transactions/transaction.entity';
+import { Transaction } from '../transactions/transaction.model';
 
 @CustomSchema()
 export class OwnerSubscription extends MainEntity {

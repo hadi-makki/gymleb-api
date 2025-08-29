@@ -1,37 +1,42 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
+import { MainEntity, PgMainEntity } from 'src/main-classes/mainEntity';
+import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
-import { Member } from 'src/member/entities/member.entity';
-import { Gym } from 'src/gym/entities/gym.model';
-import { MainEntity } from 'src/main-classes/mainEntity';
-import { Manager } from 'src/manager/manager.model';
+@Entity('pt_sessions')
+export class PTSessionEntity extends PgMainEntity {
+  @ManyToOne(() => ManagerEntity, (manager) => manager.ptSessions)
+  personalTrainer: ManagerEntity;
 
-@CustomSchema()
-export class PTSession extends MainEntity {
-  @Prop({ required: true, type: Types.ObjectId, ref: 'Manager' })
-  personalTrainer: Manager;
+  @RelationId((ptSession: PTSessionEntity) => ptSession.personalTrainer)
+  personalTrainerId: string | null;
 
-  @Prop({ required: true, type: Types.ObjectId, ref: 'Member' })
-  member: Member;
+  @ManyToOne(() => MemberEntity, (member) => member.ptSessions)
+  member: MemberEntity;
 
-  @Prop({ required: false })
+  @RelationId((ptSession: PTSessionEntity) => ptSession.member)
+  memberId: string | null;
+
+  @Column('timestamp with time zone', { nullable: true })
   sessionDate: Date;
 
-  @Prop({ required: true, default: false })
+  @Column('boolean', { default: false })
   isCancelled: boolean;
 
-  @Prop({ required: false, default: '' })
+  @Column('text', { nullable: true })
   cancelledReason: string;
 
-  @Prop({ required: false, default: null })
+  @Column('timestamp with time zone', { nullable: true })
   cancelledAt: Date;
 
-  @Prop({ ref: 'Gym', required: true, type: Types.ObjectId })
-  gym: Gym;
+  @ManyToOne(() => GymEntity, (gym) => gym.ptSessions)
+  gym: GymEntity;
 
-  @Prop({ required: false, default: null })
+  @RelationId((ptSession: PTSessionEntity) => ptSession.gym)
+  gymId: string | null;
+
+  @Column('int', { nullable: true })
   sessionPrice: number;
 }
-
-export const PTSessionSchema = SchemaFactory.createForClass(PTSession);

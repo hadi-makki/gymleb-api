@@ -1,4 +1,5 @@
-import { Transaction } from 'src/transactions/transaction.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Transaction } from 'src/transactions/transaction.model';
 
 export class ReturnUserDto {
   id: string;
@@ -13,7 +14,7 @@ export class ReturnUserDto {
   hasActiveSubscription: boolean;
   currentActiveSubscription: any;
   isNotified: boolean;
-  lastSubscription: Transaction;
+  lastSubscription: TransactionEntity;
   profileImage: string;
 }
 

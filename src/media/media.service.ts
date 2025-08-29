@@ -11,13 +11,16 @@ import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { S3Service } from '../s3/s3.service';
 import { UserService } from '../user/user.service';
-import { Media } from './media.entity';
+import { Media } from './media.model';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MediaEntity } from './media.entity';
+import { Repository } from 'typeorm';
 @Injectable()
 export class MediaService {
   constructor(
     // private readonly mediaRepository: MediaRepository,
-    @InjectModel(Media.name)
-    private readonly mediaRepository: Model<Media>,
+    @InjectRepository(MediaEntity)
+    private readonly mediaRepository: Repository<MediaEntity>,
     private readonly s3Service: S3Service,
     private readonly usersService: UserService,
   ) {}
@@ -46,9 +49,7 @@ export class MediaService {
 
     await this.s3Service.uploadFile(file, key);
 
-    return {
-      id: media._id.toString(),
-    };
+    return media;
   }
   async delete(id: string) {
     try {
@@ -58,7 +59,9 @@ export class MediaService {
       }
 
       // Find the media entity
-      const media = await this.mediaRepository.findById(id);
+      const media = await this.mediaRepository.findOne({
+        where: { id },
+      });
       if (!media) {
         throw new NotFoundException('Media not found');
       }
@@ -69,7 +72,7 @@ export class MediaService {
       await this.s3Service.deleteFile(media.s3Key);
 
       // Delete the media record from the repository
-      await this.mediaRepository.deleteOne({ id });
+      await this.mediaRepository.delete(id);
 
       // Log success
     } catch (err) {
@@ -78,7 +81,9 @@ export class MediaService {
   }
 
   async getFileById(id: string) {
-    const media = await this.mediaRepository.findById(id);
+    const media = await this.mediaRepository.findOne({
+      where: { id },
+    });
     if (!media) {
       throw new NotFoundException('Media not found');
     }
@@ -87,7 +92,9 @@ export class MediaService {
   }
 
   async getFileStreamById(id: string, res: Response) {
-    const media = await this.mediaRepository.findById(id);
+    const media = await this.mediaRepository.findOne({
+      where: { id },
+    });
     if (!media) {
       throw new NotFoundException('Media not found');
     }
@@ -129,7 +136,9 @@ export class MediaService {
     id: string,
     userId: string | null = null,
   ): Promise<{ url: string }> {
-    const media = await this.mediaRepository.findById(id);
+    const media = await this.mediaRepository.findOne({
+      where: { id },
+    });
 
     // if (!media || (userId && media.user.id !== userId)) {
     //   throw new NotFoundException('Media not found');

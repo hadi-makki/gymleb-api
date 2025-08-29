@@ -2,6 +2,7 @@ import { Prop } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
 import {
+  Column,
   CreateDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -22,9 +23,12 @@ export class MainEntity extends Document {
   isDeactivated: boolean;
 }
 
-export class PgMainEntity extends MainEntity {
+export class PgMainEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column('text')
+  mongoId: string;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;

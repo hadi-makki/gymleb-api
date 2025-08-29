@@ -1,6 +1,7 @@
 import { getNavItems } from 'src/utils/navigations copy';
 import { Manager } from '../manager/manager.model';
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 export function returnUser(user: User) {
   return {
@@ -12,16 +13,13 @@ export function returnUser(user: User) {
   };
 }
 
-export function returnManager(manager: Manager) {
-  const managerObject = manager.toObject();
+export function returnManager(manager: ManagerEntity) {
+  const managerObject = manager;
   if (managerObject.password) {
     delete managerObject.password;
   }
-  if (!managerObject.id) {
-    managerObject.id = managerObject._id.toString();
-  }
   return {
     ...managerObject,
-    navItems: getNavItems(manager.roles),
+    navItems: getNavItems(manager.permissions),
   };
 }

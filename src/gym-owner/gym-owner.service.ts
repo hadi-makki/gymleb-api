@@ -8,12 +8,12 @@ import { Model, Types } from 'mongoose';
 import { GymService } from '../gym/gym.service';
 import { MemberService } from '../member/member.service';
 import { SubscriptionService } from '../subscription/subscription.service';
-import { Transaction } from '../transactions/transaction.entity';
+import { Transaction } from '../transactions/transaction.model';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Expense } from '../expenses/expense.entity';
+import { Expense } from '../expenses/expense.model';
 import { Gym } from '../gym/entities/gym.model';
 import { Manager } from '../manager/manager.model';
-import { Revenue } from '../revenue/revenue.entity';
+import { Revenue } from '../revenue/revenue.model';
 import { Days } from '../seeder/gym.seeding';
 import {
   Subscription,
@@ -24,28 +24,35 @@ import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { RevenueService } from 'src/revenue/revenue.service';
 import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
+import { RevenueEntity } from 'src/revenue/revenue.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 export class GymOwnerService {
   constructor(
-    @InjectModel(Manager.name)
-    private readonly gymOwnerModel: Model<Manager>,
-    @InjectModel(Gym.name)
-    private readonly gymModel: Model<Gym>,
-    @InjectModel(Expense.name)
-    private readonly expenseModel: Model<Expense>,
-    @InjectModel(Revenue.name)
-    private readonly revenueModel: Model<Revenue>,
+    @InjectRepository(ManagerEntity)
+    private readonly gymOwnerModel: Repository<ManagerEntity>,
+    @InjectRepository(GymEntity)
+    private readonly gymModel: Repository<GymEntity>,
+    @InjectRepository(ExpenseEntity)
+    private readonly expenseModel: Repository<ExpenseEntity>,
+    @InjectRepository(RevenueEntity)
+    private readonly revenueModel: Repository<RevenueEntity>,
     private readonly subscriptionService: SubscriptionService,
     private readonly memberService: MemberService,
     private readonly gymService: GymService,
-    @InjectModel(Subscription.name)
-    private readonly subscriptionModel: Model<Subscription>,
+    @InjectRepository(SubscriptionEntity)
+    private readonly subscriptionModel: Repository<SubscriptionEntity>,
     private readonly expenseService: ExpensesService,
     private readonly revenueService: RevenueService,
   ) {}
 
   async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
     const checkGymOwner = await this.gymOwnerModel.findOne({
-      email: createGymOwnerDto.email,
+      where: { email: createGymOwnerDto.email },
     });
     if (checkGymOwner) {
       throw new BadRequestException('Gym owner already exists');
@@ -56,7 +63,7 @@ export class GymOwnerService {
       createGymOwnerDto.lastName.toLowerCase();
 
     const checkUsername = await this.gymOwnerModel.findOne({
-      username,
+      where: { username },
     });
     if (checkUsername) {
       username = username + Math.floor(1000 + Math.random() * 9000);
@@ -69,13 +76,13 @@ export class GymOwnerService {
       address: createGymOwnerDto.address,
       phoneNumber: createGymOwnerDto.phone,
       username,
-      roles: [Permissions.GymOwner],
+      permissions: [Permissions.GymOwner],
     });
     if (createGymOwnerDto.generateMockData) {
       let gymName =
         createGymOwnerDto.firstName + ' ' + createGymOwnerDto.lastName;
       const checkGymName = await this.gymModel.findOne({
-        name: gymName,
+        where: { name: gymName },
       });
       if (checkGymName) {
         gymName = gymName + Math.floor(1000 + Math.random() * 9000);
@@ -86,15 +93,18 @@ export class GymOwnerService {
         address: createGymOwnerDto.address,
         phone: createGymOwnerDto.phone,
         email: createGymOwnerDto.email,
-        password: createGymOwnerDto.password,
+        // password: createGymOwnerDto.password,
         openingDays: Days,
-        owner: gymOwner.id,
+        owner: gymOwner,
         gymDashedName: gymName.toLowerCase().split(' ').join('-'),
       });
-      gymOwner.gyms = [checkGym.id];
-      await gymOwner.save();
 
-      const gym = await this.gymModel.findById(checkGym.id).populate('owner');
+      await this.gymOwnerModel.save(gymOwner);
+
+      const gym = await this.gymModel.findOne({
+        where: { id: checkGym.id },
+        relations: ['owner'],
+      });
 
       await this.subscriptionService
         .create(
@@ -109,8 +119,8 @@ export class GymOwnerService {
         )
         .catch(async (err) => {
           // remove the gym owner from the gym
-          await this.gymModel.findByIdAndDelete(gym.id);
-          await this.gymOwnerModel.findByIdAndDelete(gymOwner.id);
+          await this.gymModel.remove(gym);
+          await this.gymOwnerModel.remove(gymOwner);
           throw new BadRequestException('Failed to create subscription', err);
         });
 
@@ -125,10 +135,12 @@ export class GymOwnerService {
     };
   }
 
-  async generateMockDataForGym(gymOwner: Manager, gym: Gym) {
+  async generateMockDataForGym(gymOwner: ManagerEntity, gym: GymEntity) {
     try {
       // Get available subscriptions from the database
-      const subscriptions = await this.subscriptionModel.find().limit(10);
+      const subscriptions = await this.subscriptionModel.find({
+        where: { gym: gym },
+      });
 
       if (subscriptions.length === 0) {
         console.log(
@@ -180,7 +192,7 @@ export class GymOwnerService {
 
       const randomNote = gymNotes[Math.floor(Math.random() * gymNotes.length)];
       gym.note = randomNote;
-      await gym.save();
+      await this.gymModel.save(gym);
 
       // Generate mock expenses
       const mockExpenses = [
@@ -318,16 +330,18 @@ export class GymOwnerService {
   }
 
   async findAll() {
-    const gymOwners = await this.gymOwnerModel
-      .find()
-      .populate('gyms')
-      .select('-password')
-      .sort({ createdAt: -1 });
+    const gymOwners = await this.gymOwnerModel.find({
+      select: ['id', 'firstName', 'lastName', 'email', 'createdAt'],
+      relations: ['gyms'],
+      order: { createdAt: 'DESC' },
+    });
     return gymOwners;
   }
 
   async findOne(id: string) {
-    const gymOwner = await this.gymOwnerModel.findById(id);
+    const gymOwner = await this.gymOwnerModel.findOne({
+      where: { id },
+    });
     if (!gymOwner) {
       throw new NotFoundException('Gym owner not found');
     }
@@ -335,13 +349,7 @@ export class GymOwnerService {
   }
 
   async update(id: string, updateGymOwnerDto: UpdateGymOwnerDto) {
-    const gymOwner = await this.gymOwnerModel.findByIdAndUpdate(
-      id,
-      updateGymOwnerDto,
-      {
-        new: true,
-      },
-    );
+    const gymOwner = await this.gymOwnerModel.update(id, updateGymOwnerDto);
     if (!gymOwner) {
       throw new NotFoundException('Gym owner not found');
     }
@@ -349,7 +357,7 @@ export class GymOwnerService {
   }
 
   async remove(id: string) {
-    const gymOwner = await this.gymOwnerModel.findByIdAndDelete(id);
+    const gymOwner = await this.gymOwnerModel.delete(id);
     if (!gymOwner) {
       throw new NotFoundException('Gym owner not found');
     }
@@ -363,19 +371,21 @@ export class GymOwnerService {
     phone,
   }: CreateGymToGymOwnerDto) {
     console.log('this is passed', gymOwnerId, address, name, phone);
-    const gymOwner = await this.gymOwnerModel.findById(gymOwnerId);
+    const gymOwner = await this.gymOwnerModel.findOne({
+      where: { id: gymOwnerId },
+    });
     if (!gymOwner) {
       throw new NotFoundException('Gym owner not found');
     }
-    const checkGym = await this.gymModel.exists({
-      name,
+    const checkGym = await this.gymModel.findOne({
+      where: { name },
     });
     if (checkGym) {
       throw new BadRequestException('Gym already exists');
     }
     let gymName = name ? name : gymOwner.firstName + ' ' + gymOwner.lastName;
     const checkGymName = await this.gymModel.findOne({
-      name: gymName,
+      where: { name: gymName },
     });
     if (checkGymName) {
       gymName = gymName + Math.floor(1000 + Math.random() * 9000);
@@ -386,18 +396,12 @@ export class GymOwnerService {
       address,
       phone,
       email: gymOwner.email,
-      password: gymOwner.password,
       openingDays: Days,
-      owner: gymOwner.id,
+      owner: gymOwner,
       gymDashedName: gymName.toLowerCase().split(' ').join('-'),
     });
-    await this.gymOwnerModel.findByIdAndUpdate(
-      gymOwnerId,
-      {
-        $push: { gyms: gym.id },
-      },
-      { new: true },
-    );
+    gymOwner.gyms.push(gym);
+    await this.gymOwnerModel.save(gymOwner);
 
     return gym;
   }

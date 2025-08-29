@@ -20,6 +20,7 @@ import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { GymOwnerService } from './gym-owner.service';
+import { ManagerEntity } from 'src/manager/manager.entity';
 @Controller('gym-owner')
 @ApiTags('Gym Owner')
 export class GymOwnerController {
@@ -99,7 +100,7 @@ export class GymOwnerController {
     type: Manager,
   })
   @Roles(Permissions.GymOwner)
-  getGymOwner(@User() user: Manager) {
+  getGymOwner(@User() user: ManagerEntity) {
     return returnManager(user);
   }
 

@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { Gym } from '../../gym/entities/gym.model';
-import { User } from '../../user/user.entity';
+import { User } from '../../user/user.model';
 
 export enum SubscriptionType {
   PERSONAL_TRAINER = 'personal_trainer',

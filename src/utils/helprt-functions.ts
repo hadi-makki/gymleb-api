@@ -1,4 +1,4 @@
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
 import { imageTypes } from './constants';
 
 export const returnUser = (user: User) => {
@@ -6,7 +6,10 @@ export const returnUser = (user: User) => {
   return restUser;
 };
 
-export const validateImage = (file: Express.Multer.File, required?: boolean) => {
+export const validateImage = (
+  file: Express.Multer.File,
+  required?: boolean,
+) => {
   if (!file && required) return false;
   if (!file) return true;
   if (!imageTypes.test(file?.mimetype)) return false;

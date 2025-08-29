@@ -8,24 +8,28 @@ import { Model } from 'mongoose';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { Manager } from '../manager/manager.model';
-import { Member } from '../member/entities/member.entity';
+import { Member } from '../member/entities/member.model';
 import { GenerateTokenDTO } from './token.dto';
-import TokenEntity from './token.model';
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
 import { CookieNames, cookieOptions } from '../utils/constants';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TokenEntity } from './token.entity';
 @Injectable()
 export class TokenService {
   constructor(
-    @InjectModel(TokenEntity.name)
-    private readonly tokenRepository: Model<TokenEntity>,
+    @InjectRepository(TokenEntity)
+    private readonly tokenRepository: Repository<TokenEntity>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
 
-    @InjectModel(Member.name)
-    private readonly memberRepository: Model<Member>,
+    @InjectRepository(MemberEntity)
+    private readonly memberRepository: Repository<MemberEntity>,
     // private readonly TokenService: TokenService,
-    @InjectModel(Manager.name)
-    private readonly managerRepository: Model<Manager>,
+    @InjectRepository(ManagerEntity)
+    private readonly managerRepository: Repository<ManagerEntity>,
   ) {}
 
   async generateAccessToken(
@@ -105,21 +109,22 @@ export class TokenService {
     };
   }
   async storeToken(data: GenerateTokenDTO): Promise<TokenEntity> {
-    const checkToken = await this.tokenRepository
-      .findOne({
-        $or: [
-          {
-            member: data?.userId,
-            deviceId: data?.deviceId,
-          },
-          {
-            manager: data?.managerId,
-            deviceId: data?.deviceId,
-          },
-        ],
-      })
-      .populate('member')
-      .populate('manager');
+    const checkToken = await this.tokenRepository.findOne({
+      where: [
+        {
+          member: { id: data?.userId },
+          deviceId: data?.deviceId,
+        },
+        {
+          manager: { id: data?.managerId },
+          deviceId: data?.deviceId,
+        },
+      ],
+      relations: {
+        member: true,
+        manager: true,
+      },
+    });
 
     if (checkToken) {
       checkToken.refreshToken = data.refreshToken;
@@ -127,31 +132,31 @@ export class TokenService {
       checkToken.accessToken = data.accessToken;
       checkToken.accessExpirationDate = data.accessExpirationDate;
       if (data.userId && data.userId !== checkToken.member?.id) {
-        const member = await this.memberRepository.findById(data.userId);
+        const member = await this.memberRepository.findOne({
+          where: { id: data.userId },
+        });
         if (!member) {
           throw new UnauthorizedException('User not found');
         }
         checkToken.member = member;
       }
       if (data.managerId && data.managerId !== checkToken.manager?.id) {
-        const manager = await this.managerRepository.findById(data.managerId);
+        const manager = await this.managerRepository.findOne({
+          where: { id: data.managerId },
+        });
         if (!manager) {
           throw new UnauthorizedException('Manager not found');
         }
         checkToken.manager = manager;
       }
-      return await this.tokenRepository.findByIdAndUpdate(
-        checkToken.id,
-        checkToken,
-        { new: true },
-      );
+      return await this.tokenRepository.save(checkToken);
     } else {
       const tokenData = {
         ...data,
-        ...(data.userId ? { member: data?.userId } : {}),
-        ...(data.managerId ? { manager: data?.managerId } : {}),
+        ...(data.userId ? { member: { id: data?.userId } } : {}),
+        ...(data.managerId ? { manager: { id: data?.managerId } } : {}),
       };
-      return await this.tokenRepository.create(tokenData);
+      return await this.tokenRepository.save(tokenData);
     }
   }
 
@@ -159,13 +164,16 @@ export class TokenService {
     deviceId: string,
     accessToken: string,
   ): Promise<TokenEntity | null> {
-    const getToken = await this.tokenRepository
-      .findOne({
+    const getToken = await this.tokenRepository.findOne({
+      where: {
         deviceId: deviceId,
         accessToken: accessToken,
-      })
-      .populate('member')
-      .populate('manager');
+      },
+      relations: {
+        member: true,
+        manager: true,
+      },
+    });
     return getToken;
   }
 
@@ -174,19 +182,17 @@ export class TokenService {
     deviceId?: string,
   ): Promise<SuccessMessageReturn> {
     const query = deviceId
-      ? {
-          $or: [
-            { member: userId, deviceId: deviceId },
-            { manager: userId, deviceId: deviceId },
-          ],
-        }
-      : {
-          $or: [{ member: userId }, { manager: userId }],
-        };
+      ? [
+          { member: { id: userId }, deviceId: deviceId },
+          { manager: { id: userId }, deviceId: deviceId },
+        ]
+      : [{ member: { id: userId } }, { manager: { id: userId } }];
 
-    const tokenToDelete = await this.tokenRepository.find(query);
+    const tokenToDelete = await this.tokenRepository.find({
+      where: query,
+    });
     if (tokenToDelete.length > 0) {
-      await this.tokenRepository.deleteMany(query);
+      await this.tokenRepository.remove(tokenToDelete);
     }
     return {
       message: 'Tokens deleted successfully',
@@ -194,15 +200,23 @@ export class TokenService {
   }
 
   async getTokensByUserId(userId: string): Promise<TokenEntity[]> {
-    return await this.tokenRepository.findOne({
-      member: {
-        id: userId,
+    return await this.tokenRepository.find({
+      where: {
+        member: {
+          id: userId,
+        },
+      },
+      relations: {
+        member: true,
+        manager: true,
       },
     });
   }
 
   async validateJwt(
-    req: Request & { user: User | Manager | Member },
+    req: Request & {
+      user: User | Manager | Member | MemberEntity | ManagerEntity;
+    },
     res: Response,
     isMember: boolean = false,
   ): Promise<{
@@ -313,7 +327,7 @@ export class TokenService {
           await this.generateAccessToken(decodedJwt.sub);
         checkToken.accessToken = accessToken;
         checkToken.accessExpirationDate = accessExpirationDate;
-        await checkToken.save();
+        await this.tokenRepository.save(checkToken);
 
         // Set the new token in cookies
         const cookieName = checkToken.member ? 'memberToken' : 'token';

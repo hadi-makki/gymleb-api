@@ -6,20 +6,23 @@ import { BadRequestException } from '../error/bad-request-error';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import Token from '../token/token.model';
 import { TokenService } from '../token/token.service';
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
 import { UserService } from '../user/user.service';
 import { returnUser } from '../utils/helprt-functions';
 import { LoginDto } from './dtos/request/login.dto';
 import { RegisterDto } from './dtos/request/register.dto';
 import { UserCreatedDto } from './dtos/response/user-created.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TokenEntity } from 'src/token/token.entity';
+import { Repository } from 'typeorm';
 @Injectable()
 export class AuthService {
   constructor(
     private readonly tokenService: TokenService,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    @InjectModel(Token.name)
-    private readonly tokenRepository: Model<Token>,
+    @InjectRepository(TokenEntity)
+    private readonly tokenRepository: Repository<TokenEntity>,
   ) {}
 
   // Generate access and refresh tokens for a user on a specific device.
@@ -87,8 +90,7 @@ export class AuthService {
   // Refresh tokens: Validate the refresh token and update tokens.
   async refreshToken(token: string, deviceId: string) {
     const tokenDoc = await this.tokenRepository.findOne({
-      deviceId,
-      accessToken: token,
+      where: { deviceId, accessToken: token },
     });
     if (!tokenDoc) {
       throw new UnauthorizedException('Refresh token not found');
@@ -111,7 +113,7 @@ export class AuthService {
     const tokens = this.generateTokens(user, deviceId);
 
     tokenDoc.accessToken = tokens.accessToken;
-    await tokenDoc.save();
+    await this.tokenRepository.save(tokenDoc);
 
     return {
       token: tokens.accessToken,
@@ -121,7 +123,7 @@ export class AuthService {
   async validateJwt(req: any) {
     const token = req.headers.authorization?.split(' ')[1];
     const getTokenFromDb = await this.tokenRepository.findOne({
-      accessToken: token,
+      where: { accessToken: token },
     });
     if (!token || !getTokenFromDb) {
       throw new UnauthorizedException('Unauthorized');
