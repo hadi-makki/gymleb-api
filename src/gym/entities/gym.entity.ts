@@ -37,7 +37,6 @@ export class GymEntity extends PgMainEntity {
   phone: string;
 
   @ManyToMany(() => ManagerEntity, (manager) => manager.gyms)
-  @JoinTable()
   personalTrainers: ManagerEntity[];
 
   @OneToMany(() => SubscriptionEntity, (subscription) => subscription.gym)

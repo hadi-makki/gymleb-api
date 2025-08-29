@@ -289,14 +289,14 @@ export class PersonalTrainersService {
     }
 
     // Build the query using TypeORM syntax
-    let whereCondition: any = { gym: gym };
+    let whereCondition: any = { gym: { id: gymId } };
 
     // Add search functionality using TypeORM's ILike
     if (search) {
       whereCondition = [
-        { gym: gym, name: ILike(`%${search}%`) },
-        { gym: gym, phone: ILike(`%${search}%`) },
-        { gym: gym, email: ILike(`%${search}%`) },
+        { gym: { id: gymId }, name: ILike(`%${search}%`) },
+        { gym: { id: gymId }, phone: ILike(`%${search}%`) },
+        { gym: { id: gymId }, email: ILike(`%${search}%`) },
       ];
     }
 
@@ -386,8 +386,8 @@ export class PersonalTrainersService {
 
     const sessions = await this.sessionEntity.find({
       where: {
-        gym: gym,
-        personalTrainer: trainer,
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
       },
       relations: ['member', 'personalTrainer', 'gym'],
     });
@@ -429,8 +429,8 @@ export class PersonalTrainersService {
     // Get all sessions for this trainer
     const sessions = await this.sessionEntity.find({
       where: {
-        gym: gym,
-        personalTrainer: trainer,
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
       },
       relations: ['member'],
     });
@@ -501,9 +501,9 @@ export class PersonalTrainersService {
 
     const sessions = await this.sessionEntity.find({
       where: {
-        gym: gym,
-        personalTrainer: trainer,
-        member: member,
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+        member: { id: memberId },
       },
       relations: ['member', 'personalTrainer', 'gym'],
     });
@@ -537,8 +537,8 @@ export class PersonalTrainersService {
 
     const sessions = await this.sessionEntity.find({
       where: {
-        gym: gym,
-        personalTrainer: personalTrainer,
+        gym: { id: gymId },
+        personalTrainer: { id: personalTrainer.id },
       },
 
       relations: ['member', 'personalTrainer', 'gym'],
@@ -574,8 +574,8 @@ export class PersonalTrainersService {
     // Get all sessions for this trainer
     const sessions = await this.sessionEntity.find({
       where: {
-        gym: gym,
-        personalTrainer: personalTrainer,
+        gym: { id: gymId },
+        personalTrainer: { id: personalTrainer.id },
       },
       relations: ['member', 'personalTrainer', 'gym'],
     });
@@ -639,8 +639,8 @@ export class PersonalTrainersService {
 
     const sessions = await this.sessionEntity.find({
       where: {
-        gym: gym,
-        personalTrainer: personalTrainer,
+        gym: { id: gymId },
+        personalTrainer: { id: personalTrainer.id },
         member: member,
       },
       relations: ['member', 'personalTrainer', 'gym'],

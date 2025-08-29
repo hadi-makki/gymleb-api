@@ -5,7 +5,14 @@ import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subsc
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { Column, Entity, ManyToOne, OneToOne, RelationId } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+  RelationId,
+} from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 
@@ -116,11 +123,8 @@ export class TransactionEntity extends PgMainEntity {
   @RelationId((transaction: TransactionEntity) => transaction.revenue)
   revenueId: string | null;
 
-  @ManyToOne(() => ExpenseEntity, (expense) => expense.transaction)
+  @OneToOne(() => ExpenseEntity, (expense) => expense.transaction)
   expense: ExpenseEntity;
-
-  @RelationId((transaction: TransactionEntity) => transaction.expense)
-  expenseId: string | null;
 
   @Column('timestamp with time zone', { nullable: true })
   date: Date;

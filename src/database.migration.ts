@@ -133,9 +133,6 @@ export class DatabaseMigration implements OnModuleInit {
     console.log('[Migration] Gyms to migrate:', getUserGyms.length);
 
     for (const gym of getUserGyms) {
-      const getAllTransactions = await this.transactionModel.find({
-        gym: gym.id,
-      });
       console.log('[Migration] Migrating gym:', gym.name, gym.id);
       const createGym = this.gymRepository.create({
         name: gym.name,
@@ -259,11 +256,11 @@ export class DatabaseMigration implements OnModuleInit {
         );
 
         // migrate subscription transactions
-        const subscriptionTransactions = getAllTransactions.filter(
-          (transaction) =>
-            transaction.member.toString() === createdMember.id &&
-            transaction.type === TransactionType.SUBSCRIPTION,
-        );
+        const subscriptionTransactions = await this.transactionModel.find({
+          member: member._id,
+          // gym: new Types.ObjectId(gym.id),
+          type: TransactionType.SUBSCRIPTION,
+        });
         console.log(
           '[Migration] Subscription transactions for member',
           createdMember.id,
@@ -339,57 +336,40 @@ export class DatabaseMigration implements OnModuleInit {
           product: createdProduct,
         });
         const createdMedia = await this.mediaRepository.save(createMedia);
-
-        // create product transactions
-        const revenueTransactions = await this.transactionModel.find({
-          product: product._id,
-          type: TransactionType.REVENUE,
-        });
-        console.log(
-          '[Migration] Revenue transactions for product',
-          product.id,
-          ':',
-          revenueTransactions.length,
-        );
-        for (const revenueTransaction of revenueTransactions) {
-          let product: ProductEntity | null = null;
-          if (revenueTransaction.product) {
-            product = await this.productRepository.findOne({
-              where: {
-                mongoId: revenueTransaction.product.toString(),
-              },
-            });
-          }
-          const createRevenueTransaction = this.transactionRepository.create({
-            currency: revenueTransaction?.currency,
-            date: revenueTransaction?.date,
-            createdAt: revenueTransaction?.createdAt,
-            endDate: revenueTransaction?.endDate,
-            startDate: revenueTransaction?.startDate,
-            type: revenueTransaction?.type,
-            gym: createdGym,
-            isPaid: revenueTransaction?.isPaid,
-            product: product,
-            isInvalidated: revenueTransaction?.isInvalidated,
-            invalidatedAt: revenueTransaction?.invalidatedAt,
-            gymsPTSessionPercentage:
-              revenueTransaction?.gymsPTSessionPercentage,
-            mongoId: revenueTransaction?.id,
-            isSubscription: false,
-            paidBy: revenueTransaction?.paidBy,
-            paidAmount: revenueTransaction?.paidAmount,
-            numberSold: revenueTransaction?.numberSold,
-            owner: createdManager,
-            isOwnerSubscriptionAssignment:
-              revenueTransaction?.isOwnerSubscriptionAssignment,
-          });
-          await this.transactionRepository.save(createRevenueTransaction);
-        }
       }
+
+      //   const personalTrainers = await this.personalTrainerEntity
+      //   .find({
+      //     gyms: { $in: [gym._id] },
+      //     roles: { $in: [Permissions.personalTrainers] },
+      //   })
+      //   .populate({
+      //     path: 'gyms',
+      //   });
+
+      // const sessionsResult: { personalTrainer: Manager; clientsCount: number }[] =
+      //   [];
+
+      // for (const personalTrainer of personalTrainers) {
+      //   const sessions = await this.sessionEntity
+      //     .find({
+      //       personalTrainer: personalTrainer._id,
+      //     })
+      //     .populate({
+      //       path: 'member',
+      //     });
+      //   const clients = sessions.map((session) => session.member?.id);
+      //   // filter out duplicates
+      //   const uniqueClients = [...new Set(clients)];
+      //   sessionsResult.push({
+      //     personalTrainer,
+      //     clientsCount: uniqueClients.length,
+      //   });
+      // }
 
       // migrate personal trainers
       const personalTrainers = await this.managerModel.find({
-        gyms: { $in: [gym.id] },
+        gyms: { $in: [gym._id] },
         roles: { $in: [Permissions.personalTrainers] },
       });
       console.log(
@@ -399,6 +379,7 @@ export class DatabaseMigration implements OnModuleInit {
         personalTrainers.length,
       );
       for (const personalTrainer of personalTrainers) {
+        console.log('this is the gym', createdGym.id);
         const createPersonalTrainer = this.managerRepository.create({
           firstName: personalTrainer.firstName,
           lastName: personalTrainer.lastName,
@@ -410,19 +391,24 @@ export class DatabaseMigration implements OnModuleInit {
           permissions: personalTrainer.roles,
           username: personalTrainer.username,
           password: personalTrainer.password,
-          gyms: [createdGym],
         });
         const createdPersonalTrainer = await this.managerRepository.save(
           createPersonalTrainer,
         );
 
-        createdGym.personalTrainers.push(createdPersonalTrainer);
-        await this.gymRepository.save(createdGym);
+        createdPersonalTrainer.gyms = [createdGym];
+        await this.managerRepository.save(createdPersonalTrainer);
 
         // migrate personal trainer sessions
         const personalTrainerSessions = await this.ptSessionModel.find({
-          personalTrainer: personalTrainer.id,
+          personalTrainer: new Types.ObjectId(personalTrainer.id),
         });
+        console.log(
+          '[Migration] PT sessions found for PT',
+          personalTrainer.id,
+          ':',
+          personalTrainerSessions.length,
+        );
         for (const personalTrainerSession of personalTrainerSessions) {
           const getMember = await this.memberRepository.findOne({
             where: {
@@ -447,47 +433,56 @@ export class DatabaseMigration implements OnModuleInit {
           });
           const createdPersonalTrainerSession =
             await this.ptSessionRepository.save(createPersonalTrainerSession);
-          // create personal trainer session transactions
-          const personalTrainerSessionTransactions =
-            await this.transactionModel.find({
-              ptSession: createdPersonalTrainerSession.id,
-              type: TransactionType.PERSONAL_TRAINER_SESSION,
-            });
-          console.log(
-            '[Migration] PT session tx for session',
-            createdPersonalTrainerSession.id,
-            ':',
-            personalTrainerSessionTransactions.length,
-          );
-          for (const personalTrainerSessionTransaction of personalTrainerSessionTransactions) {
-            const createPersonalTrainerSessionTransaction =
-              this.transactionRepository.create({
-                currency: personalTrainerSessionTransaction?.currency,
-                date: personalTrainerSessionTransaction?.date,
-                createdAt: personalTrainerSessionTransaction?.createdAt,
-                endDate: personalTrainerSessionTransaction?.endDate,
-                startDate: personalTrainerSessionTransaction?.startDate,
-                type: personalTrainerSessionTransaction?.type,
-                gym: createdGym,
-                isPaid: personalTrainerSessionTransaction?.isPaid,
-                member: getMember,
-                isInvalidated: personalTrainerSessionTransaction?.isInvalidated,
-                invalidatedAt: personalTrainerSessionTransaction?.invalidatedAt,
-                gymsPTSessionPercentage:
-                  personalTrainerSessionTransaction?.gymsPTSessionPercentage,
-                mongoId: personalTrainerSessionTransaction?.id,
-                isSubscription: false,
-                paidBy: personalTrainerSessionTransaction?.paidBy,
-                paidAmount: personalTrainerSessionTransaction?.paidAmount,
-                numberSold: personalTrainerSessionTransaction?.numberSold,
-                owner: createdManager,
-                isOwnerSubscriptionAssignment:
-                  personalTrainerSessionTransaction?.isOwnerSubscriptionAssignment,
-              });
-            await this.transactionRepository.save(
-              createPersonalTrainerSessionTransaction,
-            );
+        }
+        // create personal trainer session transactions
+        const personalTrainerSessionTransactions =
+          await this.transactionModel.find({
+            personalTrainer: new Types.ObjectId(personalTrainer.id),
+            type: TransactionType.PERSONAL_TRAINER_SESSION,
+          });
+        console.log(
+          '[Migration] PT session tx for session',
+          personalTrainer.id,
+          ':',
+          personalTrainerSessionTransactions.length,
+        );
+        for (const personalTrainerSessionTransaction of personalTrainerSessionTransactions) {
+          const getMember = await this.memberRepository.findOne({
+            where: {
+              mongoId: personalTrainerSessionTransaction.member.toString(),
+            },
+          });
+          if (!getMember) {
+            throw new BadRequestException('Member not found');
           }
+          const createPersonalTrainerSessionTransaction =
+            this.transactionRepository.create({
+              title: personalTrainerSessionTransaction?.title,
+              currency: personalTrainerSessionTransaction?.currency,
+              date: personalTrainerSessionTransaction?.date,
+              createdAt: personalTrainerSessionTransaction?.createdAt,
+              endDate: personalTrainerSessionTransaction?.endDate,
+              startDate: personalTrainerSessionTransaction?.startDate,
+              type: personalTrainerSessionTransaction?.type,
+              gym: createdGym,
+              isPaid: personalTrainerSessionTransaction?.isPaid,
+              member: getMember,
+              isInvalidated: personalTrainerSessionTransaction?.isInvalidated,
+              invalidatedAt: personalTrainerSessionTransaction?.invalidatedAt,
+              gymsPTSessionPercentage:
+                personalTrainerSessionTransaction?.gymsPTSessionPercentage,
+              mongoId: personalTrainerSessionTransaction?.id,
+              isSubscription: false,
+              paidBy: personalTrainerSessionTransaction?.paidBy,
+              paidAmount: personalTrainerSessionTransaction?.paidAmount,
+              numberSold: personalTrainerSessionTransaction?.numberSold,
+              owner: createdManager,
+              isOwnerSubscriptionAssignment:
+                personalTrainerSessionTransaction?.isOwnerSubscriptionAssignment,
+            });
+          await this.transactionRepository.save(
+            createPersonalTrainerSessionTransaction,
+          );
         }
       }
       const expenses = await this.expenseModel.find({
@@ -515,7 +510,7 @@ export class DatabaseMigration implements OnModuleInit {
 
         // create expense transactions
         const expenseTransactions = await this.transactionModel.find({
-          expense: createdExpense.id,
+          expense: new Types.ObjectId(expense.id),
           type: TransactionType.EXPENSE,
         });
         console.log(
@@ -525,6 +520,7 @@ export class DatabaseMigration implements OnModuleInit {
           expenseTransactions.length,
         );
         for (const expenseTransaction of expenseTransactions) {
+          console.log('expenseTransaction', expenseTransaction);
           const getExpense = await this.expenseRepository.findOne({
             where: {
               mongoId: expenseTransaction.expense.toString(),
@@ -533,6 +529,7 @@ export class DatabaseMigration implements OnModuleInit {
           if (!getExpense) {
             throw new BadRequestException('Expense not found');
           }
+          console.log('getExpense', getExpense);
           const createExpenseTransaction = this.transactionRepository.create({
             currency: expenseTransaction?.currency,
             date: expenseTransaction?.date,
@@ -559,6 +556,53 @@ export class DatabaseMigration implements OnModuleInit {
           });
           await this.transactionRepository.save(createExpenseTransaction);
         }
+      }
+      const getOtherRevenueTransactions = await this.transactionModel.find({
+        gym: new Types.ObjectId(gym.id),
+        type: TransactionType.REVENUE,
+      });
+      console.log(
+        '[Migration] Other revenue transactions for gym',
+        gym.id,
+        ':',
+        getOtherRevenueTransactions.length,
+      );
+      for (const otherRevenueTransaction of getOtherRevenueTransactions) {
+        let product: ProductEntity | null = null;
+        if (otherRevenueTransaction.product) {
+          product = await this.productRepository.findOne({
+            where: {
+              mongoId: otherRevenueTransaction.product.toString(),
+            },
+          });
+        }
+        const createOtherRevenueTransaction = this.transactionRepository.create(
+          {
+            title: otherRevenueTransaction?.title,
+            currency: otherRevenueTransaction?.currency,
+            date: otherRevenueTransaction?.date,
+            createdAt: otherRevenueTransaction?.createdAt,
+            endDate: otherRevenueTransaction?.endDate,
+            startDate: otherRevenueTransaction?.startDate,
+            type: otherRevenueTransaction?.type,
+            gym: createdGym,
+            isPaid: otherRevenueTransaction?.isPaid,
+            isInvalidated: otherRevenueTransaction?.isInvalidated,
+            invalidatedAt: otherRevenueTransaction?.invalidatedAt,
+            gymsPTSessionPercentage:
+              otherRevenueTransaction?.gymsPTSessionPercentage,
+            mongoId: otherRevenueTransaction?.id,
+            isSubscription: false,
+            paidBy: otherRevenueTransaction?.paidBy,
+            paidAmount: otherRevenueTransaction?.paidAmount,
+            numberSold: otherRevenueTransaction?.numberSold,
+            owner: createdManager,
+            isOwnerSubscriptionAssignment:
+              otherRevenueTransaction?.isOwnerSubscriptionAssignment,
+            product: product,
+          },
+        );
+        await this.transactionRepository.save(createOtherRevenueTransaction);
       }
     }
     // }

@@ -544,7 +544,7 @@ export class GymService {
 
     // Fetch all transactions for the gym in the specified range
     const allTransactions = await this.transactionModel.find({
-      where: { gym: gym, ...dateFilter },
+      where: { gym: { id: gym.id }, ...dateFilter },
       relations: ['subscription', 'revenue', 'expense'],
     });
 
@@ -552,11 +552,11 @@ export class GymService {
     const lastMonthTransactions = await this.transactionModel.find({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(lastMonthStart),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(lastMonthEnd),
         },
       ],
@@ -566,7 +566,7 @@ export class GymService {
     // Fetch transactions for current month comparison
     const currentMonthTransactions = await this.transactionModel.find({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
         createdAt: MoreThanOrEqual(currentMonthStart),
       },
       relations: ['subscription', 'revenue', 'expense'],
@@ -591,18 +591,18 @@ export class GymService {
     const lastMonthMembers = await this.memberModel.count({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(lastMonthStart),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(lastMonthEnd),
         },
       ],
     });
     const currentMonthMembers = await this.memberModel.count({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
         createdAt: MoreThanOrEqual(currentMonthStart),
       },
     });
@@ -628,14 +628,14 @@ export class GymService {
 
     const totalMembers = await this.memberModel.count({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
       },
     });
     const members = await this.memberModel.find({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
       },
-      relations: ['subscription', 'transactions', 'gyms'],
+      relations: ['subscription', 'transactions', 'gym'],
     });
 
     const membersWithActiveSubscription = members.map((member) => {
@@ -754,7 +754,7 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
-    const filter: any = { gym: gym };
+    const filter: any = { gym: { id: gym.id } };
     if (search) {
       filter.name = ILike(`%${search}%`);
     }
@@ -844,7 +844,7 @@ export class GymService {
     // Fetch all transactions for the gym in the specified range
     const allTransactions = await this.transactionModel.find({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
         ...dateFilter,
       },
       relations: ['subscription', 'revenue', 'expense'],
@@ -854,11 +854,11 @@ export class GymService {
     const lastMonthTransactions = await this.transactionModel.find({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(lastMonthStart),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(lastMonthEnd),
         },
       ],
@@ -868,7 +868,7 @@ export class GymService {
     // Fetch transactions for current month comparison
     const currentMonthTransactions = await this.transactionModel.find({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
         createdAt: MoreThanOrEqual(currentMonthStart),
       },
       relations: ['subscription', 'revenue', 'expense'],
@@ -893,18 +893,18 @@ export class GymService {
     const lastMonthMembers = await this.memberModel.count({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(lastMonthStart),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(lastMonthEnd),
         },
       ],
     });
     const currentMonthMembers = await this.memberModel.count({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
         createdAt: MoreThanOrEqual(currentMonthStart),
       },
     });
@@ -930,14 +930,14 @@ export class GymService {
 
     const totalMembers = await this.memberModel.count({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
       },
     });
     const members = await this.memberModel.find({
       where: {
-        gym: gym,
+        gym: { id: gym.id },
       },
-      relations: ['subscription', 'transactions', 'gyms'],
+      relations: ['subscription', 'transactions', 'gym'],
     });
 
     const membersWithActiveSubscription = members.map((member) => {
@@ -1090,11 +1090,11 @@ export class GymService {
     const transactions = await this.transactionModel.find({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(startDate),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(endDate),
         },
       ],
@@ -1175,11 +1175,11 @@ export class GymService {
     const members = await this.memberModel.find({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(startDate),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(endDate),
         },
       ],
@@ -1261,11 +1261,11 @@ export class GymService {
     const transactions = await this.transactionModel.find({
       where: [
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: MoreThanOrEqual(startDate),
         },
         {
-          gym: gym,
+          gym: { id: gym.id },
           createdAt: LessThanOrEqual(endDate),
         },
       ],

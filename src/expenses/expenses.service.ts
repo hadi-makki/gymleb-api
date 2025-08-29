@@ -26,7 +26,7 @@ export class ExpensesService {
     const expense = this.expenseModel.create({
       ...dto,
       date: dto.date ? new Date(dto.date) : new Date(),
-      gym: gym,
+      gym: { id: dto.gymId },
     });
     const transaction = await this.transactionService.createExpenseTransaction({
       paidAmount: dto.amount,
@@ -53,7 +53,7 @@ export class ExpensesService {
       where: { id: gymId },
     });
     if (!gym) throw new NotFoundException('Gym not found');
-    const filter: any = { gym: gym };
+    const filter: any = { gym: { id: gymId } };
     if (start || end) {
       filter.date = {};
       if (start) filter.date.$gte = new Date(start);
@@ -78,11 +78,11 @@ export class ExpensesService {
     if (!gym) throw new NotFoundException('Gym not found');
 
     const expense = await this.expenseModel.update(
-      { id: id, gym: gym },
+      { id: id, gym: { id: gymId } },
       {
         ...dto,
         ...(dto.date ? { date: new Date(dto.date) } : {}),
-        gym: gym,
+        gym: { id: gymId },
       },
     );
     if (!expense) throw new NotFoundException('Expense not found');
@@ -96,7 +96,7 @@ export class ExpensesService {
     if (!gym) throw new NotFoundException('Gym not found');
     const expense = await this.expenseModel.delete({
       id: id,
-      gym: gym,
+      gym: { id: gymId },
     });
     if (!expense) throw new NotFoundException('Expense not found');
 
