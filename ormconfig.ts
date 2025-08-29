@@ -10,7 +10,7 @@ dotenv.config({
 
 const isLocal = isLocalEnv();
 
-const local = isLocal ? 'LOCAL_' : 'LOCAL_';
+const local = isLocal ? 'LOCAL_' : '';
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

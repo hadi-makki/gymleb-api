@@ -37,6 +37,7 @@ export class TokenEntity extends PgMainEntity {
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.tokens, {
     nullable: true,
+    onDelete: 'CASCADE',
   })
   manager: ManagerEntity;
 

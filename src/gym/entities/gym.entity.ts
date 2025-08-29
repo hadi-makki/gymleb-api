@@ -82,7 +82,7 @@ export class GymEntity extends PgMainEntity {
   @Column('jsonb')
   offers: { description: string }[];
 
-  @Column('int', { default: 0 })
+  @Column('int', { default: 10 })
   gymsPTSessionPercentage: number;
 
   @Column('boolean', { default: false })

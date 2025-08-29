@@ -285,14 +285,7 @@ export class DatabaseMigration implements OnModuleInit {
               startDate: subscriptionTransaction?.startDate,
               type: subscriptionTransaction?.type,
               gym: createdGym,
-              isPaid:
-                typeof subscriptionTransaction?.paidBy === 'boolean' &&
-                subscriptionTransaction.isPaid === false
-                  ? false
-                  : typeof subscriptionTransaction?.paidBy === 'boolean' &&
-                      subscriptionTransaction.isPaid === true
-                    ? true
-                    : true,
+              isPaid: true,
               member: createdMember,
               isInvalidated: subscriptionTransaction?.isInvalidated,
               invalidatedAt: subscriptionTransaction?.invalidatedAt,
@@ -321,9 +314,12 @@ export class DatabaseMigration implements OnModuleInit {
       );
       for (const product of products) {
         // migrate media
-        const media = await this.mediaModel.findOne({
-          _id: product.image,
-        });
+        let media: Media | null = null;
+        if (product.image) {
+          media = await this.mediaModel.findOne({
+            _id: product.image,
+          });
+        }
         const createProduct = this.productRepository.create({
           name: product.name,
           price: product.price,
@@ -339,48 +335,21 @@ export class DatabaseMigration implements OnModuleInit {
         });
         const createdProduct = await this.productRepository.save(createProduct);
 
-        const createMedia = this.mediaRepository.create({
-          mongoId: media._id.toString(),
-          fileName: media.fileName,
-          size: media.size,
-          createdAt: media.createdAt,
-          updatedAt: media.updatedAt,
-          s3Key: media.s3Key,
-          originalName: media.originalName,
-          mimeType: media.mimeType,
-          product: createdProduct,
-        });
-        const createdMedia = await this.mediaRepository.save(createMedia);
+        if (media) {
+          const createMedia = this.mediaRepository.create({
+            mongoId: media?._id.toString(),
+            fileName: media.fileName,
+            size: media.size,
+            createdAt: media.createdAt,
+            updatedAt: media.updatedAt,
+            s3Key: media.s3Key,
+            originalName: media.originalName,
+            mimeType: media.mimeType,
+            product: createdProduct,
+          });
+          const createdMedia = await this.mediaRepository.save(createMedia);
+        }
       }
-
-      //   const personalTrainers = await this.personalTrainerEntity
-      //   .find({
-      //     gyms: { $in: [gym._id] },
-      //     roles: { $in: [Permissions.personalTrainers] },
-      //   })
-      //   .populate({
-      //     path: 'gyms',
-      //   });
-
-      // const sessionsResult: { personalTrainer: Manager; clientsCount: number }[] =
-      //   [];
-
-      // for (const personalTrainer of personalTrainers) {
-      //   const sessions = await this.sessionEntity
-      //     .find({
-      //       personalTrainer: personalTrainer._id,
-      //     })
-      //     .populate({
-      //       path: 'member',
-      //     });
-      //   const clients = sessions.map((session) => session.member?.id);
-      //   // filter out duplicates
-      //   const uniqueClients = [...new Set(clients)];
-      //   sessionsResult.push({
-      //     personalTrainer,
-      //     clientsCount: uniqueClients.length,
-      //   });
-      // }
 
       // migrate personal trainers
       const personalTrainers = await this.managerModel.find({
@@ -464,56 +433,22 @@ export class DatabaseMigration implements OnModuleInit {
           });
           const createdPersonalTrainerSession =
             await this.ptSessionRepository.save(createPersonalTrainerSession);
-        }
-        // create personal trainer session transactions
-        const personalTrainerSessionTransactions =
-          await this.transactionModel.find({
-            personalTrainer: new Types.ObjectId(personalTrainer.id),
+          const newTransactionModel = this.transactionRepository.create({
+            title:
+              'Personal Trainer Session With ' +
+              createdPersonalTrainer.firstName +
+              ' ' +
+              createdPersonalTrainer.lastName,
             type: TransactionType.PERSONAL_TRAINER_SESSION,
+            personalTrainer: createdPersonalTrainer,
+            gym: createdGym,
+            member: getMember,
+            paidAmount: personalTrainerSession.sessionPrice,
+            gymsPTSessionPercentage: createdGym.gymsPTSessionPercentage || 0,
+            isPaid: true,
+            ptSession: createdPersonalTrainerSession,
           });
-        console.log(
-          '[Migration] PT session tx for session',
-          personalTrainer.id,
-          ':',
-          personalTrainerSessionTransactions.length,
-        );
-        for (const personalTrainerSessionTransaction of personalTrainerSessionTransactions) {
-          const getMember = await this.memberRepository.findOne({
-            where: {
-              mongoId: personalTrainerSessionTransaction.member.toString(),
-            },
-          });
-          if (!getMember) {
-            throw new BadRequestException('Member not found');
-          }
-          const createPersonalTrainerSessionTransaction =
-            this.transactionRepository.create({
-              title: personalTrainerSessionTransaction?.title,
-              currency: personalTrainerSessionTransaction?.currency,
-              date: personalTrainerSessionTransaction?.date,
-              createdAt: personalTrainerSessionTransaction?.createdAt,
-              endDate: personalTrainerSessionTransaction?.endDate,
-              startDate: personalTrainerSessionTransaction?.startDate,
-              type: personalTrainerSessionTransaction?.type,
-              gym: createdGym,
-              isPaid: personalTrainerSessionTransaction?.isPaid,
-              member: getMember,
-              isInvalidated: personalTrainerSessionTransaction?.isInvalidated,
-              invalidatedAt: personalTrainerSessionTransaction?.invalidatedAt,
-              gymsPTSessionPercentage:
-                personalTrainerSessionTransaction?.gymsPTSessionPercentage,
-              mongoId: personalTrainerSessionTransaction?.id,
-              isSubscription: false,
-              paidBy: personalTrainerSessionTransaction?.paidBy,
-              paidAmount: personalTrainerSessionTransaction?.paidAmount,
-              numberSold: personalTrainerSessionTransaction?.numberSold,
-              owner: createdManager,
-              isOwnerSubscriptionAssignment:
-                personalTrainerSessionTransaction?.isOwnerSubscriptionAssignment,
-            });
-          await this.transactionRepository.save(
-            createPersonalTrainerSessionTransaction,
-          );
+          await this.transactionRepository.save(newTransactionModel);
         }
       }
       const expenses = await this.expenseModel.find({
@@ -569,7 +504,7 @@ export class DatabaseMigration implements OnModuleInit {
             startDate: expenseTransaction?.startDate,
             type: expenseTransaction?.type,
             gym: createdGym,
-            isPaid: expenseTransaction?.isPaid,
+            isPaid: true,
             // member: createdMember,
             isInvalidated: expenseTransaction?.isInvalidated,
             invalidatedAt: expenseTransaction?.invalidatedAt,
@@ -607,6 +542,16 @@ export class DatabaseMigration implements OnModuleInit {
             },
           });
         }
+        const createRevenue = this.revenueRepository.create({
+          date: otherRevenueTransaction?.date,
+          amount: otherRevenueTransaction?.paidAmount,
+          gym: createdGym,
+          title: otherRevenueTransaction?.title,
+          createdAt: otherRevenueTransaction?.createdAt,
+          updatedAt: otherRevenueTransaction?.updatedAt,
+          mongoId: otherRevenueTransaction?.id,
+        });
+        const createdRevenue = await this.revenueRepository.save(createRevenue);
         const createOtherRevenueTransaction = this.transactionRepository.create(
           {
             title: otherRevenueTransaction?.title,
@@ -617,7 +562,7 @@ export class DatabaseMigration implements OnModuleInit {
             startDate: otherRevenueTransaction?.startDate,
             type: otherRevenueTransaction?.type,
             gym: createdGym,
-            isPaid: otherRevenueTransaction?.isPaid,
+            isPaid: true,
             isInvalidated: otherRevenueTransaction?.isInvalidated,
             invalidatedAt: otherRevenueTransaction?.invalidatedAt,
             gymsPTSessionPercentage:
@@ -631,6 +576,7 @@ export class DatabaseMigration implements OnModuleInit {
             isOwnerSubscriptionAssignment:
               otherRevenueTransaction?.isOwnerSubscriptionAssignment,
             product: product,
+            revenue: createdRevenue,
           },
         );
         await this.transactionRepository.save(createOtherRevenueTransaction);

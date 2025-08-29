@@ -88,12 +88,8 @@ export class ProductsService {
     updateProductDto: UpdateProductDto,
     gymId: string,
   ) {
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
     const product = await this.productRepository.findOne({
-      where: { id: id, gym: gym },
+      where: { id: id, gym: { id: gymId } },
       relations: {
         images: true,
       },
@@ -119,11 +115,13 @@ export class ProductsService {
       image = uploadResult;
     }
 
-    const updatedProduct = await this.productRepository.update(id, {
-      ...updateProductDto,
-      images: [image],
-      gym: gym,
-    });
+    product.images = [image];
+    product.name = updateProductDto.name;
+    product.price = updateProductDto.price;
+    product.description = updateProductDto.description;
+    product.stock = updateProductDto.stock;
+
+    const updatedProduct = await this.productRepository.save(product);
 
     return {
       message: 'Product updated successfully',
@@ -134,19 +132,17 @@ export class ProductsService {
   async deleteProduct(id: string, user: User, gymId: string) {
     const product = await this.productRepository.findOne({
       where: { id: id, gym: { id: gymId } },
+      relations: {
+        images: true,
+      },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
     // Delete associated image if exists
-    if (product.images[0]) {
-      try {
-        await this.mediaService.delete(product.images[0].id);
-      } catch (error) {
-        // Continue even if deletion fails
-        console.warn('Failed to delete product image:', error);
-      }
+    if (product.images?.[0]) {
+      await this.mediaService.delete(product.images?.[0].id);
     }
 
     await this.productRepository.delete(id);

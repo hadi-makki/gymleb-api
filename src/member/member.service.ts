@@ -413,7 +413,9 @@ export class MemberService {
       relations: {
         gym: true,
         subscription: true,
-        transactions: true,
+        transactions: {
+          subscription: true,
+        },
         profileImage: true,
       },
     });
@@ -422,9 +424,12 @@ export class MemberService {
       throw new NotFoundException('Member not found');
     }
 
-    member.transactions = member.transactions.filter(
-      (t) => t.type === TransactionType.SUBSCRIPTION,
-    );
+    member.transactions = member.transactions
+      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
 
     return await this.returnMember(member);
   }

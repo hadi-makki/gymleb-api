@@ -94,13 +94,12 @@ export class ExpensesService {
       where: { id: gymId },
     });
     if (!gym) throw new NotFoundException('Gym not found');
+    await this.transactionService.removeExpenseTransaction(id);
     const expense = await this.expenseModel.delete({
       id: id,
       gym: { id: gymId },
     });
     if (!expense) throw new NotFoundException('Expense not found');
-
-    await this.transactionService.removeExpenseTransaction(id);
 
     return { success: true };
   }

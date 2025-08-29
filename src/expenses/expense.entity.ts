@@ -33,7 +33,9 @@ export class ExpenseEntity extends PgMainEntity {
   @RelationId((expense: ExpenseEntity) => expense.gym)
   gymId: string | null;
 
-  @OneToOne(() => TransactionEntity, (transaction) => transaction.expense)
+  @OneToOne(() => TransactionEntity, (transaction) => transaction.expense, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   transaction: TransactionEntity;
 }

@@ -53,14 +53,12 @@ export class MediaService {
   }
   async delete(id: string) {
     try {
-      // Validate if the input id is a valid UUID
-      if (!isMongoId(id)) {
-        throw new BadRequestException('Invalid UUID format');
-      }
-
       // Find the media entity
       const media = await this.mediaRepository.findOne({
-        where: { id },
+        where: {
+          ...(isMongoId(id) && { mongoId: id }),
+          ...(isUUID(id) && { id }),
+        },
       });
       if (!media) {
         throw new NotFoundException('Media not found');

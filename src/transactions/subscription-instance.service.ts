@@ -24,6 +24,9 @@ import { PaymentDetails } from '../stripe/stripe.interface';
 import { SubscriptionType } from '../subscription/entities/subscription.model';
 import { TransactionEntity } from './transaction.entity';
 import { TransactionType } from './transaction.model';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { BadRequestException } from 'src/error/bad-request-error';
+import { ApiNotFoundResponse } from 'src/error/api-responses.decorator';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -214,12 +217,6 @@ export class TransactionService {
       where: { id: gymId },
     });
 
-    if (getManagerGym.owner.toString() !== manager.id.toString()) {
-      throw new UnauthorizedException(
-        'You do not have permission to delete this subscription instance',
-      );
-    }
-
     await this.transactionModel.delete({
       id: subscriptionInstance.id,
     });
@@ -283,17 +280,35 @@ export class TransactionService {
   }
 
   async removeRevenueTransaction(revenueId: string) {
-    await this.transactionModel.delete({
-      revenue: { id: revenueId },
-      type: TransactionType.REVENUE,
+    const getTransaction = await this.transactionModel.findOne({
+      where: {
+        revenue: {
+          id: revenueId,
+        },
+      },
     });
+
+    if (!getTransaction) {
+      throw new NotFoundException('revenue not found');
+    }
+
+    await this.transactionModel.remove(getTransaction);
   }
 
   async removeExpenseTransaction(expenseId: string) {
-    await this.transactionModel.delete({
-      expense: { id: expenseId },
-      type: TransactionType.EXPENSE,
+    const getTransaction = await this.transactionModel.findOne({
+      where: {
+        expense: {
+          id: expenseId,
+        },
+      },
     });
+
+    if (!getTransaction) {
+      throw new NotFoundException('revenue not found');
+    }
+
+    await this.transactionModel.remove(getTransaction);
   }
 
   async createPersonalTrainerSessionTransaction(dto: {
@@ -301,6 +316,8 @@ export class TransactionService {
     gym: GymEntity;
     member: MemberEntity;
     amount: number;
+    willPayLater: boolean;
+    ptSession: PTSessionEntity;
   }) {
     const gymsPTSessionPercentage = dto.gym.gymsPTSessionPercentage;
     const newTransactionModel = this.transactionModel.create({
@@ -315,9 +332,43 @@ export class TransactionService {
       member: dto.member,
       paidAmount: dto.amount,
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
+      isPaid: !dto.willPayLater,
+      ptSession: dto.ptSession,
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);
     return newTransaction;
+  }
+
+  async updateTransactionPaymentStatus(
+    transactionId: string,
+    manager: Manager,
+    gymId: string,
+    isPaid: boolean,
+  ) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+      relations: { gym: true },
+    });
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    const getManagerGym = await this.gymRepository.findOne({
+      where: { id: gymId },
+    });
+    if (!getManagerGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    transaction.isPaid = !transaction.isPaid;
+    console.log(transaction.isPaid);
+    console.log(transaction.willPayLater);
+    await this.transactionModel.save(transaction);
+
+    return {
+      message: `Transaction payment status updated to ${isPaid ? 'paid' : 'unpaid'}`,
+      transaction,
+    };
   }
 }

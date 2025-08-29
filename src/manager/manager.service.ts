@@ -84,9 +84,9 @@ export class ManagerService {
       username: body.username.trim(),
       permissions: body.roles,
       phoneNumber: body.phoneNumber,
+      gyms: [checkGym],
     });
 
-    savedManager.gyms.push(checkGym);
     await this.managerEntity.save(savedManager);
 
     const token = await this.tokenService.generateTokens({
@@ -140,9 +140,9 @@ export class ManagerService {
       phoneNumber: body.phoneNumber,
       firstName,
       lastName,
+      gyms: [checkGym],
     });
 
-    savedManagerModel.gyms.push(checkGym);
     const savedManager = await this.managerEntity.save(savedManagerModel);
 
     const token = await this.tokenService.generateTokens({
@@ -339,6 +339,7 @@ export class ManagerService {
       where: { id: manager.id },
       relations: {
         ownedGyms: true,
+        gyms: true,
       },
     });
 

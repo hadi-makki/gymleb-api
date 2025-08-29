@@ -15,6 +15,7 @@ import {
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -123,13 +124,17 @@ export class TransactionEntity extends PgMainEntity {
   @Column('int', { nullable: true })
   numberSold: number;
 
-  @OneToOne(() => RevenueEntity, (revenue) => revenue.transaction)
+  @OneToOne(() => RevenueEntity, (revenue) => revenue.transaction, {
+    onDelete: 'CASCADE',
+  })
   revenue: RevenueEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.revenue)
   revenueId: string | null;
 
-  @OneToOne(() => ExpenseEntity, (expense) => expense.transaction)
+  @OneToOne(() => ExpenseEntity, (expense) => expense.transaction, {
+    onDelete: 'CASCADE',
+  })
   expense: ExpenseEntity;
 
   @Column('timestamp with time zone', { nullable: true })
@@ -152,4 +157,10 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   willPayLater: boolean;
+
+  @OneToOne(() => PTSessionEntity, (ptSession) => ptSession.transaction, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  ptSession: PTSessionEntity;
 }

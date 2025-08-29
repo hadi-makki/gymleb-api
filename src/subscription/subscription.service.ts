@@ -1,19 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
-import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Subscription, SubscriptionType } from './entities/subscription.model';
-import { Model } from 'mongoose';
-import { Gym } from '../gym/entities/gym.model';
-import { Manager } from '../manager/manager.model';
-import { isMongoId } from 'validator';
-import { BadRequestException } from '../error/bad-request-error';
-import { TransactionService } from '../transactions/subscription-instance.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SubscriptionEntity } from './entities/subscription.entity';
-import { Repository } from 'typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
+import { BadRequestException } from '../error/bad-request-error';
+import { TransactionService } from '../transactions/subscription-instance.service';
+import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { SubscriptionEntity } from './entities/subscription.entity';
+import { SubscriptionType } from './entities/subscription.model';
+import { isUUID } from 'class-validator';
 @Injectable()
 export class SubscriptionService {
   constructor(
@@ -65,7 +61,7 @@ export class SubscriptionService {
   }
 
   async findOne(id: string) {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid subscription id');
     }
     const subscription = await this.subscriptionModel.findOne({
@@ -84,7 +80,7 @@ export class SubscriptionService {
       throw new NotFoundException('Gym not found');
     }
 
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid subscription id');
     }
     const subscriptionDuration =

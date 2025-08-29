@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDate, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDate,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateSessionDto {
   @ApiProperty({
@@ -40,4 +47,12 @@ export class CreateSessionDto {
   @IsNotEmpty()
   @IsNumber()
   numberOfSessions: number;
+
+  @ApiProperty({
+    description: 'The type of the session',
+    example: 'personal_trainer',
+  })
+  @IsOptional()
+  @IsBoolean()
+  willPayLater: boolean;
 }

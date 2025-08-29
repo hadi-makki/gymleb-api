@@ -10,6 +10,7 @@ import { AddOfferDto } from './dto/add-offer.dto';
 import { GymEntity } from './entities/gym.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
+  Between,
   ILike,
   In,
   LessThanOrEqual,
@@ -106,15 +107,22 @@ export class GymService {
     // Build date filter for the specified range
     const dateFilter: any = {};
     if (start || end) {
-      dateFilter.createdAt = {};
-      if (start) dateFilter.createdAt.$gte = new Date(start);
-      if (end) dateFilter.createdAt.$lte = new Date(end);
+      if (start && end) {
+        dateFilter.createdAt = Between(new Date(start), new Date(end));
+        return;
+      }
+      if (start) {
+        dateFilter.createdAt = MoreThanOrEqual(new Date(start));
+      }
+      if (end) {
+        dateFilter.createdAt = LessThanOrEqual(new Date(end));
+      }
     }
 
     // Fetch all transactions for the gym in the specified range
     const allTransactions = await this.transactionModel.find({
-      where: { gym: { id: gym.id }, ...dateFilter },
-      relations: ['subscription', 'revenue', 'expense'],
+      where: { gym: { id: gym.id }, isPaid: true, ...dateFilter },
+      relations: ['subscription', 'revenue', 'expense', 'ptSession'],
     });
 
     // Fetch transactions for last month comparison
@@ -124,14 +132,14 @@ export class GymService {
           gym: {
             id: gym.id,
           },
-
+          isPaid: true,
           createdAt: MoreThanOrEqual(lastMonthStart),
         },
         {
           gym: {
             id: gym.id,
           },
-
+          isPaid: true,
           createdAt: LessThanOrEqual(lastMonthEnd),
         },
       ],
@@ -144,6 +152,7 @@ export class GymService {
         gym: {
           id: gym.id,
         },
+        isPaid: true,
         createdAt: MoreThanOrEqual(currentMonthStart),
       },
       relations: ['subscription', 'revenue', 'expense'],
@@ -554,10 +563,12 @@ export class GymService {
         {
           gym: { id: gym.id },
           createdAt: MoreThanOrEqual(lastMonthStart),
+          isPaid: true,
         },
         {
           gym: { id: gym.id },
           createdAt: LessThanOrEqual(lastMonthEnd),
+          isPaid: true,
         },
       ],
       relations: ['subscription', 'revenue', 'expense'],
@@ -568,6 +579,7 @@ export class GymService {
       where: {
         gym: { id: gym.id },
         createdAt: MoreThanOrEqual(currentMonthStart),
+        isPaid: true,
       },
       relations: ['subscription', 'revenue', 'expense'],
     });
@@ -1092,10 +1104,12 @@ export class GymService {
         {
           gym: { id: gym.id },
           createdAt: MoreThanOrEqual(startDate),
+          isPaid: true,
         },
         {
           gym: { id: gym.id },
           createdAt: LessThanOrEqual(endDate),
+          isPaid: true,
         },
       ],
       relations: ['member'],

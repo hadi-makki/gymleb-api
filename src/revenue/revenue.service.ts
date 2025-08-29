@@ -26,9 +26,13 @@ export class RevenueService {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const product = await this.productModel.findOne({
-      where: { id: dto.productId },
-    });
+    let product: ProductEntity | null = null;
+
+    if (dto.productId) {
+      product = await this.productModel.findOne({
+        where: { id: dto.productId },
+      });
+    }
 
     if (product && product.stock < dto.numberSold) {
       throw new BadRequestException('Product stock is not enough');
@@ -84,7 +88,7 @@ export class RevenueService {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const filter: any = { gym: { id: gym.id } };
+    const filter: any = {};
 
     if (start && end) {
       filter.date = Between(new Date(start), new Date(end));
@@ -94,8 +98,13 @@ export class RevenueService {
       filter.date = LessThanOrEqual(new Date(end));
     }
 
+    console.log(filter);
+
     return await this.revenueModel.find({
-      where: filter,
+      where: {
+        ...filter,
+        gym: { id: gym.id },
+      },
       relations: ['transaction'],
       order: { date: 'DESC' },
     });
@@ -130,14 +139,17 @@ export class RevenueService {
 
     const revenue = await this.revenueModel.findOne({
       where: { id: id, gym: { id: gym.id } },
+      relations: {
+        transaction: true,
+      },
     });
 
     if (!revenue) throw new NotFoundException('Revenue not found');
 
-    await this.revenueModel.delete(id);
-
     // remove transaction
     await this.transactionService.removeRevenueTransaction(id);
+
+    await this.revenueModel.delete(id);
 
     return { message: 'Revenue deleted successfully' };
   }

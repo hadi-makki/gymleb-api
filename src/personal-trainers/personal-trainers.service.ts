@@ -198,15 +198,15 @@ export class PersonalTrainersService {
         sessionPrice: createSessionDto.sessionPrice,
         sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
       });
-      const session = await this.sessionEntity.save(createSessionModel);
-      checkIfUserInGym.ptSessions.push(session);
-      await this.memberEntity.save(checkIfUserInGym);
+      const createdSession = await this.sessionEntity.save(createSessionModel);
 
       await this.transactionService.createPersonalTrainerSessionTransaction({
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
         member: checkIfUserInGym,
         amount: createSessionDto.sessionPrice,
+        willPayLater: createSessionDto.willPayLater || false,
+        ptSession: createdSession,
       });
 
       setDateDone = true;
@@ -505,7 +505,12 @@ export class PersonalTrainersService {
         personalTrainer: { id: trainerId },
         member: { id: memberId },
       },
-      relations: ['member', 'personalTrainer', 'gym'],
+      relations: {
+        member: true,
+        personalTrainer: true,
+        gym: true,
+        transaction: true,
+      },
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates

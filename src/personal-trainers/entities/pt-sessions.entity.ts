@@ -1,9 +1,17 @@
 import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { MainEntity, PgMainEntity } from 'src/main-classes/mainEntity';
-import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+  RelationId,
+} from 'typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
 
 @Entity('pt_sessions')
 export class PTSessionEntity extends PgMainEntity {
@@ -37,6 +45,12 @@ export class PTSessionEntity extends PgMainEntity {
   @RelationId((ptSession: PTSessionEntity) => ptSession.gym)
   gymId: string | null;
 
-  @Column('int', { nullable: true })
+  @Column('float', { nullable: true })
   sessionPrice: number;
+
+  @OneToOne(() => TransactionEntity, (transaction) => transaction.ptSession, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'transactionId' })
+  transaction: TransactionEntity;
 }

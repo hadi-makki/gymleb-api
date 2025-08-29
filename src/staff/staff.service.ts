@@ -65,7 +65,6 @@ export class StaffService {
         ),
       },
     });
-    console.log('staff', staff);
     return staff.map((m) => returnManager(m));
   }
 
