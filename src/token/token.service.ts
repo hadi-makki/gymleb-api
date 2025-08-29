@@ -238,6 +238,15 @@ export class TokenService {
     let decodedJwt;
     let isTokenExpired = false;
 
+    const checkAccessTokenInDatabase =
+      await this.getAccessTokenByDeviceIdAndAccessToken(
+        req.cookies.deviceId,
+        tokenToUse,
+      );
+    if (!checkAccessTokenInDatabase) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
     try {
       decodedJwt = (await this.jwtService.verifyAsync(tokenToUse, {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
