@@ -74,8 +74,14 @@ export class TransactionEntity extends PgMainEntity {
   @RelationId((transaction: TransactionEntity) => transaction.subscription)
   subscriptionId: string | null;
 
-  @ManyToOne(() => MemberEntity, (member) => member.transactions)
+  @ManyToOne(() => MemberEntity, (member) => member.transactions, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   member: MemberEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.member)
+  memberId: string | null;
 
   // Owner subscription assignment transaction
   @ManyToOne(() => ManagerEntity, (manager) => manager.transactions)

@@ -27,7 +27,7 @@ export class PgMainEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   mongoId: string;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isMongoId, isUUID } from 'class-validator';
+import { isUUID } from 'class-validator';
 import { addDays, endOfDay, startOfDay, isBefore, isAfter } from 'date-fns';
 import { Response } from 'express';
 import { GymEntity } from 'src/gym/entities/gym.entity';
@@ -248,9 +248,6 @@ export class MemberService {
 
     await this.memberModel.save(member);
 
-    gym.transactions.push(subscriptionInstance);
-    await this.gymModel.save(gym);
-
     const newMember = await this.memberModel.findOne({
       where: { id: member.id },
       relations: ['gym', 'subscription', 'transactions'],
@@ -350,7 +347,12 @@ export class MemberService {
       },
       this.memberModel,
       {
-        relations: ['gym', 'subscription', 'transactions', 'profileImage'],
+        relations: {
+          gym: true,
+          subscription: true,
+          transactions: true,
+          profileImage: true,
+        },
         sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
         searchableColumns: ['name', 'phone', 'email'],
         defaultSortBy: [['createdAt', 'DESC']],
@@ -407,7 +409,12 @@ export class MemberService {
     }
     let member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
-      relations: ['gym', 'subscription', 'transactions', 'profileImage'],
+      relations: {
+        gym: true,
+        subscription: true,
+        transactions: true,
+        profileImage: true,
+      },
     });
 
     if (!member) {
@@ -438,8 +445,12 @@ export class MemberService {
     }
 
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
-      relations: ['gym', 'subscription', 'transactions'],
+      where: { id, gym: { id: checkGym.id } },
+      relations: {
+        gym: true,
+        subscription: true,
+        transactions: true,
+      },
     });
 
     if (!member) {
@@ -457,6 +468,9 @@ export class MemberService {
 
       checkSubscription = await this.subscriptionModel.findOne({
         where: { id: subscriptionId },
+        relations: {
+          gym: true,
+        },
       });
 
       if (!checkSubscription) {
@@ -486,7 +500,10 @@ export class MemberService {
         }
 
         const getCheckSubscription = await this.subscriptionModel.findOne({
-          where: { id: getLatestSubscriptionInstance.subscription.id },
+          where: { id: getLatestSubscriptionInstance.subscriptionId },
+          relations: {
+            gym: true,
+          },
         });
 
         checkSubscription = getCheckSubscription;
@@ -519,19 +536,16 @@ export class MemberService {
 
     await this.memberModel.save(member);
 
-    checkGym.transactions.push(createSubscriptionInstance);
-    await this.gymModel.save(checkGym);
-
     return {
       message: 'Subscription renewed successfully',
     };
   }
 
   async update(id: string, updateMemberDto: UpdateMemberDto, gymId: string) {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid member id');
     }
-    if (!isMongoId(gymId)) {
+    if (!isUUID(gymId)) {
       throw new BadRequestException('Invalid gym id');
     }
     const checkGym = await this.gymModel.findOne({
@@ -541,7 +555,7 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
+      where: { id, gym: { id: checkGym.id } },
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -565,8 +579,8 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
-      relations: ['transactions'],
+      where: { id, gym: { id: checkGym.id } },
+      relations: ['transactions', 'ptSessions'],
     });
 
     if (!member) {
@@ -585,7 +599,7 @@ export class MemberService {
       });
     }
 
-    if (member.ptSessions.length > 0) {
+    if (member.ptSessions && member.ptSessions.length > 0) {
       await this.personalTrainersService.removeClientFromTrainer(id, gymId);
     }
 
@@ -708,7 +722,7 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
+      where: { id, gym: { id: checkGym.id } },
       relations: ['gym', 'subscription', 'transactions'],
     });
     if (!member) {
@@ -761,7 +775,7 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
+      where: { id, gym: { id: checkGym.id } },
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -796,7 +810,7 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
+      where: { id, gym: { id: checkGym.id } },
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -838,7 +852,7 @@ export class MemberService {
     }
 
     const member = await this.memberModel.findOne({
-      where: { id, gym: checkGym },
+      where: { id, gym: { id: checkGym.id } },
     });
 
     if (!member) {
@@ -872,7 +886,7 @@ export class MemberService {
 
     // Validate all member IDs are valid MongoDB ObjectIds
     for (const id of memberIds) {
-      if (!isMongoId(id)) {
+      if (!isUUID(id)) {
         throw new BadRequestException(`Invalid member id: ${id}`);
       }
     }
@@ -915,7 +929,7 @@ export class MemberService {
 
     // Validate all member IDs are valid MongoDB ObjectIds
     for (const id of memberIds) {
-      if (!isMongoId(id)) {
+      if (!isUUID(id)) {
         throw new BadRequestException(`Invalid member id: ${id}`);
       }
     }
