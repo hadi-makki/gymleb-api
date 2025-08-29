@@ -1,53 +1,40 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { SubscriptionInstance } from '../transactions/subscription-instance.entity';
-import { Media } from '../media/media.entity';
-import { Gym } from '../gym/entities/gym.entity';
-import { MainEntity } from '../main-classes/mainEntity';
-import { Transaction } from '../transactions/transaction.entity';
+import { PgMainEntity } from '../main-classes/mainEntity';
+import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
+import { MediaEntity } from 'src/media/media.entity';
 
-export type ProductDocument = Product & Document;
-
-@CustomSchema()
-export class Product extends MainEntity {
-  @Prop({ type: String, required: true })
+@Entity('products')
+export class ProductEntity extends PgMainEntity {
+  @Column('text')
   name: string;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   stripeProductId: string;
 
-  @Prop({ type: Number, required: true })
+  @Column('float')
   price: number;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   description: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Media', required: false })
-  image: Media;
+  @OneToMany(() => MediaEntity, (media) => media.product)
+  images: MediaEntity[];
 
-  @Prop({
-    type: [{ type: Types.ObjectId, ref: 'SubscriptionInstance' }],
-    default: [],
-  })
-  subscriptionInstances: SubscriptionInstance[];
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.product)
+  transactions: TransactionEntity[];
 
-  @Prop({
-    type: [Types.ObjectId],
-    ref: 'Transaction',
-    required: false,
-    default: [],
-  })
-  transactions: Transaction[];
-
-  @Prop({ type: Number, default: 600 })
+  @Column('int', { default: 600 })
   maxDurationSeconds: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'Gym', required: false })
-  gym: Gym;
+  @ManyToOne(() => GymEntity, (gym) => gym.products)
+  gym: GymEntity;
 
-  @Prop({ type: Number, default: 0 })
+  @RelationId((product: ProductEntity) => product.gym)
+  gymId: string | null;
+
+  @Column('int', { default: 0 })
   stock: number;
 }
-
-export const ProductSchema = SchemaFactory.createForClass(Product);

@@ -1,25 +1,26 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   Param,
-  UseGuards,
   Patch,
-  Body,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Convert } from 'easy-currencies';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Roles } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
 import {
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
 } from '../error/api-responses.decorator';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { Roles } from '../decorators/roles/Role';
-import { Permissions } from '../decorators/roles/role.enum';
-import { TransactionService } from './subscription-instance.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { Manager } from '../manager/manager.entity';
-import { User } from '../decorators/users.decorator';
-import { Convert } from 'easy-currencies';
+import { TransactionService } from './subscription-instance.service';
+import { Manager } from 'src/manager/manager.model';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -35,7 +36,7 @@ export class TransactionController {
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
   async delete(
     @Param('id') id: string,
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
   ) {
     return this.service.deleteSubscriptionInstance(id, manager, gymId);

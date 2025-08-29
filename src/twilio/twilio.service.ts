@@ -2,18 +2,18 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../error/bad-request-error';
 import { GymService } from '../gym/gym.service';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { MemberService } from '../member/member.service';
 
-import { Twilio } from 'twilio';
-import { NotFoundException } from 'src/error/not-found-error';
-import { format } from 'date-fns';
-import { Member } from 'src/member/entities/member.entity';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { checkNodeEnv } from 'src/config/helper/helper-functions';
+import { InjectRepository } from '@nestjs/typeorm';
 import { isPhoneNumber } from 'class-validator';
-import { Gym, GymTypeEnum } from 'src/gym/entities/gym.entity';
+import { format } from 'date-fns';
+import { checkNodeEnv } from 'src/config/helper/helper-functions';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { Twilio } from 'twilio';
+import { Repository } from 'typeorm';
+import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
 
 export enum TwilioWhatsappTemplates {
   EXPIARY_REMINDER = 'HXe8f26377490ff319bae6b9c1d9538486',
@@ -29,8 +29,8 @@ export class TwilioService {
     private readonly gymService: GymService,
     @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
-    @InjectModel(Member.name)
-    private readonly memberModel: Model<Member>,
+    @InjectRepository(MemberEntity)
+    private readonly memberModel: Repository<MemberEntity>,
   ) {}
 
   private readonly allowedMessagesNumber = 500;
@@ -40,7 +40,7 @@ export class TwilioService {
     process.env.TWILIO_AUTH,
   );
 
-  async notifyExpiredMembers(manager: Manager, gymId: string) {
+  async notifyExpiredMembers(manager: ManagerEntity, gymId: string) {
     const members = await this.memberService.getExpiredMembers(
       manager,
       1000,
@@ -50,7 +50,7 @@ export class TwilioService {
     );
 
     let notifiedNumber = 0;
-    for (const member of members.items) {
+    for (const member of members.data) {
       if (member.phone && !member.isNotified) {
         await this.memberService.toggleNotified(member.id, true);
         notifiedNumber++;
@@ -59,17 +59,21 @@ export class TwilioService {
     await this.gymService.addGymMembersNotified(gymId, notifiedNumber);
   }
 
-  async sendWelcomeMessage(memberName: string, memberPhone: string, gym: Gym) {
+  async sendWelcomeMessage(
+    memberName: string,
+    memberPhone: string,
+    gym: GymEntity,
+  ) {
     const member = await this.memberModel.findOne({
-      phone: memberPhone,
+      where: { phone: memberPhone },
     });
     if (member.isWelcomeMessageSent) {
       console.log('member is already notified');
       return;
     }
-    await this.memberModel.findByIdAndUpdate(member.id, {
-      isWelcomeMessageSent: true,
-    });
+
+    member.isWelcomeMessageSent = true;
+    await this.memberModel.save(member);
 
     if (!checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
       console.log('sending notification to', memberPhone);

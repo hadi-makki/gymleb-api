@@ -1,8 +1,12 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Gym } from '../gym/entities/gym.entity';
-import { Manager } from '../manager/manager.entity';
+import { Gym } from '../gym/entities/gym.model';
+import { Manager } from '../manager/manager.model';
+import { InjectRepository } from '@nestjs/typeorm';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { Repository } from 'typeorm';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 export const Days = [
   { day: 'Monday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },
@@ -22,10 +26,10 @@ export const Days = [
 @Injectable({ scope: Scope.DEFAULT })
 export class GymSeeding implements OnModuleInit {
   constructor(
-    @InjectModel(Gym.name)
-    private gymRepository: Model<Gym>,
-    @InjectModel(Manager.name)
-    private managerRepository: Model<Manager>,
+    @InjectRepository(GymEntity)
+    private gymRepository: Repository<GymEntity>,
+    @InjectRepository(ManagerEntity)
+    private managerRepository: Repository<ManagerEntity>,
   ) {}
 
   async onModuleInit() {
@@ -35,14 +39,14 @@ export class GymSeeding implements OnModuleInit {
   }
 
   private async removeData() {
-    await this.gymRepository.deleteMany({});
+    await this.gymRepository.delete({});
   }
 
   async addDashedGymName() {
     const gyms = await this.gymRepository.find({});
     for (const gym of gyms) {
       gym.gymDashedName = gym.name.toLowerCase().split(' ').join('-');
-      await gym.save();
+      await this.gymRepository.save(gym);
     }
   }
 
@@ -53,11 +57,11 @@ export class GymSeeding implements OnModuleInit {
     const email = 'gym1@example.com';
 
     const getManager = await this.managerRepository.findOne({
-      username: 'admin',
+      where: { username: 'admin' },
     });
 
     const exists = await this.gymRepository.findOne({
-      name,
+      where: { name },
     });
 
     if (!exists && getManager) {
@@ -66,7 +70,7 @@ export class GymSeeding implements OnModuleInit {
         address,
         phone,
         email,
-        owner: getManager.id,
+        owner: getManager,
         openingDays: Days,
       });
       console.log('Gym seeded');

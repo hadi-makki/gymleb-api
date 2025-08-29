@@ -1,7 +1,7 @@
 import { OnModuleInit } from '@nestjs/common';
 import { ManagerService } from './manager.service';
 import { InjectModel } from '@nestjs/mongoose';
-import { Manager } from './manager.entity';
+import { Manager } from './manager.model';
 import { Model } from 'mongoose';
 
 export class ManagerScript implements OnModuleInit {

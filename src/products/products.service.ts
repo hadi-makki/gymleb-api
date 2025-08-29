@@ -1,37 +1,49 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Product } from './products.entity';
-import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
-import { User } from '../user/user.entity';
-import { MediaService } from '../media/media.service';
-import { Manager } from '../manager/manager.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { isMongoId, isUUID } from 'class-validator';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';
-import { isMongoId } from 'class-validator';
+import { MediaService } from '../media/media.service';
+import { User } from '../user/user.model';
+import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
+import { ProductEntity } from './products.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MediaEntity } from 'src/media/media.entity';
 
 @Injectable()
 export class ProductsService {
   constructor(
-    @InjectModel(Product.name)
-    private readonly productRepository: Model<Product>,
+    @InjectRepository(ProductEntity)
+    private readonly productRepository: Repository<ProductEntity>,
     private readonly mediaService: MediaService,
     private readonly gymService: GymService,
+    @InjectRepository(GymEntity)
+    private readonly gymModel: Repository<GymEntity>,
   ) {}
 
   async getProducts(gymId: string) {
-    const gym = !isMongoId(gymId)
+    const gym = !isUUID(gymId)
       ? await this.gymService.getGymByGymName(gymId)
       : null;
 
-    const products = await this.productRepository
-      .find({ gym: gym ? gym.id : gymId })
-      .populate('image');
+    const products = await this.productRepository.find({
+      where: { gym: gym ? gym : { id: gymId } },
+      relations: {
+        images: true,
+      },
+    });
 
     return products;
   }
 
   async getProductById(id: string) {
-    const product = await this.productRepository.findById(id).populate('image');
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: {
+        images: true,
+      },
+    });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
@@ -40,29 +52,29 @@ export class ProductsService {
 
   async createProduct(
     file: Express.Multer.File,
-    user: Manager,
+    user: ManagerEntity,
     createProductDto: CreateProductDto,
     gymId: string,
   ) {
-    const gym = await this.gymService.getGymById(gymId);
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    let imageId = null;
+    let image: MediaEntity | null = null;
 
     // Upload image if provided
     if (file) {
       const uploadResult = await this.mediaService.upload(file, user.id);
-      imageId = uploadResult.id;
+      image = uploadResult;
     }
 
-    const product = await this.productRepository.create({
+    const createProductModel = this.productRepository.create({
       ...createProductDto,
-      image: imageId,
-      gym: gym.id,
+      images: [image],
+      gym: gym,
       stock: createProductDto.stock,
     });
-
+    const product = await this.productRepository.save(createProductModel);
     return {
       message: 'Product created successfully',
       data: product,
@@ -77,41 +89,39 @@ export class ProductsService {
     gymId: string,
   ) {
     const product = await this.productRepository.findOne({
-      _id: id,
-      gym: gymId,
+      where: { id: id, gym: { id: gymId } },
+      relations: {
+        images: true,
+      },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
-    let imageId: string | null = product.image?.id;
+    let image: MediaEntity | null = product.images[0];
 
     // Upload new image if provided
     if (file) {
       // Delete old image if exists
-      if (product.image) {
+      if (product.images[0]) {
         try {
-          await this.mediaService.delete(product.image.toString());
+          await this.mediaService.delete(product.images[0].id);
         } catch (error) {
           // Continue even if deletion fails
           console.warn('Failed to delete old image:', error);
         }
       }
       const uploadResult = await this.mediaService.upload(file, user.id);
-      imageId = uploadResult.id;
+      image = uploadResult;
     }
 
-    const updatedProduct = await this.productRepository
-      .findByIdAndUpdate(
-        id,
-        {
-          ...updateProductDto,
-          image: imageId,
-          gym: gymId,
-        },
-        { new: true },
-      )
-      .populate('image');
+    product.images = [image];
+    product.name = updateProductDto.name;
+    product.price = updateProductDto.price;
+    product.description = updateProductDto.description;
+    product.stock = updateProductDto.stock;
+
+    const updatedProduct = await this.productRepository.save(product);
 
     return {
       message: 'Product updated successfully',
@@ -121,24 +131,21 @@ export class ProductsService {
 
   async deleteProduct(id: string, user: User, gymId: string) {
     const product = await this.productRepository.findOne({
-      _id: id,
-      gym: gymId,
+      where: { id: id, gym: { id: gymId } },
+      relations: {
+        images: true,
+      },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
     // Delete associated image if exists
-    if (product.image) {
-      try {
-        await this.mediaService.delete(product.image.toString());
-      } catch (error) {
-        // Continue even if deletion fails
-        console.warn('Failed to delete product image:', error);
-      }
+    if (product.images?.[0]) {
+      await this.mediaService.delete(product.images?.[0].id);
     }
 
-    await this.productRepository.findByIdAndDelete(id);
+    await this.productRepository.delete(id);
 
     return {
       message: 'Product deleted successfully',

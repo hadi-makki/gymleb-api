@@ -11,12 +11,12 @@ import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { User } from 'src/decorators/users.decorator';
-import { Manager } from 'src/manager/manager.entity';
 import { UseGuards } from '@nestjs/common';
 import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
 import { Roles } from 'src/decorators/roles/Role';
 import { Permissions, returnAllRoles } from 'src/decorators/roles/role.enum';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('staff')
 @ApiTags('Staff')
@@ -29,7 +29,7 @@ export class StaffController {
   @Roles(Permissions.GymOwner)
   async create(
     @Body() createStaffDto: CreateStaffDto,
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
   ) {
     return await this.staffService.create(createStaffDto, user, gymId);
@@ -39,8 +39,8 @@ export class StaffController {
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()
   @Roles(Permissions.GymOwner)
-  @ApiOkResponse({ type: [Manager] })
-  findAll(@User() user: Manager, @Param('gymId') gymId: string) {
+  @ApiOkResponse({ type: [ManagerEntity] })
+  findAll(@User() user: ManagerEntity, @Param('gymId') gymId: string) {
     return this.staffService.findAll(user, gymId);
   }
 
@@ -48,7 +48,7 @@ export class StaffController {
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()
   @Roles(Permissions.GymOwner)
-  findOne(@Param('id') id: string, @User() user: Manager) {
+  findOne(@Param('id') id: string, @User() user: ManagerEntity) {
     return this.staffService.findOne(id, user);
   }
 
@@ -59,7 +59,7 @@ export class StaffController {
   update(
     @Param('gymId') gymId: string,
     @Param('id') id: string,
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Body() updateStaffDto: UpdateStaffDto,
   ) {
     return this.staffService.update(id, user, gymId, updateStaffDto);
@@ -72,7 +72,7 @@ export class StaffController {
   remove(
     @Param('gymId') gymId: string,
     @Param('id') id: string,
-    @User() user: Manager,
+    @User() user: ManagerEntity,
   ) {
     return this.staffService.remove(id, user, gymId);
   }

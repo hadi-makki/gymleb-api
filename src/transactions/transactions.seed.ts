@@ -1,25 +1,32 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Transaction, TransactionType } from './transaction.entity';
-import { SubscriptionInstance } from './subscription-instance.entity';
-import { Member } from '../member/entities/member.entity';
-import { Gym } from '../gym/entities/gym.entity';
-import { Product } from '../products/products.entity';
+import { Transaction, TransactionType } from './transaction.model';
+import { SubscriptionInstance } from './subscription-instance.model';
+import { Member } from '../member/entities/member.model';
+import { Gym } from '../gym/entities/gym.model';
+import { Product } from '../products/products.model';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { SubscriptionInstanceEntity } from './subscription-instance.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { Repository } from 'typeorm';
+import { ProductEntity } from 'src/products/products.entity';
+import { TransactionEntity } from './transaction.entity';
 
 @Injectable({ scope: Scope.DEFAULT })
 export class TransactionSeeding implements OnModuleInit {
   constructor(
-    @InjectModel(Transaction.name)
-    private transactionRepository: Model<Transaction>,
-    @InjectModel(SubscriptionInstance.name)
-    private subscriptionInstanceRepository: Model<SubscriptionInstance>,
-    @InjectModel(Member.name)
-    private memberRepository: Model<Member>,
-    @InjectModel(Gym.name)
-    private gymRepository: Model<Gym>,
-    @InjectModel(Product.name)
-    private productRepository: Model<Product>,
+    @InjectRepository(TransactionEntity)
+    private transactionRepository: Repository<TransactionEntity>,
+    @InjectRepository(SubscriptionInstanceEntity)
+    private subscriptionInstanceRepository: Repository<SubscriptionInstanceEntity>,
+    @InjectRepository(MemberEntity)
+    private memberRepository: Repository<MemberEntity>,
+    @InjectRepository(GymEntity)
+    private gymRepository: Repository<GymEntity>,
+    @InjectRepository(ProductEntity)
+    private productRepository: Repository<ProductEntity>,
   ) {}
 
   async migrateTransactions() {
@@ -27,13 +34,13 @@ export class TransactionSeeding implements OnModuleInit {
     const getSubscriptionInstances =
       await this.subscriptionInstanceRepository.find();
     for (const subscriptionInstance of getSubscriptionInstances) {
-      const existingTransaction = await this.transactionRepository.findById(
-        subscriptionInstance._id,
-      );
+      const existingTransaction = await this.transactionRepository.findOne({
+        where: { id: subscriptionInstance.id },
+      });
 
       if (!existingTransaction) {
         await this.transactionRepository.create({
-          _id: subscriptionInstance._id,
+          id: subscriptionInstance.id,
           type: TransactionType.SUBSCRIPTION,
           endDate: subscriptionInstance.endDate,
           startDate: subscriptionInstance.startDate,
@@ -54,10 +61,9 @@ export class TransactionSeeding implements OnModuleInit {
     }
 
     // move member subscription instances to transactions
-    const getMembers = await this.memberRepository
-      .find()
-      .populate('transactions')
-      .populate('subscriptionInstances');
+    const getMembers = await this.memberRepository.find({
+      relations: { transactions: true, subscriptionInstances: true },
+    });
 
     for (const member of getMembers) {
       const transactions = member.transactions || [];
@@ -68,22 +74,22 @@ export class TransactionSeeding implements OnModuleInit {
           (subscriptionInstance) => subscriptionInstance?.id,
         ),
       ];
-      let checkTransactions: Transaction[] = [];
+      let checkTransactions: TransactionEntity[] = [];
       for (const transactionId of transactionsIds) {
-        const transaction =
-          await this.transactionRepository.findById(transactionId);
+        const transaction = await this.transactionRepository.findOne({
+          where: { id: transactionId },
+        });
         if (transaction) {
           checkTransactions.push(transaction);
         }
       }
       member.transactions = checkTransactions;
-      await member.save();
+      await this.memberRepository.save(member);
     }
 
-    const getGyms = await this.gymRepository
-      .find()
-      .populate('transactions')
-      .populate('subscriptionInstances');
+    const getGyms = await this.gymRepository.find({
+      relations: { transactions: true, subscriptionInstances: true },
+    });
     for (const gym of getGyms) {
       const transactions = gym.transactions || [];
       const transactionsIds = [
@@ -92,33 +98,34 @@ export class TransactionSeeding implements OnModuleInit {
           (subscriptionInstance) => subscriptionInstance?.id,
         ),
       ];
-      let checkTransactions: Transaction[] = [];
+      let checkTransactions: TransactionEntity[] = [];
       for (const transactionId of transactionsIds) {
-        const transaction =
-          await this.transactionRepository.findById(transactionId);
+        const transaction = await this.transactionRepository.findOne({
+          where: { id: transactionId },
+        });
         checkTransactions.push(transaction);
       }
       gym.transactions = checkTransactions;
-      await gym.save();
+      await this.gymRepository.save(gym);
     }
 
-    const getProducts = await this.productRepository
-      .find()
-      .populate('transactions')
-      .populate('subscriptionInstances');
+    const getProducts = await this.productRepository.find({
+      relations: { transactions: true },
+    });
     for (const product of getProducts) {
       const transactions = product.transactions || [];
       const transactionsIds = [
         ...transactions.map((transaction) => transaction.id),
       ];
-      let checkTransactions: Transaction[] = [];
+      let checkTransactions: TransactionEntity[] = [];
       for (const transactionId of transactionsIds) {
-        const transaction =
-          await this.transactionRepository.findById(transactionId);
+        const transaction = await this.transactionRepository.findOne({
+          where: { id: transactionId },
+        });
         checkTransactions.push(transaction);
       }
       product.transactions = checkTransactions;
-      await product.save();
+      await this.productRepository.save(product);
     }
   }
 

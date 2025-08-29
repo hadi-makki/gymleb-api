@@ -1,31 +1,38 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { User } from '../user/user.entity';
-import { Manager } from '../manager/manager.entity';
+import { PgMainEntity } from 'src/main-classes/mainEntity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { ProductEntity } from 'src/products/products.entity';
+import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
 
-@CustomSchema()
-export class Media extends Document {
-  @Prop({ required: true })
+@Entity('media')
+export class MediaEntity extends PgMainEntity {
+  @Column('text')
   s3Key: string;
 
-  @Prop({ required: true })
+  @Column('text')
   originalName: string;
 
-  @Prop({ nullable: true, default: null })
+  @Column('text', { nullable: true, default: null })
   fileName: string;
 
-  @Prop({ type: Number })
+  @Column('int')
   size: number;
 
-  @Prop({ required: true })
+  @Column('text')
   mimeType: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', nullable: true })
-  user: User;
+  @ManyToOne(() => ManagerEntity, (manager) => manager.media)
+  manager: ManagerEntity;
 
-  @Prop({ type: Types.ObjectId, ref: 'Manager', nullable: true })
-  manager: Manager;
+  @RelationId((media: MediaEntity) => media.manager)
+  managerId: string | null;
+
+  @ManyToOne(() => ProductEntity, (product) => product.images)
+  product: ProductEntity;
+
+  @RelationId((media: MediaEntity) => media.product)
+  productId: string | null;
+
+  @OneToMany(() => MemberEntity, (member) => member.profileImage)
+  members: MemberEntity[];
 }
-
-export const MediaSchema = SchemaFactory.createForClass(Media);

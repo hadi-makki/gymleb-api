@@ -7,17 +7,20 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { TokenService } from '../token/token.service';
 import { Permissions } from '../decorators/roles/role.enum';
 import { PERMISSIONS_KEY } from '../decorators/roles/Role';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
 @Injectable()
 export class ManagerAuthGuard implements CanActivate {
   constructor(
-    @InjectModel(Manager.name)
-    private managerRepository: Model<Manager>,
+    @InjectRepository(ManagerEntity)
+    private managerRepository: Repository<ManagerEntity>,
     private readonly tokenService: TokenService,
     private readonly reflector: Reflector,
   ) {}
@@ -25,7 +28,7 @@ export class ManagerAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user: Manager }>();
+      .getRequest<Request & { user: Manager | ManagerEntity }>();
     const response = context.switchToHttp().getResponse();
     const requiredRoles =
       this.reflector.getAllAndOverride<Permissions[]>(PERMISSIONS_KEY, [
@@ -51,13 +54,13 @@ export class ManagerAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const manager = await this.managerRepository
-      .findById(userId)
-      .populate('roles');
+    const manager = await this.managerRepository.findOne({
+      where: { id: userId },
+    });
 
     if (
       (!manager ||
-        !requiredRoles.some((role) => manager.roles.includes(role))) &&
+        !requiredRoles.some((role) => manager.permissions.includes(role))) &&
       !requiredRoles.includes(Permissions.Any)
     ) {
       console.log('Unauthorized');

@@ -1,7 +1,10 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Product } from './products.entity';
+import { Product } from './products.model';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ProductEntity } from './products.entity';
+import { Repository } from 'typeorm';
 
 const products: {
   name: string;
@@ -24,8 +27,8 @@ const topics: string[] = [
 @Injectable({ scope: Scope.DEFAULT })
 export class SubscriptionPlanSeeding implements OnModuleInit {
   constructor(
-    @InjectModel(Product.name)
-    private productRepository: Model<Product>,
+    @InjectRepository(ProductEntity)
+    private productRepository: Repository<ProductEntity>,
   ) {}
 
   async onModuleInit() {

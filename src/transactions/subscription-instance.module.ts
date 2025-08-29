@@ -7,26 +7,39 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import {
   OwnerSubscription,
   OwnerSubscriptionSchema,
-} from '../owner-subscriptions/owner-subscription.entity';
-import { Gym, GymSchema } from '../gym/entities/gym.entity';
-import { Manager, ManagerSchema } from '../manager/manager.entity';
-import { Member, MemberSchema } from '../member/entities/member.entity';
+} from '../owner-subscriptions/owner-subscription.model';
+import { Gym, GymSchema } from '../gym/entities/gym.model';
+import { Manager, ManagerSchema } from '../manager/manager.model';
+import { Member, MemberSchema } from '../member/entities/member.model';
 import {
   OwnerSubscriptionType,
   OwnerSubscriptionTypeSchema,
-} from '../owner-subscriptions/owner-subscription-type.entity';
-import { Product, ProductSchema } from '../products/products.entity';
+} from '../owner-subscriptions/owner-subscription-type.model';
+import { Product, ProductSchema } from '../products/products.model';
 import {
   Subscription,
   SubscriptionSchema,
-} from '../subscription/entities/subscription.entity';
-import { User, UserSchema } from '../user/user.entity';
+} from '../subscription/entities/subscription.model';
+import { User, UserSchema } from '../user/user.model';
 import {
   SubscriptionInstance,
   SubscriptionInstanceSchema,
-} from './subscription-instance.entity';
-import { Transaction, TransactionSchema } from './transaction.entity';
+} from './subscription-instance.model';
+import { Transaction, TransactionSchema } from './transaction.model';
 import { TransactionSeeding } from './transactions.seed';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { TransactionEntity } from './transaction.entity';
+import { UserEntity } from 'src/user/user.entity';
+import { ProductEntity } from 'src/products/products.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
+import { RevenueEntity } from 'src/revenue/revenue.entity';
+import { SubscriptionInstanceEntity } from './subscription-instance.entity';
 
 @Module({
   imports: [
@@ -48,6 +61,20 @@ import { TransactionSeeding } from './transactions.seed';
       },
       { name: Transaction.name, schema: TransactionSchema },
       { name: SubscriptionInstance.name, schema: SubscriptionInstanceSchema },
+    ]),
+    TypeOrmModule.forFeature([
+      TransactionEntity,
+      UserEntity,
+      ProductEntity,
+      MemberEntity,
+      GymEntity,
+      ManagerEntity,
+      OwnerSubscriptionEntity,
+      ExpenseEntity,
+      SubscriptionEntity,
+      OwnerSubscriptionTypeEntity,
+      RevenueEntity,
+      SubscriptionInstanceEntity,
     ]),
     AuthenticationModule,
   ],

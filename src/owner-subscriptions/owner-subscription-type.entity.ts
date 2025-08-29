@@ -1,22 +1,39 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
 import { CustomSchema } from '../decorators/custom-schema.decorator';
-import { MainEntity } from '../main-classes/mainEntity';
+import { MainEntity, PgMainEntity } from '../main-classes/mainEntity';
+import { Column, Entity, OneToMany } from 'typeorm';
+import { OwnerSubscriptionEntity } from './owner-subscription.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 
-@CustomSchema()
-export class OwnerSubscriptionType extends MainEntity {
-  @Prop({ type: String, required: true })
+@Entity('owner_subscription_types')
+export class OwnerSubscriptionTypeEntity extends PgMainEntity {
+  @Column('text', { nullable: true })
   title: string;
 
-  @Prop({ type: Number, required: true, min: 0 })
+  @Column('int', { nullable: true })
   price: number;
 
-  @Prop({ type: Number, required: true, min: 1 })
+  @Column('int', { nullable: true })
   durationDays: number;
 
-  @Prop({ type: String, required: false })
+  @Column('text', { nullable: true })
   description?: string;
-}
 
-export const OwnerSubscriptionTypeSchema = SchemaFactory.createForClass(
-  OwnerSubscriptionType,
-);
+  @OneToMany(
+    () => OwnerSubscriptionEntity,
+    (ownerSubscription) => ownerSubscription.type,
+  )
+  ownerSubscription: OwnerSubscriptionEntity[];
+
+  @OneToMany(
+    () => TransactionEntity,
+    (transaction) => transaction.ownerSubscriptionType,
+  )
+  transactions: TransactionEntity[];
+
+  @OneToMany(
+    () => SubscriptionInstanceEntity,
+    (subscriptionInstance) => subscriptionInstance.ownerSubscriptionType,
+  )
+  instances: SubscriptionInstanceEntity[];
+}

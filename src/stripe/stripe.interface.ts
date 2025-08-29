@@ -1,14 +1,17 @@
-import { Member } from '../member/entities/member.entity';
+import { Member } from '../member/entities/member.model';
 import {
   Subscription,
   SubscriptionType,
-} from '../subscription/entities/subscription.entity';
-import { Gym } from '../gym/entities/gym.entity';
+} from '../subscription/entities/subscription.model';
+import { Gym } from '../gym/entities/gym.model';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
 
 export interface PaymentDetails {
-  subscription: Subscription;
-  member: Member;
-  gym: Gym;
+  subscription: SubscriptionEntity;
+  member: MemberEntity;
+  gym: GymEntity;
   subscriptionType: SubscriptionType;
   amount: number;
   // If true for daily subscriptions, grant a full 24 hours. If false/undefined, expire at end of day

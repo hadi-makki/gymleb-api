@@ -1,48 +1,69 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
-import { Types } from 'mongoose';
-import { CustomSchema } from '../decorators/custom-schema.decorator';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { MediaEntity } from 'src/media/media.entity';
+import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { TokenEntity } from 'src/token/token.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Column, Entity, JoinTable, ManyToMany, OneToMany } from 'typeorm';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Gym } from '../gym/entities/gym.entity';
-import { MainEntity } from '../main-classes/mainEntity';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.entity';
-import Token from '../token/token.entity';
+import { PgMainEntity } from '../main-classes/mainEntity';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
-@CustomSchema()
-export class Manager extends MainEntity {
-  @Prop({ required: true, unique: true })
+@Entity('managers')
+export class ManagerEntity extends PgMainEntity {
+  @Column({ unique: true })
   username: string;
 
-  @Prop({ required: true, default: 'John' })
+  @Column({ default: 'John' })
   firstName: string;
 
-  @Prop({ required: true, default: 'Doe' })
+  @Column({ default: 'Doe' })
   lastName: string;
 
-  @Prop({ required: true })
+  @Column()
   password: string;
 
-  @Prop({ required: true })
+  @Column('text', { nullable: true })
+  address: string;
+
+  @Column('text', { nullable: true })
   phoneNumber: string;
 
-  @Prop({ required: false })
+  @Column({ nullable: true })
   email: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Token' }] })
-  tokens: Token[];
+  @OneToMany(() => TokenEntity, (token) => token.manager)
+  tokens: TokenEntity[];
 
-  @Prop({
-    type: [String],
-    enum: Permissions,
-    default: [Permissions.Any],
-    index: true,
-  })
-  roles: Permissions[];
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Gym' }], required: false })
-  gyms: Gym[];
+  @Column({ type: 'jsonb', default: [] })
+  permissions: Permissions[];
 
-  @Prop({ type: Types.ObjectId, ref: 'OwnerSubscription', required: false })
-  ownerSubscription?: OwnerSubscription;
+  @ManyToMany(() => GymEntity, (gym) => gym.personalTrainers)
+  @JoinTable()
+  gyms: GymEntity[];
+
+  // Gyms owned by this manager (inverse side of GymEntity.owner)
+  @OneToMany(() => GymEntity, (gym) => gym.owner)
+  ownedGyms: GymEntity[];
+
+  @OneToMany(
+    () => OwnerSubscriptionEntity,
+    (ownerSubscription) => ownerSubscription.owner,
+  )
+  ownerSubscription?: OwnerSubscriptionEntity;
+
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.owner)
+  transactions: TransactionEntity[];
+
+  @OneToMany(() => MediaEntity, (media) => media.manager)
+  media: MediaEntity[];
+
+  @OneToMany(() => PTSessionEntity, (session) => session.personalTrainer)
+  ptSessions: PTSessionEntity[];
+
+  @OneToMany(() => MemberEntity, (member) => member.personalTrainer)
+  members: MemberEntity[];
 
   static async isPasswordMatch(
     password: string,
@@ -55,5 +76,3 @@ export class Manager extends MainEntity {
     return bcrypt.hash(password, 10);
   }
 }
-
-export const ManagerSchema = SchemaFactory.createForClass(Manager);

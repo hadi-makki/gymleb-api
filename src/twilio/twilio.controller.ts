@@ -4,9 +4,10 @@ import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { CreateTwilioDto } from './dto/create-twilio.dto';
 import { TwilioService } from './twilio.service';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('notifications')
 export class TwilioController {
@@ -24,7 +25,7 @@ export class TwilioController {
   @ApiBearerAuth()
   @Roles(Permissions.GymOwner)
   async notifyExpiredMembers(
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
   ) {
     return await this.twilioService.notifyExpiredMembers(manager, gymId);

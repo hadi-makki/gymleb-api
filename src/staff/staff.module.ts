@@ -4,7 +4,7 @@ import { StaffService } from './staff.service';
 import { StaffController } from './staff.controller';
 import { ManagerModule } from 'src/manager/manager.module';
 import { GymModule } from 'src/gym/gym.module';
-import { Manager, ManagerSchema } from 'src/manager/manager.entity';
+import { Manager, ManagerSchema } from 'src/manager/manager.model';
 import { AuthenticationModule } from 'src/common/AuthModule.module';
 
 @Module({

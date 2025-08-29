@@ -9,17 +9,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Gym } from 'src/gym/entities/gym.entity';
+import { Gym } from 'src/gym/entities/gym.model';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { returnManager } from '../functions/returnUser';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { Manager } from '../manager/manager.entity';
+import { Manager } from '../manager/manager.model';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 import { GymOwnerService } from './gym-owner.service';
+import { ManagerEntity } from 'src/manager/manager.entity';
 @Controller('gym-owner')
 @ApiTags('Gym Owner')
 export class GymOwnerController {
@@ -99,7 +100,7 @@ export class GymOwnerController {
     type: Manager,
   })
   @Roles(Permissions.GymOwner)
-  getGymOwner(@User() user: Manager) {
+  getGymOwner(@User() user: ManagerEntity) {
     return returnManager(user);
   }
 

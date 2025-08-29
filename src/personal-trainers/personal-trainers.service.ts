@@ -4,41 +4,45 @@ import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Permissions } from '../decorators/roles/role.enum';
-import { User } from '../user/user.entity';
+import { User } from '../user/user.model';
 import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
 import { NotFoundException } from '../error/not-found-error';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
-import { PTSession } from './entities/pt-sessions.entity';
-import { Gym } from 'src/gym/entities/gym.entity';
-import { Member } from 'src/member/entities/member.entity';
-import { Manager } from 'src/manager/manager.entity';
+import { PTSession } from './entities/pt-sessions.model';
+import { Gym } from 'src/gym/entities/gym.model';
+import { Member } from 'src/member/entities/member.model';
 import { ManagerService } from 'src/manager/manager.service';
 import { v4 as uuidv4 } from 'uuid';
-import { TransactionType } from 'src/transactions/transaction.entity';
+import { TransactionType } from 'src/transactions/transaction.model';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { UserEntity } from 'src/user/user.entity';
+import { ILike, In, Raw, Repository } from 'typeorm';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { PTSessionEntity } from './entities/pt-sessions.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
 @Injectable()
 export class PersonalTrainersService {
   constructor(
-    @InjectModel(Manager.name)
-    private readonly personalTrainerEntity: Model<Manager>,
-    @InjectModel(User.name)
-    private readonly userEntity: Model<User>,
-    @InjectModel(PTSession.name)
-    private readonly sessionEntity: Model<PTSession>,
-    @InjectModel(Gym.name)
-    private readonly gymEntity: Model<Gym>,
-    @InjectModel(Member.name)
-    private readonly memberEntity: Model<Member>,
-    @InjectModel(Manager.name)
-    private readonly managerEntity: Model<Manager>,
+    @InjectRepository(ManagerEntity)
+    private readonly personalTrainerEntity: Repository<ManagerEntity>,
+    @InjectRepository(PTSessionEntity)
+    private readonly sessionEntity: Repository<PTSessionEntity>,
+    @InjectRepository(GymEntity)
+    private readonly gymEntity: Repository<GymEntity>,
+    @InjectRepository(MemberEntity)
+    private readonly memberEntity: Repository<MemberEntity>,
+    @InjectRepository(ManagerEntity)
+    private readonly managerEntity: Repository<ManagerEntity>,
     private readonly managerService: ManagerService,
     private readonly transactionService: TransactionService,
   ) {}
 
   async removeClientFromTrainer(memberId: string, gymId: string) {
-    const member = await this.memberEntity.findById(memberId);
+    const member = await this.memberEntity.findOne({ where: { id: memberId } });
     console.log(
       'this is the member inside the removeClientFromTrainer',
       member,
@@ -49,15 +53,15 @@ export class PersonalTrainersService {
     }
 
     const trainer = await this.managerEntity.findOne({
-      users: { $in: [member._id] },
+      where: { members: { id: member.id } },
     });
     if (!trainer) {
       return;
     }
 
-    await this.sessionEntity.deleteMany({
-      member: member._id,
-      personalTrainer: trainer._id,
+    await this.sessionEntity.delete({
+      member: member,
+      personalTrainer: trainer,
     });
 
     return {
@@ -69,17 +73,17 @@ export class PersonalTrainersService {
     createPersonalTrainerDto: CreatePersonalTrainerDto,
     gymId: string,
   ) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
     const checkIfPersonalTrainerExists =
       (await this.personalTrainerEntity.findOne({
-        phoneNumber: createPersonalTrainerDto.phone,
+        where: { phoneNumber: createPersonalTrainerDto.phone },
       })) ||
       (await this.managerEntity.findOne({
-        phoneNumber: createPersonalTrainerDto.phone,
+        where: { phoneNumber: createPersonalTrainerDto.phone },
       }));
 
     if (checkIfPersonalTrainerExists) {
@@ -111,49 +115,46 @@ export class PersonalTrainersService {
   }
 
   findOne(id: string) {
-    return this.personalTrainerEntity.findById(id);
+    return this.personalTrainerEntity.findOne({ where: { id } });
   }
 
   update(id: string, updatePersonalTrainerDto: UpdatePersonalTrainerDto) {
-    return this.personalTrainerEntity.findByIdAndUpdate(
-      id,
-      updatePersonalTrainerDto,
-    );
+    return this.personalTrainerEntity.update(id, updatePersonalTrainerDto);
   }
 
   remove(id: string) {
-    return this.personalTrainerEntity.findByIdAndDelete(id);
+    return this.personalTrainerEntity.delete(id);
   }
 
-  findAllUsers(personalTrainer: Manager) {
-    return this.userEntity.find({ personalTrainer: personalTrainer._id });
+  findAllUsers(personalTrainer: ManagerEntity) {
+    return this.memberEntity.find({
+      where: { personalTrainer: personalTrainer },
+    });
   }
 
   async addUserToPersonalTrainer(
     addPersonalTrainerDto: AddPersonalTrainerDto,
-    personalTrainer: Manager,
+    personalTrainer: ManagerEntity,
   ) {
-    const user = await this.userEntity.findById(addPersonalTrainerDto.userId);
+    const user = await this.memberEntity.findOne({
+      where: { id: addPersonalTrainerDto.userId },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     const checkIfUserIsAlreadyInPersonalTrainer =
       await this.personalTrainerEntity.findOne({
-        users: { $in: [user._id] },
+        where: { members: { id: user.id } },
+        relations: ['members'],
       });
 
     if (checkIfUserIsAlreadyInPersonalTrainer) {
       throw new BadRequestException('User already in personal trainer');
     }
 
-    await this.personalTrainerEntity.findByIdAndUpdate(personalTrainer._id, {
-      $push: { users: user._id },
-    });
-
-    await this.userEntity.findByIdAndUpdate(user._id, {
-      personalTrainer: personalTrainer._id,
-    });
+    user.personalTrainer = personalTrainer;
+    await this.memberEntity.save(user);
 
     return {
       message: 'User added to personal trainer',
@@ -161,40 +162,29 @@ export class PersonalTrainersService {
   }
 
   async createSession(gymId: string, createSessionDto: CreateSessionDto) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const checkIfUserInGym = await this.memberEntity
-      .findById(createSessionDto.memberId)
-      .populate({
-        path: 'gym',
-        select: '_id name',
-      });
+    const checkIfUserInGym = await this.memberEntity.findOne({
+      where: { id: createSessionDto.memberId },
+      relations: ['gym'],
+    });
 
-    if (
-      !checkIfUserInGym ||
-      (checkIfUserInGym.gym._id.toString() !== gymId &&
-        !(checkIfUserInGym.gym._id as any).equals(new Types.ObjectId(gymId)))
-    ) {
+    if (!checkIfUserInGym || checkIfUserInGym.gym.id !== gymId) {
       throw new NotFoundException('Member not found in gym');
     }
 
-    const checkIfPersonalTrainerInGym = await this.personalTrainerEntity
-      .findById(createSessionDto.personalTrainerId)
-      .populate({
-        path: 'gyms',
-        select: '_id name',
+    const checkIfPersonalTrainerInGym =
+      await this.personalTrainerEntity.findOne({
+        where: { id: createSessionDto.personalTrainerId },
+        relations: ['gyms'],
       });
 
     if (
       !checkIfPersonalTrainerInGym ||
-      !checkIfPersonalTrainerInGym.gyms.some(
-        (gym: any) =>
-          gym._id.toString() === gymId ||
-          gym._id.equals(new Types.ObjectId(gymId)),
-      )
+      !checkIfPersonalTrainerInGym.gyms.some((gym) => gym.id === gymId)
     ) {
       throw new NotFoundException('Personal trainer not found in gym');
     }
@@ -202,26 +192,22 @@ export class PersonalTrainersService {
     let setDateDone = false;
 
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
-      const session = await this.sessionEntity.create({
+      const createSessionModel = this.sessionEntity.create({
         member: checkIfUserInGym,
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
         sessionPrice: createSessionDto.sessionPrice,
         sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
       });
-      await this.memberEntity.findByIdAndUpdate(
-        checkIfUserInGym._id,
-        {
-          $push: { sessions: session._id },
-        },
-        { new: true },
-      );
+      const createdSession = await this.sessionEntity.save(createSessionModel);
 
       await this.transactionService.createPersonalTrainerSessionTransaction({
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
         member: checkIfUserInGym,
         amount: createSessionDto.sessionPrice,
+        willPayLater: createSessionDto.willPayLater || false,
+        ptSession: createdSession,
       });
 
       setDateDone = true;
@@ -232,64 +218,57 @@ export class PersonalTrainersService {
     };
   }
 
-  async findAllSessions(gymId: string, personalTrainer: Manager) {
-    const checkGym = await this.gymEntity.findById(gymId);
+  async findAllSessions(gymId: string, personalTrainer: ManagerEntity) {
+    const checkGym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
 
     // Check if the user is a personal trainer (not gym owner or super admin)
     const isPersonalTrainer =
-      personalTrainer.roles.includes(Permissions.personalTrainers) &&
-      !personalTrainer.roles.includes(Permissions.GymOwner) &&
-      !personalTrainer.roles.includes(Permissions.SuperAdmin);
+      personalTrainer.permissions.includes(Permissions.personalTrainers) &&
+      !personalTrainer.permissions.includes(Permissions.GymOwner) &&
+      !personalTrainer.permissions.includes(Permissions.SuperAdmin);
 
-    return await this.sessionEntity
-      .find({
-        gym: checkGym._id,
-        ...(isPersonalTrainer ? { personalTrainer: personalTrainer._id } : {}),
-      })
-      .populate({
-        path: 'member',
-        select: '_id name phone email',
-      })
-      .populate({
-        path: 'personalTrainer',
-        select: '_id firstName lastName username',
-      })
-      .populate({
-        path: 'gym',
-        select: '_id name',
-      })
-      .sort({ sessionDate: 1 });
+    return await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        ...(isPersonalTrainer ? { personalTrainer: personalTrainer } : {}),
+      },
+      relations: ['member', 'personalTrainer', 'gym'],
+      order: { sessionDate: 'ASC' },
+    });
   }
 
   async findByGym(gymId: string) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const personalTrainers = await this.personalTrainerEntity
-      .find({
-        gyms: { $in: [gym._id] },
-        roles: { $in: [Permissions.personalTrainers] },
-      })
-      .populate({
-        path: 'gyms',
-      });
+    const personalTrainers = await this.personalTrainerEntity.find({
+      where: {
+        gyms: { id: gymId },
+        permissions: Raw(
+          (alias) => `${alias} @> '["${Permissions.personalTrainers}"]'::jsonb`,
+        ),
+      },
+      relations: ['gyms'],
+    });
 
-    const sessionsResult: { personalTrainer: Manager; clientsCount: number }[] =
-      [];
+    const sessionsResult: {
+      personalTrainer: ManagerEntity;
+      clientsCount: number;
+    }[] = [];
 
     for (const personalTrainer of personalTrainers) {
-      const sessions = await this.sessionEntity
-        .find({
-          personalTrainer: personalTrainer._id,
-        })
-        .populate({
-          path: 'member',
-        });
+      const sessions = await this.sessionEntity.find({
+        where: {
+          personalTrainer: { id: personalTrainer.id },
+          gym: { id: gym.id },
+        },
+        relations: ['member'],
+      });
       const clients = sessions.map((session) => session.member?.id);
       // filter out duplicates
       const uniqueClients = [...new Set(clients)];
@@ -303,42 +282,48 @@ export class PersonalTrainersService {
   }
 
   async getGymMembers(gymId: string, search?: string, limit?: number) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({
+      where: { id: gymId },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    let query: any = { gym: gym.id };
+    // Build the query using TypeORM syntax
+    let whereCondition: any = { gym: { id: gymId } };
 
-    // Add search functionality
+    // Add search functionality using TypeORM's ILike
     if (search) {
-      query = {
-        ...query,
-        $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-        ],
-      };
+      whereCondition = [
+        { gym: { id: gymId }, name: ILike(`%${search}%`) },
+        { gym: { id: gymId }, phone: ILike(`%${search}%`) },
+        { gym: { id: gymId }, email: ILike(`%${search}%`) },
+      ];
     }
 
-    let membersQuery = this.memberEntity.find(query);
+    const queryOptions: any = {
+      where: whereCondition,
+      relations: ['gym', 'subscription', 'transactions'],
+      order: { createdAt: 'DESC' },
+    };
 
     // Add limit if provided
     if (limit) {
-      membersQuery = membersQuery.limit(limit);
+      queryOptions.take = limit;
     }
 
-    return await membersQuery.exec();
+    return await this.memberEntity.find(queryOptions);
   }
 
   async cancelSession(sessionId: string, reason: string) {
-    const session = await this.sessionEntity.findById(sessionId);
+    const session = await this.sessionEntity.findOne({
+      where: { id: sessionId },
+    });
     if (!session) {
       throw new NotFoundException('Session not found');
     }
 
-    await this.sessionEntity.findByIdAndUpdate(sessionId, {
+    await this.sessionEntity.update(sessionId, {
       isCancelled: true,
       cancelledReason: reason,
       cancelledAt: new Date(),
@@ -350,7 +335,9 @@ export class PersonalTrainersService {
   }
 
   async updateSession(sessionId: string, updateSessionDto: UpdateSessionDto) {
-    const session = await this.sessionEntity.findById(sessionId);
+    const session = await this.sessionEntity.findOne({
+      where: { id: sessionId },
+    });
     if (!session) {
       throw new NotFoundException('Session not found');
     }
@@ -359,13 +346,13 @@ export class PersonalTrainersService {
 
     // Update member if provided
     if (updateSessionDto.memberId) {
-      const member = await this.memberEntity.findById(
-        updateSessionDto.memberId,
-      );
+      const member = await this.memberEntity.findOne({
+        where: { id: updateSessionDto.memberId },
+      });
       if (!member) {
         throw new NotFoundException('Member not found');
       }
-      updateData.member = member._id;
+      updateData.member = member;
     }
 
     // Update session date if provided
@@ -378,7 +365,7 @@ export class PersonalTrainersService {
       updateData.sessionPrice = updateSessionDto.sessionPrice;
     }
 
-    await this.sessionEntity.findByIdAndUpdate(sessionId, updateData);
+    await this.sessionEntity.update(sessionId, updateData);
 
     return {
       message: 'Session updated successfully',
@@ -386,33 +373,25 @@ export class PersonalTrainersService {
   }
 
   async getTrainerSessions(trainerId: string, gymId: string) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const trainer = await this.managerEntity.findById(trainerId);
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
     if (!trainer) {
       throw new NotFoundException('Personal trainer not found');
     }
 
-    const sessions = await this.sessionEntity
-      .find({
-        gym: gym._id,
-        personalTrainer: trainer._id,
-      })
-      .populate({
-        path: 'member',
-        select: '_id name phone email',
-      })
-      .populate({
-        path: 'personalTrainer',
-        select: '_id firstName lastName username',
-      })
-      .populate({
-        path: 'gym',
-        select: '_id name',
-      });
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+      },
+      relations: ['member', 'personalTrainer', 'gym'],
+    });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
     return sessions.sort((a, b) => {
@@ -436,31 +415,32 @@ export class PersonalTrainersService {
   }
 
   async getTrainerClients(trainerId: string, gymId: string) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const trainer = await this.managerEntity.findById(trainerId);
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
     if (!trainer) {
       throw new NotFoundException('Personal trainer not found');
     }
 
     // Get all sessions for this trainer
-    const sessions = await this.sessionEntity
-      .find({
-        gym: gym._id,
-        personalTrainer: trainer._id,
-      })
-      .populate({
-        path: 'member',
-      });
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+      },
+      relations: ['member'],
+    });
 
     // Get unique members and their session counts
     const memberMap = new Map();
 
     sessions.forEach((session) => {
-      const memberId = session.member?._id.toString();
+      const memberId = session.member?.id;
       if (!memberMap.has(memberId)) {
         memberMap.set(memberId, {
           member: session.member,
@@ -503,39 +483,36 @@ export class PersonalTrainersService {
     memberId: string,
     gymId: string,
   ) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const trainer = await this.managerEntity.findById(trainerId);
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
     if (!trainer) {
       throw new NotFoundException('Personal trainer not found');
     }
 
-    const member = await this.memberEntity.findById(memberId);
+    const member = await this.memberEntity.findOne({ where: { id: memberId } });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
 
-    const sessions = await this.sessionEntity
-      .find({
-        gym: gym._id,
-        personalTrainer: trainer._id,
-        member: member._id,
-      })
-      .populate({
-        path: 'member',
-        select: '_id name phone email',
-      })
-      .populate({
-        path: 'personalTrainer',
-        select: '_id firstName lastName username',
-      })
-      .populate({
-        path: 'gym',
-        select: '_id name',
-      });
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+        member: { id: memberId },
+      },
+      relations: {
+        member: true,
+        personalTrainer: true,
+        gym: true,
+        transaction: true,
+      },
+    });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
     return sessions.sort((a, b) => {
@@ -558,29 +535,20 @@ export class PersonalTrainersService {
     });
   }
 
-  async mySessions(gymId: string, personalTrainer: Manager) {
-    const gym = await this.gymEntity.findById(gymId);
+  async mySessions(gymId: string, personalTrainer: ManagerEntity) {
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const sessions = await this.sessionEntity
-      .find({
-        gym: gym._id,
-        personalTrainer: personalTrainer._id,
-      })
-      .populate({
-        path: 'member',
-        select: '_id name phone email',
-      })
-      .populate({
-        path: 'personalTrainer',
-        select: '_id firstName lastName username',
-      })
-      .populate({
-        path: 'gym',
-        select: '_id name',
-      });
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: personalTrainer.id },
+      },
+
+      relations: ['member', 'personalTrainer', 'gym'],
+    });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
     return sessions.sort((a, b) => {
@@ -603,28 +571,26 @@ export class PersonalTrainersService {
     });
   }
 
-  async myClients(gymId: string, personalTrainer: Manager) {
-    const gym = await this.gymEntity.findById(gymId);
+  async myClients(gymId: string, personalTrainer: ManagerEntity) {
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
     // Get all sessions for this trainer
-    const sessions = await this.sessionEntity
-      .find({
-        gym: gym._id,
-        personalTrainer: personalTrainer._id,
-      })
-      .populate({
-        path: 'member',
-        select: '_id name phone email',
-      });
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: personalTrainer.id },
+      },
+      relations: ['member', 'personalTrainer', 'gym'],
+    });
 
     // Get unique members and their session counts
     const memberMap = new Map();
 
     sessions.forEach((session) => {
-      const memberId = session.member?._id.toString();
+      const memberId = session.member?.id;
       if (!memberMap.has(memberId)) {
         memberMap.set(memberId, {
           member: session.member,
@@ -665,36 +631,26 @@ export class PersonalTrainersService {
   async getClientSessions(
     memberId: string,
     gymId: string,
-    personalTrainer: Manager,
+    personalTrainer: ManagerEntity,
   ) {
-    const gym = await this.gymEntity.findById(gymId);
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    const member = await this.memberEntity.findById(memberId);
+    const member = await this.memberEntity.findOne({ where: { id: memberId } });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
 
-    const sessions = await this.sessionEntity
-      .find({
-        gym: gym._id,
-        personalTrainer: personalTrainer._id,
-        member: member._id,
-      })
-      .populate({
-        path: 'member',
-        select: '_id name phone email',
-      })
-      .populate({
-        path: 'personalTrainer',
-        select: '_id firstName lastName username',
-      })
-      .populate({
-        path: 'gym',
-        select: '_id name',
-      });
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: personalTrainer.id },
+        member: member,
+      },
+      relations: ['member', 'personalTrainer', 'gym'],
+    });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
     return sessions.sort((a, b) => {

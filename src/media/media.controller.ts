@@ -30,7 +30,7 @@ import {
 import { Response } from 'express';
 import { AuthGuard } from '../guards/auth.guard';
 import { User } from '../decorators/users.decorator';
-import { User as UserEntity } from '../user/user.entity';
+import { User as UserEntity } from '../user/user.model';
 
 class File {
   @ApiProperty({
