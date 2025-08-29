@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isMongoId } from 'class-validator';
+import { isMongoId, isUUID } from 'class-validator';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { BadRequestException } from 'src/error/bad-request-error';
 import { NotFoundException } from 'src/error/not-found-error';
@@ -9,7 +9,7 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ManagerService } from 'src/manager/manager.service';
-import { Not, Repository } from 'typeorm';
+import { Not, Raw, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
@@ -54,17 +54,23 @@ export class StaffService {
       throw new NotFoundException('Gym not found');
     }
 
+    console.log('gymId', gymId);
+
     const staff = await this.managerModel.find({
       where: {
-        gyms: { id: gymId },
-        permissions: Not(Permissions.GymOwner),
+        gyms: { id: gym.id },
+        // permissions is jsonb[]; exclude owners via jsonb containment
+        permissions: Raw(
+          (alias) => `NOT (${alias} @> '["${Permissions.GymOwner}"]'::jsonb)`,
+        ),
       },
     });
+    console.log('staff', staff);
     return staff.map((m) => returnManager(m));
   }
 
   async findOne(id: string, manager: ManagerEntity) {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid id');
     }
     const gym = await this.gymService.getGymByManager(manager);
@@ -86,7 +92,7 @@ export class StaffService {
     gymId: string,
     updateStaffDto: UpdateStaffDto,
   ) {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid id');
     }
     const gym = await this.gymService.getGymByManager(manager);
@@ -117,7 +123,7 @@ export class StaffService {
   }
 
   async remove(id: string, manager: ManagerEntity, gymId: string) {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid id');
     }
     const gym = await this.gymService.getGymByManager(manager);

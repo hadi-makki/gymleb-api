@@ -100,10 +100,18 @@ export class DatabaseMigration implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    console.log('[Migration] Starting migration bootstrap...');
-    const mongoManager = await this.managerModel.findOne({
-      username: 'demogym',
+    const getManagers = await this.managerModel.find({
+      roles: { $in: [Permissions.GymOwner] },
     });
+    for (const manager of getManagers) {
+      console.log('[Migration] Migrating manager:', manager.username);
+      await this.migrateData(manager);
+    }
+  }
+
+  async migrateData(mongoManager: Manager) {
+    console.log('[Migration] Starting migration bootstrap...');
+
     if (!mongoManager) {
       throw new BadRequestException('Manager not found');
     }
@@ -277,7 +285,14 @@ export class DatabaseMigration implements OnModuleInit {
               startDate: subscriptionTransaction?.startDate,
               type: subscriptionTransaction?.type,
               gym: createdGym,
-              isPaid: subscriptionTransaction?.isPaid,
+              isPaid:
+                typeof subscriptionTransaction?.paidBy === 'boolean' &&
+                subscriptionTransaction.isPaid === false
+                  ? false
+                  : typeof subscriptionTransaction?.paidBy === 'boolean' &&
+                      subscriptionTransaction.isPaid === true
+                    ? true
+                    : true,
               member: createdMember,
               isInvalidated: subscriptionTransaction?.isInvalidated,
               invalidatedAt: subscriptionTransaction?.invalidatedAt,
@@ -285,7 +300,7 @@ export class DatabaseMigration implements OnModuleInit {
                 subscriptionTransaction?.gymsPTSessionPercentage,
               mongoId: subscriptionTransaction?.id,
               isSubscription: true,
-              paidBy: subscriptionTransaction?.paidBy,
+              paidBy: subscriptionTransaction.paidBy,
               paidAmount: subscriptionTransaction?.paidAmount,
               numberSold: subscriptionTransaction?.numberSold,
               subscription: getSubscription,
@@ -380,6 +395,22 @@ export class DatabaseMigration implements OnModuleInit {
       );
       for (const personalTrainer of personalTrainers) {
         console.log('this is the gym', createdGym.id);
+        let username = personalTrainer.username;
+        const checkUsername = await this.managerRepository.findOne({
+          where: {
+            username: personalTrainer.username,
+          },
+        });
+        if (checkUsername) {
+          const rand = Math.floor(1000 + Math.random() * 9000); // 4-digit suffix
+          username = `${personalTrainer.username}${rand}`;
+          console.log(
+            'username changed from',
+            personalTrainer.username,
+            'to',
+            username,
+          );
+        }
         const createPersonalTrainer = this.managerRepository.create({
           firstName: personalTrainer.firstName,
           lastName: personalTrainer.lastName,
@@ -603,6 +634,29 @@ export class DatabaseMigration implements OnModuleInit {
           },
         );
         await this.transactionRepository.save(createOtherRevenueTransaction);
+      }
+      // migrate staff
+      const staff = await this.managerModel.find({
+        gyms: { $in: [gym._id] },
+        roles: { $nin: [Permissions.GymOwner, Permissions.personalTrainers] },
+      });
+      console.log('[Migration] Staff found for gym', gym.id, ':', staff.length);
+      for (const staffMember of staff) {
+        const createStaff = this.managerRepository.create({
+          firstName: staffMember.firstName,
+          lastName: staffMember.lastName,
+          email: staffMember.email,
+          phoneNumber: staffMember.phoneNumber,
+          createdAt: staffMember.createdAt,
+          password: staffMember.password,
+          permissions: staffMember.roles,
+          username: staffMember.username,
+          mongoId: staffMember.id,
+          updatedAt: staffMember.updatedAt,
+        });
+        const createdStaff = await this.managerRepository.save(createStaff);
+        createdStaff.gyms = [createdGym];
+        await this.managerRepository.save(createdStaff);
       }
     }
     // }

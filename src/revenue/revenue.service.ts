@@ -1,19 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Revenue, RevenueDocument } from './revenue.model';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
-import { Gym } from '../gym/entities/gym.model';
-import { Product } from '../products/products.model';
 import { BadRequestException } from '../error/bad-request-error';
-import { TransactionType } from '../transactions/transaction.model';
 import { TransactionService } from '../transactions/subscription-instance.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RevenueEntity } from './revenue.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ProductEntity } from 'src/products/products.entity';
-import { Repository } from 'typeorm';
+import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Injectable()
@@ -90,17 +84,14 @@ export class RevenueService {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const filter: any = { gym: gym };
+    const filter: any = { gym: { id: gym.id } };
 
     if (start && end) {
-      filter.date = {
-        $gte: new Date(start),
-        $lte: new Date(end),
-      };
+      filter.date = Between(new Date(start), new Date(end));
     } else if (start) {
-      filter.date = { $gte: new Date(start) };
+      filter.date = MoreThanOrEqual(new Date(start));
     } else if (end) {
-      filter.date = { $lte: new Date(end) };
+      filter.date = LessThanOrEqual(new Date(end));
     }
 
     return await this.revenueModel.find({
@@ -120,7 +111,7 @@ export class RevenueService {
     if (!gym) throw new NotFoundException('Gym not found');
 
     const revenue = await this.revenueModel.findOne({
-      where: { id: id, gym: gym },
+      where: { id: id, gym: { id: gym.id } },
     });
 
     if (!revenue) throw new NotFoundException('Revenue not found');
@@ -138,7 +129,7 @@ export class RevenueService {
     if (!gym) throw new NotFoundException('Gym not found');
 
     const revenue = await this.revenueModel.findOne({
-      where: { id: id, gym: gym },
+      where: { id: id, gym: { id: gym.id } },
     });
 
     if (!revenue) throw new NotFoundException('Revenue not found');
@@ -160,14 +151,14 @@ export class RevenueService {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const filter: any = { gym: gym };
+    const filter: any = { gym: { id: gym.id } };
 
     if (start && end) {
-      filter.date = { $gte: start, $lte: end };
+      filter.date = Between(start, end);
     } else if (start) {
-      filter.date = { $gte: start };
+      filter.date = MoreThanOrEqual(start);
     } else if (end) {
-      filter.date = { $lte: end };
+      filter.date = LessThanOrEqual(end);
     }
 
     const result = await this.revenueModel.find({

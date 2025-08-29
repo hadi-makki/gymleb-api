@@ -1,5 +1,12 @@
 import { PgMainEntity } from '../../main-classes/mainEntity';
-import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  RelationId,
+} from 'typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
@@ -42,10 +49,8 @@ export class MemberEntity extends PgMainEntity {
   isNotified: boolean;
 
   @ManyToOne(() => MediaEntity, (media) => media.members)
+  @JoinColumn({ name: 'profileImageId' })
   profileImage: MediaEntity;
-
-  @RelationId((member: MemberEntity) => member.profileImage)
-  profileImageId: string | null;
 
   @OneToMany(() => PTSessionEntity, (session) => session.member)
   ptSessions: PTSessionEntity[];

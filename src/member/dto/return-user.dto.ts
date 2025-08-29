@@ -1,3 +1,4 @@
+import { MediaEntity } from 'src/media/media.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { Transaction } from 'src/transactions/transaction.model';
 
@@ -15,7 +16,7 @@ export class ReturnUserDto {
   currentActiveSubscription: any;
   isNotified: boolean;
   lastSubscription: TransactionEntity;
-  profileImage: string;
+  profileImage: MediaEntity;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

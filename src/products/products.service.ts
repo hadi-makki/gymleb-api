@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isMongoId } from 'class-validator';
+import { isMongoId, isUUID } from 'class-validator';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';
@@ -23,7 +23,7 @@ export class ProductsService {
   ) {}
 
   async getProducts(gymId: string) {
-    const gym = !isMongoId(gymId)
+    const gym = !isUUID(gymId)
       ? await this.gymService.getGymByGymName(gymId)
       : null;
 

@@ -457,7 +457,7 @@ export class GymService {
 
   async getGymByManager(manager: ManagerEntity) {
     const gym = await this.gymModel.findOne({
-      where: { owner: manager },
+      where: { owner: { id: manager.id } },
     });
     return gym;
   }

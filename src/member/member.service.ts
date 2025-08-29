@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isMongoId, isUUID } from 'class-validator';
-import { addDays, endOfDay, startOfDay } from 'date-fns';
+import { addDays, endOfDay, startOfDay, isBefore, isAfter } from 'date-fns';
 import { Response } from 'express';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
@@ -159,7 +159,7 @@ export class MemberService {
       currentActiveSubscription: currentActiveSubscription,
       lastSubscription: lastSubscription,
       isNotified: member.isNotified,
-      profileImage: member.profileImage?.id,
+      profileImage: member.profileImage,
     };
   }
 
@@ -405,7 +405,7 @@ export class MemberService {
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-    const member = await this.memberModel.findOne({
+    let member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
       relations: ['gym', 'subscription', 'transactions', 'profileImage'],
     });
@@ -413,6 +413,10 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+
+    member.transactions = member.transactions.filter(
+      (t) => t.type === TransactionType.SUBSCRIPTION,
+    );
 
     return await this.returnMember(member);
   }
@@ -609,7 +613,12 @@ export class MemberService {
 
     // First get all members to check expiration
     const allMembers = await this.memberModel.find({
-      where: { gym: { id: gym.id } },
+      where: {
+        gym: { id: gym.id },
+        transactions: {
+          type: TransactionType.SUBSCRIPTION,
+        },
+      },
       relations: ['gym', 'subscription', 'transactions'],
     });
 
@@ -621,11 +630,13 @@ export class MemberService {
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
         return (
-          new Date(latestSubscriptionInstance.endDate) < new Date() ||
+          isBefore(new Date(latestSubscriptionInstance.endDate), new Date()) ||
           latestSubscriptionInstance.isInvalidated
         );
       })
       .map((member) => member.id);
+
+    console.log('expiredMemberIds', expiredMemberIds);
 
     // Use pagination utility with the filtered IDs
     const res = await paginate(
