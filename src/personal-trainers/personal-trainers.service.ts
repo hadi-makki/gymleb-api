@@ -3,9 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ManagerService } from 'src/manager/manager.service';
+import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
-import { ILike, Raw, Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Permissions } from '../decorators/roles/role.enum';
 import { NotFoundException } from '../error/not-found-error';
@@ -31,6 +32,7 @@ export class PersonalTrainersService {
     private readonly managerEntity: Repository<ManagerEntity>,
     private readonly managerService: ManagerService,
     private readonly transactionService: TransactionService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async removeClientFromTrainer(memberId: string, gymId: string) {
@@ -64,6 +66,7 @@ export class PersonalTrainersService {
   async create(
     createPersonalTrainerDto: CreatePersonalTrainerDto,
     gymId: string,
+    profileImage?: Express.Multer.File,
   ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
@@ -99,6 +102,18 @@ export class PersonalTrainersService {
       createPersonalTrainerDto.firstName,
       createPersonalTrainerDto.lastName,
     );
+
+    // Handle profile image upload if provided
+    if (profileImage) {
+      const imageData = await this.mediaService.upload(
+        profileImage,
+        personalTrainer.id,
+      );
+      await this.personalTrainerEntity.update(personalTrainer.id, {
+        profileImage: imageData.id as any,
+      });
+    }
+
     return personalTrainer;
   }
 
@@ -110,8 +125,44 @@ export class PersonalTrainersService {
     return this.personalTrainerEntity.findOne({ where: { id } });
   }
 
-  update(id: string, updatePersonalTrainerDto: UpdatePersonalTrainerDto) {
-    return this.personalTrainerEntity.update(id, updatePersonalTrainerDto);
+  async update(
+    id: string,
+    updatePersonalTrainerDto: UpdatePersonalTrainerDto,
+    profileImage?: Express.Multer.File,
+  ) {
+    const personalTrainer = await this.personalTrainerEntity.findOne({
+      where: { id },
+      relations: ['profileImage'],
+    });
+    if (!personalTrainer) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+
+    // Handle profile image upload if provided
+    if (profileImage) {
+      // Delete old profile image if exists
+      if (personalTrainer.profileImage) {
+        try {
+          await this.mediaService.delete(personalTrainer.profileImage.id);
+        } catch (error) {
+          // Continue even if deletion fails
+          console.warn('Failed to delete old profile image:', error);
+        }
+      }
+
+      const imageData = await this.mediaService.upload(
+        profileImage,
+        personalTrainer.id,
+      );
+      await this.personalTrainerEntity.update(id, {
+        ...updatePersonalTrainerDto,
+        profileImage: imageData,
+      });
+    } else {
+      await this.personalTrainerEntity.update(id, updatePersonalTrainerDto);
+    }
+
+    return { message: 'Personal trainer updated successfully' };
   }
 
   remove(id: string) {
@@ -238,15 +289,19 @@ export class PersonalTrainersService {
       throw new NotFoundException('Gym not found');
     }
 
-    const personalTrainers = await this.personalTrainerEntity.find({
-      where: {
-        gyms: { id: gymId },
-        permissions: Raw(
-          (alias) => `${alias} @> '["${Permissions.personalTrainers}"]'::jsonb`,
-        ),
-      },
-      relations: ['gyms'],
+    // Use a simpler approach to find personal trainers
+    const allManagers = await this.personalTrainerEntity.find({
+      where: { gyms: { id: gymId } },
+      relations: ['gyms', 'profileImage'],
     });
+
+    // Filter managers who have personal-trainers permission
+    const personalTrainers = allManagers.filter(
+      (manager) =>
+        manager.permissions &&
+        Array.isArray(manager.permissions) &&
+        manager.permissions.includes(Permissions.personalTrainers),
+    );
 
     const sessionsResult: {
       personalTrainer: ManagerEntity;

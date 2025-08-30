@@ -435,6 +435,19 @@ export class GymController {
     }
   }
 
+  @Patch('show-personal-trainers/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym show personal trainers setting' })
+  updateShowPersonalTrainers(
+    @Param('gymId') gymId: string,
+    @Body() body: { showPersonalTrainers: boolean },
+  ) {
+    return this.gymService.updateShowPersonalTrainers(
+      gymId,
+      body.showPersonalTrainers,
+    );
+  }
+
   @Delete('admin/delete-gym/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin)

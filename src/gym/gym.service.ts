@@ -26,6 +26,7 @@ import {
   TransactionType,
 } from 'src/transactions/transaction.entity';
 import { paginate, FilterOperator } from 'nestjs-paginate';
+import { Permissions } from 'src/decorators/roles/role.enum';
 
 @Injectable()
 export class GymService {
@@ -310,6 +311,22 @@ export class GymService {
 
     if (!gym) {
       throw new NotFoundException('Gym not found');
+    }
+    if (gym.showPersonalTrainers) {
+      console.log('showPersonalTrainers', gym.showPersonalTrainers);
+      // Use a simpler approach to find personal trainers
+      const allManagers = await this.managerModel.find({
+        where: { gyms: { id: gym.id } },
+        relations: ['profileImage'],
+      });
+
+      // Filter managers who have personal-trainers permission
+      gym.personalTrainers = allManagers.filter(
+        (manager) =>
+          manager.permissions &&
+          Array.isArray(manager.permissions) &&
+          manager.permissions.includes(Permissions.personalTrainers),
+      );
     }
     return gym;
   }
@@ -1272,6 +1289,21 @@ export class GymService {
       startDate,
       endDate,
     };
+  }
+
+  async updateShowPersonalTrainers(
+    gymId: string,
+    showPersonalTrainers: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.showPersonalTrainers = showPersonalTrainers;
+    await this.gymModel.save(gym);
+    return gym;
   }
 
   async deleteGym(gymId: string) {

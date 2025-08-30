@@ -5,7 +5,16 @@ import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscript
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { TokenEntity } from 'src/token/token.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
-import { Column, Entity, JoinTable, ManyToMany, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { Permissions } from '../decorators/roles/role.enum';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -58,6 +67,10 @@ export class ManagerEntity extends PgMainEntity {
 
   @OneToMany(() => MediaEntity, (media) => media.manager)
   media: MediaEntity[];
+
+  @OneToOne(() => MediaEntity, (media) => media.managers)
+  @JoinColumn({ name: 'profileImageId' })
+  profileImage: MediaEntity;
 
   @OneToMany(() => PTSessionEntity, (session) => session.personalTrainer)
   ptSessions: PTSessionEntity[];

@@ -6,15 +6,20 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { MaxFileSizeValidator, ParseFilePipe } from '@nestjs/common';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
@@ -39,17 +44,32 @@ export class PersonalTrainersController {
   @Roles(Permissions.GymOwner)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new personal trainer' })
+  @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreatePersonalTrainerDto })
   @ApiResponse({
     status: 201,
     description: 'The personal trainer has been successfully created.',
     type: ManagerEntity,
   })
+  @UseInterceptors(FileInterceptor('profileImage'))
   create(
     @Param('gymId') gymId: string,
     @Body() createPersonalTrainerDto: CreatePersonalTrainerDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+        ],
+        fileIsRequired: false,
+      }),
+    )
+    profileImage?: Express.Multer.File,
   ) {
-    return this.personalTrainersService.create(createPersonalTrainerDto, gymId);
+    return this.personalTrainersService.create(
+      createPersonalTrainerDto,
+      gymId,
+      profileImage,
+    );
   }
 
   @Get()
@@ -124,16 +144,31 @@ export class PersonalTrainersController {
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a personal trainer by ID' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 200,
     description: 'The personal trainer has been successfully updated.',
     type: ManagerEntity,
   })
+  @UseInterceptors(FileInterceptor('profileImage'))
   update(
     @Param('id') id: string,
     @Body() updatePersonalTrainerDto: UpdatePersonalTrainerDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+        ],
+        fileIsRequired: false,
+      }),
+    )
+    profileImage?: Express.Multer.File,
   ) {
-    return this.personalTrainersService.update(id, updatePersonalTrainerDto);
+    return this.personalTrainersService.update(
+      id,
+      updatePersonalTrainerDto,
+      profileImage,
+    );
   }
 
   @Delete(':id')

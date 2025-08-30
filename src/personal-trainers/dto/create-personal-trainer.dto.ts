@@ -25,4 +25,8 @@ export class CreatePersonalTrainerDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @ApiProperty({ required: false, type: 'string', format: 'binary' })
+  @IsOptional()
+  profileImage?: Express.Multer.File;
 }
