@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
-import { addDays, endOfDay, startOfDay, isBefore, isAfter } from 'date-fns';
+import { addDays, endOfDay, isBefore, startOfDay } from 'date-fns';
 import { Response } from 'express';
+import { FilterOperator, paginate } from 'nestjs-paginate';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
 import { ManagerEntity } from 'src/manager/manager.entity';
@@ -11,8 +12,7 @@ import { SubscriptionEntity } from 'src/subscription/entities/subscription.entit
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
-import { paginate, PaginateQuery } from 'nestjs-paginate';
-import { ILike, In, LessThan, MoreThan, Repository } from 'typeorm';
+import { Between, In, MoreThan, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
@@ -25,7 +25,6 @@ import { ReturnUserDto } from './dto/return-user.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberEntity } from './entities/member.entity';
 import { Member } from './entities/member.model';
-import { FilterOperator, PaginateConfig } from 'nestjs-paginate';
 
 @Injectable()
 export class MemberService {
@@ -84,12 +83,7 @@ export class MemberService {
     const expiringTransactions = await this.transactionModel.find({
       where: [
         {
-          endDate: MoreThan(startOfTargetDate),
-          type: TransactionType.SUBSCRIPTION,
-          isInvalidated: false,
-        },
-        {
-          endDate: LessThan(endOfTargetDate),
+          endDate: Between(startOfTargetDate, endOfTargetDate),
           type: TransactionType.SUBSCRIPTION,
           isInvalidated: false,
         },

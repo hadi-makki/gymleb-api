@@ -15,7 +15,7 @@ const local = isLocal ? 'LOCAL_' : '';
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   host: process.env[local + 'DB_HOST'],
-  port: parseInt(process.env.DB_PORT, 10),
+  port: parseInt(process.env[local + 'DB_PORT'], 10),
   username: process.env[local + 'DB_USER'],
   password: process.env[local + 'DB_PASSWORD'],
   database: process.env[local + 'DB_NAME'],
