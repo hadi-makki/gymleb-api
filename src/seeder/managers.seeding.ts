@@ -16,10 +16,6 @@ export class ManagerSeeding implements OnModuleInit {
     await this.seedManagers();
   }
 
-  private async removeData() {
-    await this.managerRepository.delete({});
-  }
-
   private async seedManagers() {
     const username = 'admin';
     const email = 'admin@example.com';
@@ -27,14 +23,16 @@ export class ManagerSeeding implements OnModuleInit {
     const exists = await this.managerRepository.findOne({
       where: [{ username }, { email }],
     });
+    console.log('exists', exists);
     if (!exists) {
       const hashedPassword = await ManagerEntity.hashPassword('Password1$');
-      await this.managerRepository.create({
+      const manager = this.managerRepository.create({
         username,
         email,
         password: hashedPassword,
         permissions: [Permissions.SuperAdmin],
       });
+      await this.managerRepository.save(manager);
       console.log('Admin seeded');
     }
   }
