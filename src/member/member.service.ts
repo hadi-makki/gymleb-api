@@ -88,12 +88,11 @@ export class MemberService {
           isInvalidated: false,
         },
       ],
-      relations: [
-        'member',
-        'member.gym',
-        'member.subscription',
-        'member.transactions',
-      ],
+      relations: {
+        gym: true,
+        member: true,
+        subscription: true,
+      },
     });
 
     const newMembers = expiringTransactions
