@@ -13,9 +13,11 @@ import {
   Between,
   ILike,
   In,
+  IsNull,
   LessThanOrEqual,
   Like,
   MoreThanOrEqual,
+  Not,
   Repository,
 } from 'typeorm';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -27,6 +29,7 @@ import {
 } from 'src/transactions/transaction.entity';
 import { paginate, FilterOperator } from 'nestjs-paginate';
 import { Permissions } from 'src/decorators/roles/role.enum';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class GymService {
@@ -70,6 +73,9 @@ export class GymService {
   }
 
   async findOne(id: string) {
+    if (!isUUID(id)) {
+      throw new BadRequestException('Gym ID is required');
+    }
     const gym = await this.gymModel.findOne({
       where: { id },
     });
@@ -359,31 +365,50 @@ export class GymService {
   }
 
   async getAllGyms() {
+    // Get all gyms with owner and personal trainers in a single query
     const gyms = await this.gymModel.find({
-      relations: ['owner'],
+      relations: {
+        owner: true,
+        personalTrainers: {
+          profileImage: true,
+        },
+      },
     });
-    const data = await Promise.all(
-      gyms.map(async (gym) => {
-        const ownerSubscriptions = await this.ownerSubscriptionModel.find({
-          where: {
-            owner: gym.owner,
-          },
-        });
+
+    // Get all owner subscriptions in a single query
+    const allOwnerSubscriptions = await this.ownerSubscriptionModel.find({
+      relations: {
+        owner: true,
+      },
+    });
+
+    // Process the data efficiently
+    const data = gyms
+      .filter((gym) => gym.owner) // Filter out gyms without owners
+      .map((gym) => {
+        // Find active subscription for this gym's owner
+        const ownerSubscriptions = allOwnerSubscriptions.filter(
+          (subscription) => subscription.owner.id === gym.owner.id,
+        );
+
         const gymHasActiveSubscription = ownerSubscriptions.find(
           (subscription) =>
             subscription.active && new Date(subscription.endDate) > new Date(),
         );
+
         return {
           ...gym,
           activeSubscription: gymHasActiveSubscription,
         };
-      }),
-    );
-    const filterDataWithoutOwners = data.filter((gym) => gym.owner);
-    return filterDataWithoutOwners;
+      });
+
+    return data;
   }
 
   async updateGymName(gymId: string, gymName: string) {
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Gym ID is required');
+    }
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
     });
@@ -989,9 +1014,7 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
-    console.log('this is the gym id', checkGym.transactions.length);
-
-    return paginate(
+    const res = await paginate(
       {
         page,
         limit,
@@ -1009,6 +1032,7 @@ export class GymService {
         maxLimit: 100,
       },
     );
+    return res;
   }
 
   async getGymMembers(

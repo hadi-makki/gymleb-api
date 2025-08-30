@@ -173,10 +173,14 @@ export class ManagerService {
       throw new NotFoundException('User not found');
     }
 
+    console.log('manager', manager);
+
     const isPasswordMatch = await ManagerEntity.isPasswordMatch(
       body.password,
       manager.password,
     );
+
+    console.log('isPasswordMatch', isPasswordMatch);
     if (!isPasswordMatch) {
       throw new BadRequestException('Password is incorrect');
     }

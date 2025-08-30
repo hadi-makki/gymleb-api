@@ -31,7 +31,7 @@ export class GymEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   gymDashedName: string;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   address: string;
 
   @Column('text', { nullable: true })
@@ -73,17 +73,17 @@ export class GymEntity extends PgMainEntity {
   @Column('int', { default: 0 })
   membersNotified: number;
 
-  @Column('jsonb')
+  @Column('jsonb', { default: [] })
   womensTimes: {
     day: string;
     from: string;
     to: string;
   }[];
 
-  @Column('text')
+  @Column('text', { nullable: true })
   note: string;
 
-  @Column('jsonb')
+  @Column('jsonb', { default: [] })
   offers: { description: string }[];
 
   @Column('int', { default: 10 })

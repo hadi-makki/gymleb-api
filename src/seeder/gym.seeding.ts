@@ -61,7 +61,7 @@ export class GymSeeding implements OnModuleInit {
     });
 
     if (!exists && getManager) {
-      await this.gymRepository.create({
+      const gym = this.gymRepository.create({
         name,
         address,
         phone,
@@ -69,6 +69,7 @@ export class GymSeeding implements OnModuleInit {
         owner: getManager,
         openingDays: Days,
       });
+      await this.gymRepository.save(gym);
       console.log('Gym seeded');
     }
   }
