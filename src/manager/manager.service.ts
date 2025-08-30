@@ -23,7 +23,7 @@ import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { Manager } from './manager.model';
 import { ManagerEntity } from './manager.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -268,24 +268,14 @@ export class ManagerService {
     const baseFilter: any = { isOwnerSubscriptionAssignment: true };
 
     const transactions = await this.transactionModel.find({
-      where: [
-        {
-          ...baseFilter,
-          ...(start || end
-            ? {
-                createdAt: MoreThanOrEqual(start),
-              }
-            : {}),
-        },
-        {
-          ...baseFilter,
-          ...(start || end
-            ? {
-                createdAt: LessThanOrEqual(end),
-              }
-            : {}),
-        },
-      ],
+      where: {
+        ...baseFilter,
+        ...(start || end
+          ? {
+              createdAt: Between(start, end),
+            }
+          : {}),
+      },
       relations: ['owner', 'ownerSubscriptionType'],
     });
 

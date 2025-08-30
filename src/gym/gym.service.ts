@@ -109,13 +109,10 @@ export class GymService {
     if (start || end) {
       if (start && end) {
         dateFilter.createdAt = Between(new Date(start), new Date(end));
-        return;
-      }
-      if (start) {
-        dateFilter.createdAt = MoreThanOrEqual(new Date(start));
-      }
-      if (end) {
-        dateFilter.createdAt = LessThanOrEqual(new Date(end));
+      } else if (start) {
+        dateFilter.createdAt = Between(new Date(start), new Date(end));
+      } else if (end) {
+        dateFilter.createdAt = Between(new Date(start), new Date(end));
       }
     }
 
@@ -127,22 +124,14 @@ export class GymService {
 
     // Fetch transactions for last month comparison
     const lastMonthTransactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: {
-            id: gym.id,
-          },
-          isPaid: true,
-          createdAt: MoreThanOrEqual(lastMonthStart),
+      where: {
+        gym: {
+          id: gym.id,
         },
-        {
-          gym: {
-            id: gym.id,
-          },
-          isPaid: true,
-          createdAt: LessThanOrEqual(lastMonthEnd),
-        },
-      ],
+        isPaid: true,
+
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+      },
       relations: ['subscription', 'revenue', 'expense'],
     });
 
@@ -191,20 +180,12 @@ export class GymService {
 
     // Fetch member count for both periods
     const lastMonthMembers = await this.memberModel.count({
-      where: [
-        {
-          gym: {
-            id: gym.id,
-          },
-          createdAt: MoreThanOrEqual(lastMonthStart),
+      where: {
+        gym: {
+          id: gym.id,
         },
-        {
-          gym: {
-            id: gym.id,
-          },
-          createdAt: LessThanOrEqual(lastMonthEnd),
-        },
-      ],
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+      },
     });
     const currentMonthMembers = await this.memberModel.count({
       where: {
@@ -559,18 +540,12 @@ export class GymService {
 
     // Fetch transactions for last month comparison
     const lastMonthTransactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(lastMonthStart),
-          isPaid: true,
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(lastMonthEnd),
-          isPaid: true,
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+        isPaid: true,
+      },
+
       relations: ['subscription', 'revenue', 'expense'],
     });
 
@@ -601,16 +576,10 @@ export class GymService {
       : 0;
 
     const lastMonthMembers = await this.memberModel.count({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(lastMonthStart),
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(lastMonthEnd),
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+      },
     });
     const currentMonthMembers = await this.memberModel.count({
       where: {
@@ -864,16 +833,11 @@ export class GymService {
 
     // Fetch transactions for last month comparison
     const lastMonthTransactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(lastMonthStart),
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(lastMonthEnd),
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+      },
+
       relations: ['subscription', 'revenue', 'expense'],
     });
 
@@ -903,16 +867,10 @@ export class GymService {
       : 0;
 
     const lastMonthMembers = await this.memberModel.count({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(lastMonthStart),
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(lastMonthEnd),
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+      },
     });
     const currentMonthMembers = await this.memberModel.count({
       where: {
@@ -1100,18 +1058,12 @@ export class GymService {
       : subDays(new Date(), isMobile ? 7 : 30);
 
     const transactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(startDate),
-          isPaid: true,
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(endDate),
-          isPaid: true,
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(startDate, endDate),
+        isPaid: true,
+      },
+
       relations: ['member'],
       order: { createdAt: 'ASC' },
     });
@@ -1187,16 +1139,11 @@ export class GymService {
       : subDays(new Date(), isMobile ? 7 : 30);
 
     const members = await this.memberModel.find({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(startDate),
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(endDate),
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(startDate, endDate),
+      },
+
       order: { createdAt: 'ASC' },
     });
 
@@ -1273,16 +1220,11 @@ export class GymService {
       : subDays(new Date(), isMobile ? 7 : 30);
 
     const transactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: { id: gym.id },
-          createdAt: MoreThanOrEqual(startDate),
-        },
-        {
-          gym: { id: gym.id },
-          createdAt: LessThanOrEqual(endDate),
-        },
-      ],
+      where: {
+        gym: { id: gym.id },
+        createdAt: Between(startDate, endDate),
+      },
+
       relations: ['member'],
       order: { createdAt: 'ASC' },
     });
