@@ -1,32 +1,30 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Query,
   BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
-import { GymService } from './gym.service';
-import { CreateGymDto } from './dto/create-gym.dto';
-import { UpdateGymDto } from './dto/update-gym.dto';
-import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { Gym } from './entities/gym.model';
+import { ManagerEntity } from 'src/manager/manager.entity';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.model';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { GymEntity } from './entities/gym.entity';
+import { TransactionType } from 'src/transactions/transaction.entity';
+import { AddOfferDto } from './dto/add-offer.dto';
+import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
-import { SubscriptionInstance } from '../transactions/subscription-instance.model';
-import { AddOfferDto } from './dto/add-offer.dto';
-import { TransactionType } from '../transactions/transaction.model';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
-import { ManagerEntity } from 'src/manager/manager.entity';
+import { GymService } from './gym.service';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -37,7 +35,7 @@ export class GymController {
   @ApiOperation({ summary: 'Create a new gym' })
   @ApiOkResponse({
     description: 'The gym has been successfully created.',
-    type: Gym,
+    type: GymEntity,
   })
   @ApiBody({ type: CreateGymDto })
   create(@Body() createGymDto: CreateGymDto) {
@@ -49,7 +47,7 @@ export class GymController {
   @ApiOperation({ summary: 'Get all gyms' })
   @ApiOkResponse({
     description: 'The gyms have been successfully retrieved.',
-    type: [Gym],
+    type: [GymEntity],
   })
   findAll() {
     return this.gymService.findAll();
@@ -61,7 +59,7 @@ export class GymController {
   @ApiOperation({ summary: 'Get a gym by id' })
   @ApiOkResponse({
     description: 'The gym has been successfully retrieved.',
-    type: Gym,
+    type: GymEntity,
   })
   findOne(@Param('id') id: string) {
     return this.gymService.findOne(id);
@@ -72,7 +70,7 @@ export class GymController {
   @ApiOperation({ summary: 'Delete a gym by id' })
   @ApiOkResponse({
     description: 'The gym has been successfully deleted.',
-    type: Gym,
+    type: GymEntity,
   })
   remove(@Param('id') id: string) {
     return this.gymService.remove(id);
@@ -162,7 +160,7 @@ export class GymController {
   @ApiOperation({ summary: 'Get gym by name' })
   @ApiOkResponse({
     description: 'The gym has been successfully retrieved.',
-    type: Gym,
+    type: GymEntity,
   })
   getGymByName(@Param('gymName') gymName: string) {
     return this.gymService.getGymByGymName(gymName);
@@ -173,7 +171,7 @@ export class GymController {
   @ApiOperation({ summary: 'Update a gym day' })
   @ApiOkResponse({
     description: 'The gym day has been successfully updated.',
-    type: Gym,
+    type: GymEntity,
   })
   updateGymDay(@Param('gymId') gymId: string, @Param('day') day: string) {
     return this.gymService.updateGymDay(gymId, day);
@@ -236,7 +234,7 @@ export class GymController {
   @ApiOperation({ summary: 'Get transaction history' })
   @ApiOkResponse({
     description: 'The transaction history has been successfully retrieved.',
-    type: [SubscriptionInstance],
+    type: [SubscriptionInstanceEntity],
   })
   getTransactionHistory(
     @User() user: ManagerEntity,
@@ -261,7 +259,7 @@ export class GymController {
   @ApiOperation({ summary: 'Add a gym offer' })
   @ApiOkResponse({
     description: 'The gym offer has been successfully added.',
-    type: Gym,
+    type: GymEntity,
   })
   addGymOffer(@Param('gymId') gymId: string, @Body() addOfferDto: AddOfferDto) {
     return this.gymService.addGymOffer(gymId, addOfferDto);
@@ -271,7 +269,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: "Update gym's PT session cut percentage" })
-  @ApiOkResponse({ description: 'Updated gym', type: Gym })
+  @ApiOkResponse({ description: 'Updated gym', type: GymEntity })
   updatePTPercentage(
     @Param('gymId') gymId: string,
     @Body() body: UpdatePTPercentageDto,
@@ -284,7 +282,7 @@ export class GymController {
   @ApiOperation({ summary: 'Get all gyms for a specific gym owner' })
   @ApiOkResponse({
     description: 'The gyms have been successfully retrieved.',
-    type: [Gym],
+    type: [GymEntity],
   })
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   getGymsByOwner(@Param('ownerId') ownerId: string) {

@@ -1,10 +1,7 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Product } from './products.model';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ProductEntity } from './products.entity';
 import { Repository } from 'typeorm';
+import { ProductEntity } from './products.entity';
 
 const products: {
   name: string;

@@ -5,17 +5,14 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Manager } from '../manager/manager.model';
-import { TokenService } from '../token/token.service';
-import { Permissions } from '../decorators/roles/role.enum';
-import { PERMISSIONS_KEY } from '../decorators/roles/Role';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Request } from 'express';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { Repository } from 'typeorm';
+import { PERMISSIONS_KEY } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
+import { TokenService } from '../token/token.service';
 @Injectable()
 export class ManagerAuthGuard implements CanActivate {
   constructor(
@@ -28,7 +25,7 @@ export class ManagerAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user: Manager | ManagerEntity }>();
+      .getRequest<Request & { user: ManagerEntity }>();
     const response = context.switchToHttp().getResponse();
     const requiredRoles =
       this.reflector.getAllAndOverride<Permissions[]>(PERMISSIONS_KEY, [

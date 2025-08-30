@@ -7,10 +7,10 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 
 export enum SubscriptionType {
-  PERSONAL_TRAINER = 'personal_trainer',
   MONTHLY_GYM = 'monthly_gym',
   YEARLY_GYM = 'yearly_gym',
   DAILY_GYM = 'daily_gym',
+  WEEKLY_GYM = 'weekly_gym',
 }
 
 @Entity('subscriptions')

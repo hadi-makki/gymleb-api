@@ -1,20 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { BadRequestException } from '../error/bad-request-error';
-import { UnauthorizedException } from '../error/unauthorized-error';
-import Token from '../token/token.model';
-import { TokenService } from '../token/token.service';
-import { User } from '../user/user.model';
-import { UserService } from '../user/user.service';
-import { returnUser } from '../utils/helprt-functions';
-import { LoginDto } from './dtos/request/login.dto';
-import { RegisterDto } from './dtos/request/register.dto';
-import { UserCreatedDto } from './dtos/response/user-created.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TokenEntity } from 'src/token/token.entity';
+import { UserEntity } from 'src/user/user.entity';
 import { Repository } from 'typeorm';
+import { UnauthorizedException } from '../error/unauthorized-error';
+import { TokenService } from '../token/token.service';
+import { UserService } from '../user/user.service';
 @Injectable()
 export class AuthService {
   constructor(
@@ -26,7 +18,7 @@ export class AuthService {
   ) {}
 
   // Generate access and refresh tokens for a user on a specific device.
-  generateTokens(user: User, deviceId: string) {
+  generateTokens(user: UserEntity, deviceId: string) {
     const payload = { sub: user.id, deviceId };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -40,47 +32,6 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken };
-  }
-  async login(
-    { email, password }: LoginDto,
-    deviceId: string,
-  ): Promise<UserCreatedDto> {
-    const getUser = await this.userService.getUserByEmail(email);
-    if (!getUser) {
-      throw new BadRequestException('Wrong Email or Password');
-    }
-    const isPasswordValid = await getUser.comparePassword(password);
-    if (!isPasswordValid) {
-      throw new BadRequestException('Wrong Email or Password');
-    }
-    const generateTokens = await this.tokenService.generateTokens({
-      userId: getUser.id,
-      managerId: null,
-      deviceId,
-    });
-    return { ...returnUser(getUser), token: generateTokens.accessToken };
-  }
-
-  async register(
-    { email, name, password }: RegisterDto,
-    deviceId: string,
-  ): Promise<UserCreatedDto> {
-    const checkEmail = await this.userService.getUserByEmail(email);
-    if (checkEmail) {
-      throw new BadRequestException('Email already exists');
-    }
-    const hashPass = await this.userService.hashPassword(password);
-    const newUser = await this.userService.createUser({
-      email,
-      name,
-      password: hashPass,
-    });
-    const generateTokens = await this.tokenService.generateTokens({
-      userId: newUser.id,
-      managerId: null,
-      deviceId,
-    });
-    return { ...returnUser(newUser), token: generateTokens.accessToken };
   }
 
   async test() {

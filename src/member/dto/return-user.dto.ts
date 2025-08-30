@@ -1,6 +1,6 @@
 import { MediaEntity } from 'src/media/media.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
-import { Transaction } from 'src/transactions/transaction.model';
+import { MemberAttendingDaysEntity } from '../entities/member-attending-days.entity';
 
 export class ReturnUserDto {
   id: string;
@@ -17,6 +17,7 @@ export class ReturnUserDto {
   isNotified: boolean;
   lastSubscription: TransactionEntity;
   profileImage: MediaEntity;
+  attendingDays?: MemberAttendingDaysEntity[];
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

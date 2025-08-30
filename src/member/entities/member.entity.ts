@@ -15,6 +15,8 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { TokenEntity } from 'src/token/token.entity';
 import { MediaEntity } from 'src/media/media.entity';
+import { MemberAttendingDaysEntity } from './member-attending-days.entity';
+import * as bcrypt from 'bcrypt';
 
 @Entity('members')
 export class MemberEntity extends PgMainEntity {
@@ -66,4 +68,18 @@ export class MemberEntity extends PgMainEntity {
 
   @OneToMany(() => TokenEntity, (token) => token.member)
   tokens: TokenEntity[];
+
+  @OneToMany(() => MemberAttendingDaysEntity, (attendingDay) => attendingDay.member)
+  attendingDays: MemberAttendingDaysEntity[];
+
+  static async isPasswordMatch(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+
+  static async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
 }

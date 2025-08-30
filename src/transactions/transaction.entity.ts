@@ -1,21 +1,23 @@
+import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
-import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from 'src/subscription/entities/subscription.entity';
 import {
   Column,
   Entity,
-  JoinColumn,
   ManyToOne,
   OneToOne,
-  RelationId,
+  RelationId
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
-import { ExpenseEntity } from 'src/expenses/expense.entity';
-import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -28,13 +30,6 @@ export enum TransactionType {
 export enum Currency {
   USD = 'USD',
   LBP = 'LBP',
-}
-
-export enum SubscriptionType {
-  DAILY_GYM = 'daily_gym',
-  WEEKLY_GYM = 'weekly_gym',
-  MONTHLY_GYM = 'monthly_gym',
-  YEARLY_GYM = 'yearly_gym',
 }
 
 @Entity('transactions')

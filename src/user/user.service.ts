@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { Model } from 'mongoose';
+import { UserEntity } from './user.entity';
 import { RegisterDto } from '../auth/dtos/request/register.dto';
-import { User } from './user.model';
+import { Repository } from 'typeorm';
 @Injectable()
 export class UserService {
   constructor(
-    @InjectModel(User.name)
-    private readonly userRepository: Model<User>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
   async hashPassword(password: string): Promise<string> {
     const hash = await bcrypt.hash(password, 10);
     return hash;
   }
-  async getUserByEmail(email: string): Promise<User> {
-    return await this.userRepository.findOne({ email });
+  async getUserByEmail(email: string): Promise<UserEntity> {
+    return await this.userRepository.findOne({ where: { email } });
   }
 
   async createUser(data: RegisterDto) {
@@ -23,11 +23,11 @@ export class UserService {
   }
 
   async checkUserExists(id: string) {
-    return await this.userRepository.exists({ id });
+    return await this.userRepository.exists({ where: { id } });
   }
 
   async getUserById(id: string) {
-    return await this.userRepository.findById(id);
+    return await this.userRepository.findOne({ where: { id } });
   }
 
   async test() {

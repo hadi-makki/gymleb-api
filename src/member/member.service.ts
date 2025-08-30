@@ -9,7 +9,10 @@ import { GymService } from 'src/gym/gym.service';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { TransactionEntity } from 'src/transactions/transaction.entity';
+import {
+  TransactionEntity,
+  TransactionType,
+} from 'src/transactions/transaction.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
 import { Between, In, MoreThan, Repository } from 'typeorm';
@@ -18,13 +21,19 @@ import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
 import { TokenService } from '../token/token.service';
 import { TransactionService } from '../transactions/subscription-instance.service';
-import { TransactionType } from '../transactions/transaction.model';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { ReturnUserDto } from './dto/return-user.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberEntity } from './entities/member.entity';
-import { Member } from './entities/member.model';
+import {
+  MemberAttendingDaysEntity,
+  DayOfWeek,
+} from './entities/member-attending-days.entity';
+import {
+  AttendingDayDto,
+  UpdateAttendingDaysDto,
+} from './dto/attending-day.dto';
 
 @Injectable()
 export class MemberService {
@@ -35,6 +44,8 @@ export class MemberService {
     private gymModel: Repository<GymEntity>,
     @InjectRepository(SubscriptionEntity)
     private subscriptionModel: Repository<SubscriptionEntity>,
+    @InjectRepository(MemberAttendingDaysEntity)
+    private attendingDaysModel: Repository<MemberAttendingDaysEntity>,
     private readonly transactionService: TransactionService,
     private readonly tokenService: TokenService,
     private readonly mediaService: MediaService,
@@ -138,6 +149,15 @@ export class MemberService {
     );
     const lastSubscription =
       subscriptionTransactions[subscriptionTransactions.length - 1];
+
+    // Use loaded attending days or fetch them if not loaded
+    const attendingDays =
+      member.attendingDays ||
+      (await this.attendingDaysModel.find({
+        where: { member: { id: member.id } },
+        order: { dayOfWeek: 'ASC' },
+      }));
+
     return {
       id: member.id,
       name: member.name,
@@ -153,6 +173,7 @@ export class MemberService {
       lastSubscription: lastSubscription,
       isNotified: member.isNotified,
       profileImage: member.profileImage,
+      attendingDays: attendingDays,
     };
   }
 
@@ -242,9 +263,12 @@ export class MemberService {
 
     await this.memberModel.save(member);
 
+    // Initialize attending days for the new member
+    await this.initializeMemberAttendingDays(member.id);
+
     const newMember = await this.memberModel.findOne({
       where: { id: member.id },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
 
     await this.twilioService.sendWelcomeMessage(
@@ -265,7 +289,7 @@ export class MemberService {
   ): Promise<ReturnUserDto | { hasPassword: boolean; message: string }> {
     const member = await this.memberModel.findOne({
       where: { phone: loginMemberDto.phoneNumber },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
 
     if (!member) {
@@ -284,7 +308,9 @@ export class MemberService {
 
     // If member doesn't have password, set it and login
     if (!member.password) {
-      member.password = await Member.hashPassword(loginMemberDto.password);
+      member.password = await MemberEntity.hashPassword(
+        loginMemberDto.password,
+      );
       await this.memberModel.save(member);
 
       const token = await this.tokenService.generateTokens({
@@ -299,7 +325,7 @@ export class MemberService {
 
     // If member has password, validate it
     if (member.password) {
-      const isPasswordMatch = await Member.isPasswordMatch(
+      const isPasswordMatch = await MemberEntity.isPasswordMatch(
         loginMemberDto.password,
         member.password,
       );
@@ -345,6 +371,7 @@ export class MemberService {
           subscription: true,
           transactions: true,
           profileImage: true,
+          attendingDays: true,
         },
         sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
         searchableColumns: ['name', 'phone', 'email'],
@@ -408,6 +435,7 @@ export class MemberService {
           subscription: true,
         },
         profileImage: true,
+        attendingDays: true,
       },
     });
 
@@ -555,6 +583,13 @@ export class MemberService {
     }
     const member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
+      relations: [
+        'gym',
+        'subscription',
+        'transactions',
+        'profileImage',
+        'attendingDays',
+      ],
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -632,7 +667,7 @@ export class MemberService {
           type: TransactionType.SUBSCRIPTION,
         },
       },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
 
     // Filter expired members
@@ -661,7 +696,7 @@ export class MemberService {
       },
       this.memberModel,
       {
-        relations: ['gym', 'subscription', 'transactions'],
+        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
         sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
         searchableColumns: ['name', 'phone', 'email'],
         defaultSortBy: [['createdAt', 'DESC']],
@@ -689,7 +724,7 @@ export class MemberService {
   async getMe(id: string) {
     const checkMember = await this.memberModel.findOne({
       where: { id },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
 
     return await this.returnMember(checkMember);
@@ -701,7 +736,7 @@ export class MemberService {
     }
     const checkMember = await this.memberModel.findOne({
       where: { id },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
     if (!checkMember) {
       throw new NotFoundException('Member not found');
@@ -722,7 +757,7 @@ export class MemberService {
     }
     const member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -733,7 +768,7 @@ export class MemberService {
   async checkUserSubscriptionExpired(id: string) {
     const member = await this.memberModel.findOne({
       where: { id },
-      relations: ['gym', 'subscription', 'transactions'],
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -977,5 +1012,124 @@ export class MemberService {
     return {
       message: `Successfully notified ${expiringMembers.length} members`,
     };
+  }
+
+  // Attending Days Methods
+  async getMemberAttendingDays(memberId: string, gymId: string) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const attendingDays = await this.attendingDaysModel.find({
+      where: { member: { id: memberId } },
+      order: { dayOfWeek: 'ASC' },
+    });
+
+    return attendingDays;
+  }
+
+  async updateMemberAttendingDays(
+    memberId: string,
+    gymId: string,
+    updateAttendingDaysDto: UpdateAttendingDaysDto,
+  ) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Delete existing attending days
+    await this.attendingDaysModel.delete({ member: { id: memberId } });
+
+    console.log(
+      'this is the update attending days dto',
+      updateAttendingDaysDto,
+    );
+
+    // Create new attending days
+    const attendingDays = updateAttendingDaysDto.attendingDays.map(
+      (attendingDay) => {
+        const newAttendingDay = new MemberAttendingDaysEntity();
+        newAttendingDay.member = member;
+        newAttendingDay.dayOfWeek = attendingDay.dayOfWeek;
+        newAttendingDay.startTime = attendingDay.startTime || null;
+        newAttendingDay.endTime = attendingDay.endTime || null;
+        newAttendingDay.isActive = attendingDay.isActive !== false;
+        return newAttendingDay;
+      },
+    );
+
+    await this.attendingDaysModel.save(attendingDays);
+
+    return {
+      message: 'Attending days updated successfully',
+      attendingDays: await this.getMemberAttendingDays(memberId, gymId),
+    };
+  }
+
+  async initializeMemberAttendingDays(memberId: string) {
+    const member = await this.memberModel.findOne({
+      where: { id: memberId },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Check if attending days already exist
+    const existingAttendingDays = await this.attendingDaysModel.find({
+      where: { member: { id: memberId } },
+    });
+
+    if (existingAttendingDays.length > 0) {
+      return existingAttendingDays;
+    }
+
+    // Create default attending days for all days of the week
+    const defaultAttendingDays = Object.values(DayOfWeek).map((dayOfWeek) => {
+      const attendingDay = new MemberAttendingDaysEntity();
+      attendingDay.member = member;
+      attendingDay.dayOfWeek = dayOfWeek;
+      attendingDay.startTime = null;
+      attendingDay.endTime = null;
+      attendingDay.isActive = false;
+      return attendingDay;
+    });
+
+    await this.attendingDaysModel.save(defaultAttendingDays);
+
+    return defaultAttendingDays;
   }
 }

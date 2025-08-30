@@ -1,13 +1,11 @@
 import { OnModuleInit } from '@nestjs/common';
 import { ManagerService } from './manager.service';
-import { InjectModel } from '@nestjs/mongoose';
-import { Manager } from './manager.model';
+import { ManagerEntity } from './manager.entity';
 import { Model } from 'mongoose';
 
 export class ManagerScript implements OnModuleInit {
   constructor(
     private readonly managerService: ManagerService,
-    @InjectModel(Manager.name) private managerModel: Model<Manager>,
   ) {}
   async onModuleInit() {
     // const managers = await this.managerModel.find();

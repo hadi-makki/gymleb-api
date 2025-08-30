@@ -7,30 +7,27 @@ import {
   ParseFilePipe,
   Post,
   Res,
-  UseGuards,
   UploadedFile,
-  UseInterceptors,
+  UseInterceptors
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
-  ApiExcludeEndpoint,
   ApiOkResponse,
   ApiOperation,
-  ApiProperty,
+  ApiProperty
 } from '@nestjs/swagger';
-import { WebpPipe } from '../pipes/webp.pipe';
-import { MediaService } from './media.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
+import { UserEntity } from 'src/user/user.entity';
+import { User } from '../decorators/users.decorator';
 import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
 } from '../error/api-responses.decorator';
-import { Response } from 'express';
-import { AuthGuard } from '../guards/auth.guard';
-import { User } from '../decorators/users.decorator';
-import { User as UserEntity } from '../user/user.model';
+import { WebpPipe } from '../pipes/webp.pipe';
+import { MediaService } from './media.service';
 
 class File {
   @ApiProperty({

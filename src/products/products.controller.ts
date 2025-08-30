@@ -28,7 +28,6 @@ import { Request } from 'express';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { User } from '../decorators/users.decorator';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { User as UserEntity } from '../user/user.model';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -42,6 +41,7 @@ import { imageTypes } from '../utils/constants';
 import { validateImage } from '../utils/helprt-functions';
 import { BadRequestException } from '../error/bad-request-error';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { UserEntity } from 'src/user/user.entity';
 
 @ApiTags('Products')
 @Controller('products')

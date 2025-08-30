@@ -7,8 +7,10 @@ import { BadRequestException } from '../error/bad-request-error';
 import { TransactionService } from '../transactions/subscription-instance.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { SubscriptionEntity } from './entities/subscription.entity';
-import { SubscriptionType } from './entities/subscription.model';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from './entities/subscription.entity';
 import { isUUID } from 'class-validator';
 @Injectable()
 export class SubscriptionService {

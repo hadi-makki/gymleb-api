@@ -9,16 +9,15 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ExpensesService } from './expenses.service';
-import { CreateExpenseDto } from './dto/create-expense.dto';
-import { UpdateExpenseDto } from './dto/update-expense.dto';
-import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ManagerEntity } from 'src/manager/manager.entity';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.model';
-import { ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { ManagerEntity } from 'src/manager/manager.entity';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { ExpensesService } from './expenses.service';
 
 @Controller('expenses')
 @Roles(Permissions.GymOwner, Permissions.expenses)

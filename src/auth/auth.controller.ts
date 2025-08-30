@@ -7,28 +7,19 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiCreatedResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { AuthService } from './auth.service';
-import { LoginDto } from './dtos/request/login.dto';
-import { RegisterDto } from './dtos/request/register.dto';
+import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import { Request, Response } from 'express';
+import { UserEntity } from 'src/user/user.entity';
+import { User } from '../decorators/users.decorator';
 import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
 } from '../error/api-responses.decorator';
 import { AuthGuard } from '../guards/auth.guard';
-import { User } from '../decorators/users.decorator';
-import { User as UserEntity } from '../user/user.model';
-import { UserCreatedDto } from './dtos/response/user-created.dto';
+import { AuthService } from './auth.service';
 import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 import { RefreshDto } from './dtos/refresh-token.dto';
-import { Request, Response } from 'express';
-import { GetDeviceId } from '../decorators/get-device-id.decorator';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -37,35 +28,6 @@ import { GetDeviceId } from '../decorators/get-device-id.decorator';
 @ApiNotFoundResponse()
 export class AuthController {
   constructor(private readonly AuthService: AuthService) {}
-
-  @Post('register')
-  @ApiBody({
-    type: RegisterDto,
-  })
-  @ApiCreatedResponse({
-    description: 'User logged in',
-    type: UserCreatedDto,
-  })
-  async register(
-    @Body() registerDto: RegisterDto,
-    @GetDeviceId() deviceId: string,
-  ) {
-    return this.AuthService.register(registerDto, deviceId);
-  }
-
-  @Post('login')
-  // @ApiBody({
-  //   type: LoginDto,
-  // })
-  @ApiCreatedResponse({
-    description: 'User logged in',
-    type: UserCreatedDto,
-  })
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
-  async login(@Body() loginDto: LoginDto, @GetDeviceId() deviceId: string) {
-    return await this.AuthService.login(loginDto, deviceId);
-  }
 
   @Get('test')
   @ApiBearerAuth()

@@ -1,18 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Model } from 'mongoose';
+import { UserEntity } from 'src/user/user.entity';
+import Stripe from 'stripe';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { ProductsService } from '../products/products.service';
 import { TransactionService } from '../transactions/subscription-instance.service';
-import { User } from '../user/user.model';
-import Stripe from 'stripe';
 import {
   CallWith,
   CreatePaymentIntentDto,
 } from './dto/request/create-setup-intent.dto';
-import { PaymentDetails } from './stripe.interface';
 @Injectable()
 export class StripeService {
   private stripe: Stripe;
@@ -20,8 +19,8 @@ export class StripeService {
   constructor(
     private configService: ConfigService,
     private readonly transactionService: TransactionService,
-    @InjectModel(User.name)
-    private readonly userRepository: Model<User>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Model<UserEntity>,
     private readonly productService: ProductsService,
   ) {
     this.stripe = new Stripe(this.configService.get('STRIPE_SECRET_KEY'));
@@ -150,9 +149,11 @@ export class StripeService {
   }
 
   async createBuyPhoneNumberPayment(data: CreatePaymentIntentDto) {
-    let user: User;
+    let user: UserEntity;
 
-    const checkUser = await this.userRepository.findById(data.phoneNumber);
+    const checkUser = await this.userRepository.findOne({
+      where: { phoneNumber: data.phoneNumber },
+    });
     if (checkUser) {
       user = checkUser;
     } else {

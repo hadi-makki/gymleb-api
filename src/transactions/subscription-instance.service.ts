@@ -1,32 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { addDays, addHours, endOfDay, isAfter } from 'date-fns';
-import { Types } from 'mongoose';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
-import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { SubscriptionEntity, SubscriptionType } from 'src/subscription/entities/subscription.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { In, Repository } from 'typeorm';
 import { NotFoundException } from '../error/not-found-error';
-import { UnauthorizedException } from '../error/unauthorized-error';
-import { Expense } from '../expenses/expense.model';
-import { Manager } from '../manager/manager.model';
-import { Member } from '../member/entities/member.model';
-import { Product } from '../products/products.model';
-import { Revenue } from '../revenue/revenue.model';
 import { PaymentDetails } from '../stripe/stripe.interface';
-import { SubscriptionType } from '../subscription/entities/subscription.model';
-import { TransactionEntity } from './transaction.entity';
-import { TransactionType } from './transaction.model';
-import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
-import { BadRequestException } from 'src/error/bad-request-error';
-import { ApiNotFoundResponse } from 'src/error/api-responses.decorator';
+import {
+  TransactionEntity,
+  TransactionType,
+} from './transaction.entity';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -356,7 +348,7 @@ export class TransactionService {
 
   async updateTransactionPaymentStatus(
     transactionId: string,
-    manager: Manager,
+    manager: ManagerEntity,
     gymId: string,
     isPaid: boolean,
   ) {

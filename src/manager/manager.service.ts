@@ -1,34 +1,26 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { isMongoId } from 'class-validator';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
-import { Model, Types } from 'mongoose';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Between, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
-import { Expense } from '../expenses/expense.model';
 import { returnManager } from '../functions/returnUser';
-import { Gym } from '../gym/entities/gym.model';
 import { GymService } from '../gym/gym.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { Member } from '../member/entities/member.model';
-import { OwnerSubscription } from '../owner-subscriptions/owner-subscription.model';
 import { TokenService } from '../token/token.service';
-import { Transaction } from '../transactions/transaction.model';
 import { CreateManagerDto } from './dtos/create-manager.dto';
 import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
-import { Manager } from './manager.model';
 import { ManagerEntity } from './manager.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
-import { GymEntity } from 'src/gym/entities/gym.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
-import { MemberEntity } from 'src/member/entities/member.entity';
-import { ExpenseEntity } from 'src/expenses/expense.entity';
-import { TransactionEntity } from 'src/transactions/transaction.entity';
 @Injectable()
 export class ManagerService {
   constructor(
@@ -77,7 +69,7 @@ export class ManagerService {
       throw new NotFoundException('Gym not found');
     }
 
-    const hashedPassword = await Manager.hashPassword(body.password);
+    const hashedPassword = await ManagerEntity.hashPassword(body.password);
     const savedManager = this.managerEntity.create({
       ...(body.email && { email: body.email.trim().toLowerCase() }),
       password: hashedPassword,
@@ -131,7 +123,7 @@ export class ManagerService {
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-    const hashedPassword = await Manager.hashPassword(body.password);
+    const hashedPassword = await ManagerEntity.hashPassword(body.password);
     const savedManagerModel = this.managerEntity.create({
       ...(body.email && { email: body.email.trim().toLowerCase() }),
       password: hashedPassword,
@@ -181,7 +173,7 @@ export class ManagerService {
       throw new NotFoundException('User not found');
     }
 
-    const isPasswordMatch = await Manager.isPasswordMatch(
+    const isPasswordMatch = await ManagerEntity.isPasswordMatch(
       body.password,
       manager.password,
     );
@@ -245,14 +237,17 @@ export class ManagerService {
     if (body.lastName) manager.lastName = body.lastName;
     if (body.username) manager.username = body.username;
     if (body.password) {
-      const hashedPassword = await Manager.hashPassword(body.password);
+      const hashedPassword = await ManagerEntity.hashPassword(body.password);
       manager.password = hashedPassword;
     }
     await this.managerEntity.save(manager);
     return returnManager(manager);
   }
 
-  async logout(user: Manager, deviceId: string): Promise<SuccessMessageReturn> {
+  async logout(
+    user: ManagerEntity,
+    deviceId: string,
+  ): Promise<SuccessMessageReturn> {
     await this.tokenService.deleteTokensByUserId(user.id, deviceId);
     return {
       message: 'Manager logged out successfully',
@@ -324,7 +319,7 @@ export class ManagerService {
     };
   }
 
-  async getMe(manager: Manager): Promise<ManagerCreatedDto> {
+  async getMe(manager: ManagerEntity): Promise<ManagerCreatedDto> {
     const checkManager = await this.managerEntity.findOne({
       where: { id: manager.id },
       relations: {

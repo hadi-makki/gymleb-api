@@ -1,12 +1,8 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Gym } from '../gym/entities/gym.model';
-import { Manager } from '../manager/manager.model';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { Repository } from 'typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
 
 export const Days = [
   { day: 'Monday', isOpen: true, openingTime: '09:00', closingTime: '17:00' },

@@ -38,6 +38,7 @@ import { DeleteMemberDto } from './dto/delete-member.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
 @Controller('member')
@@ -317,5 +318,39 @@ export class MemberController {
   @Get('notify/members-with-expiring-subscriptions')
   async notifyMembersWithExpiringSubscriptions() {
     return await this.memberService.notifyMembersWithExpiringSubscriptions();
+  }
+
+  // Attending Days Endpoints
+  @Get(':gymId/:id/attending-days')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Get member attending days',
+    description: 'Get the attending days and times for a specific member',
+  })
+  async getMemberAttendingDays(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.getMemberAttendingDays(id, gymId);
+  }
+
+  @Patch(':gymId/:id/attending-days')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Update member attending days',
+    description: 'Update the attending days and times for a specific member',
+  })
+  async updateMemberAttendingDays(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+    @Body() updateAttendingDaysDto: UpdateAttendingDaysDto,
+  ) {
+    return await this.memberService.updateMemberAttendingDays(
+      id,
+      gymId,
+      updateAttendingDaysDto,
+    );
   }
 }

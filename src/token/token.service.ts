@@ -1,23 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { addDays, addMinutes, differenceInHours } from 'date-fns';
 import { Request, Response } from 'express';
-import { Model } from 'mongoose';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { Manager } from '../manager/manager.model';
-import { Member } from '../member/entities/member.model';
-import { GenerateTokenDTO } from './token.dto';
-import { User } from '../user/user.model';
 import { CookieNames, cookieOptions } from '../utils/constants';
-import { MemberEntity } from 'src/member/entities/member.entity';
-import { ManagerEntity } from 'src/manager/manager.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { GenerateTokenDTO } from './token.dto';
 import { TokenEntity } from './token.entity';
-import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class TokenService {
   constructor(
@@ -217,7 +212,7 @@ export class TokenService {
 
   async validateJwt(
     req: Request & {
-      user: User | Manager | Member | MemberEntity | ManagerEntity;
+      user: MemberEntity | ManagerEntity;
     },
     res: Response,
     isMember: boolean = false,
@@ -237,15 +232,6 @@ export class TokenService {
 
     let decodedJwt;
     let isTokenExpired = false;
-
-    const checkAccessTokenInDatabase =
-      await this.getAccessTokenByDeviceIdAndAccessToken(
-        req.cookies.deviceId,
-        tokenToUse,
-      );
-    if (!checkAccessTokenInDatabase) {
-      throw new UnauthorizedException('Invalid token');
-    }
 
     try {
       decodedJwt = (await this.jwtService.verifyAsync(tokenToUse, {

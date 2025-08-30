@@ -1,5 +1,5 @@
-import { SubscriptionType } from '../entities/subscription.model';
 import { IsEnum, IsNumber, IsString } from 'class-validator';
+import { SubscriptionType } from '../entities/subscription.entity';
 export class CreateSubscriptionDto {
   @IsString()
   title: string;

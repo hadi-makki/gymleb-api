@@ -3,18 +3,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
 import { isMongoId, isUUID } from 'class-validator';
 import { Response } from 'express';
-import { Model } from 'mongoose';
+import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { S3Service } from '../s3/s3.service';
 import { UserService } from '../user/user.service';
-import { Media } from './media.model';
-import { InjectRepository } from '@nestjs/typeorm';
 import { MediaEntity } from './media.entity';
-import { Repository } from 'typeorm';
 @Injectable()
 export class MediaService {
   constructor(

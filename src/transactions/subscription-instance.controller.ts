@@ -20,7 +20,6 @@ import {
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { TransactionService } from './subscription-instance.service';
-import { Manager } from 'src/manager/manager.model';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -51,7 +50,7 @@ export class TransactionController {
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
   async updatePaymentStatus(
     @Param('id') id: string,
-    @User() manager: Manager,
+    @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
     @Body() body: { isPaid: boolean },
   ) {

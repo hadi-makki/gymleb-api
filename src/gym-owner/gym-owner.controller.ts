@@ -9,13 +9,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Gym } from 'src/gym/entities/gym.model';
+import { GymEntity } from 'src/gym/entities/gym.entity';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { returnManager } from '../functions/returnUser';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { Manager } from '../manager/manager.model';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
@@ -31,12 +30,12 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Create a gym owner' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully created.',
-    type: Manager,
+    type: ManagerEntity,
   })
   @Roles(Permissions.SuperAdmin)
   async create(
     @Body() createGymOwnerDto: CreateGymOwnerDto,
-    @User() user: Manager,
+    @User() user: ManagerEntity,
   ) {
     return await this.gymOwnerService.create(createGymOwnerDto, user);
   }
@@ -46,7 +45,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get all gym owners' })
   @ApiOkResponse({
     description: 'The gym owners have been successfully retrieved.',
-    type: [Manager],
+    type: [ManagerEntity],
   })
   @Roles(Permissions.GymOwner)
   findAll() {
@@ -58,7 +57,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get a gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully retrieved.',
-    type: Manager,
+    type: ManagerEntity,
   })
   @Roles(Permissions.GymOwner)
   findOne(@Param('id') id: string) {
@@ -70,7 +69,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Update a gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully updated.',
-    type: Manager,
+    type: ManagerEntity,
   })
   @Roles(Permissions.GymOwner)
   update(
@@ -85,7 +84,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Delete a gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully deleted.',
-    type: Manager,
+    type: ManagerEntity,
   })
   @Roles(Permissions.GymOwner)
   remove(@Param('id') id: string) {
@@ -97,7 +96,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get the gym owner by id' })
   @ApiOkResponse({
     description: 'The gym owner has been successfully retrieved.',
-    type: Manager,
+    type: ManagerEntity,
   })
   @Roles(Permissions.GymOwner)
   getGymOwner(@User() user: ManagerEntity) {
@@ -109,7 +108,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Add a gym to a gym owner' })
   @ApiOkResponse({
     description: 'The gym has been successfully added to the gym owner.',
-    type: Gym,
+    type: GymEntity,
   })
   @Roles(Permissions.GymOwner)
   addGym(@Body() createGymToGymOwnerDto: CreateGymToGymOwnerDto) {
@@ -121,7 +120,7 @@ export class GymOwnerController {
   @ApiOperation({ summary: 'Get all gym owners' })
   @ApiOkResponse({
     description: 'The gym owners have been successfully retrieved.',
-    type: [Manager],
+    type: [ManagerEntity],
   })
   @Roles(Permissions.SuperAdmin)
   async getAllOwners() {

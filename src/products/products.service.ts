@@ -5,11 +5,11 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';
 import { MediaService } from '../media/media.service';
-import { User } from '../user/user.model';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { ProductEntity } from './products.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MediaEntity } from 'src/media/media.entity';
+import { UserEntity } from 'src/user/user.entity';
 
 @Injectable()
 export class ProductsService {
@@ -84,7 +84,7 @@ export class ProductsService {
   async updateProduct(
     id: string,
     file: Express.Multer.File,
-    user: User,
+    user: UserEntity,
     updateProductDto: UpdateProductDto,
     gymId: string,
   ) {
@@ -129,7 +129,7 @@ export class ProductsService {
     };
   }
 
-  async deleteProduct(id: string, user: User, gymId: string) {
+  async deleteProduct(id: string, user: UserEntity, gymId: string) {
     const product = await this.productRepository.findOne({
       where: { id: id, gym: { id: gymId } },
       relations: {

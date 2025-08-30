@@ -17,7 +17,7 @@ import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { User } from '../decorators/users.decorator';
-import { Manager } from '../manager/manager.model';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Controller('owner-subscriptions')
 @UseGuards(ManagerAuthGuard)
@@ -44,7 +44,7 @@ export class OwnerSubscriptionsController {
 
   @Get('me')
   @Roles(Permissions.Any)
-  getMy(@User() user: Manager) {
+  getMy(@User() user: ManagerEntity) {
     return this.service.getOwnerSubscription(user.id);
   }
 

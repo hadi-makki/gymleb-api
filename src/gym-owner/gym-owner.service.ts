@@ -1,36 +1,24 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { GymService } from '../gym/gym.service';
-import { MemberService } from '../member/member.service';
-import { SubscriptionService } from '../subscription/subscription.service';
-import { Transaction } from '../transactions/transaction.model';
-import { Permissions } from '../decorators/roles/role.enum';
-import { Expense } from '../expenses/expense.model';
-import { Gym } from '../gym/entities/gym.model';
-import { Manager } from '../manager/manager.model';
-import { Revenue } from '../revenue/revenue.model';
-import { Days } from '../seeder/gym.seeding';
-import {
-  Subscription,
-  SubscriptionType,
-} from '../subscription/entities/subscription.model';
-import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
-import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
-import { ExpensesService } from 'src/expenses/expenses.service';
-import { RevenueService } from 'src/revenue/revenue.service';
-import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ExpenseEntity } from 'src/expenses/expense.entity';
+import { ExpensesService } from 'src/expenses/expenses.service';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
-import { Repository } from 'typeorm';
-import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
-import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { RevenueService } from 'src/revenue/revenue.service';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from 'src/subscription/entities/subscription.entity';
+import { Repository } from 'typeorm';
+import { Permissions } from '../decorators/roles/role.enum';
+import { GymService } from '../gym/gym.service';
+import { MemberService } from '../member/member.service';
+import { Days } from '../seeder/gym.seeding';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
+import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
+import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
 export class GymOwnerService {
   constructor(
     @InjectRepository(ManagerEntity)
@@ -50,7 +38,7 @@ export class GymOwnerService {
     private readonly revenueService: RevenueService,
   ) {}
 
-  async create(createGymOwnerDto: CreateGymOwnerDto, manager: Manager) {
+  async create(createGymOwnerDto: CreateGymOwnerDto, manager: ManagerEntity) {
     const checkGymOwner = await this.gymOwnerModel.findOne({
       where: { email: createGymOwnerDto.email },
     });
@@ -72,7 +60,7 @@ export class GymOwnerService {
       firstName: createGymOwnerDto.firstName,
       lastName: createGymOwnerDto.lastName,
       email: createGymOwnerDto.email,
-      password: await Manager.hashPassword(createGymOwnerDto.password),
+      password: await ManagerEntity.hashPassword(createGymOwnerDto.password),
       address: createGymOwnerDto.address,
       phoneNumber: createGymOwnerDto.phone,
       username,

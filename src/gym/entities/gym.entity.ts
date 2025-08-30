@@ -7,6 +7,7 @@ import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { GymPresetEntity } from './gym-preset.entity';
 import {
   Column,
   Entity,
@@ -105,6 +106,9 @@ export class GymEntity extends PgMainEntity {
 
   @OneToMany(() => PTSessionEntity, (session) => session.gym)
   ptSessions: PTSessionEntity[];
+
+  @OneToMany(() => GymPresetEntity, (preset) => preset.gym)
+  presets: GymPresetEntity[];
 
   @Column('text', { nullable: true, default: GymTypeEnum.FITNESS })
   gymType: GymTypeEnum;

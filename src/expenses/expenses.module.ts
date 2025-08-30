@@ -1,21 +1,11 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Expense, ExpenseSchema } from './expense.model';
-import { ExpensesController } from './expenses.controller';
-import { ExpensesService } from './expenses.service';
-import { Gym, GymSchema } from '../gym/entities/gym.model';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionModule } from '../transactions/subscription-instance.module';
+import { ExpensesController } from './expenses.controller';
+import { ExpensesService } from './expenses.service';
 
 @Module({
-  imports: [
-    AuthenticationModule,
-    MongooseModule.forFeature([
-      { name: Expense.name, schema: ExpenseSchema },
-      { name: Gym.name, schema: GymSchema },
-    ]),
-    TransactionModule,
-  ],
+  imports: [AuthenticationModule, TransactionModule],
   controllers: [ExpensesController],
   providers: [ExpensesService],
   exports: [ExpensesService],

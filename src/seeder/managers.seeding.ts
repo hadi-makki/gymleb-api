@@ -1,14 +1,14 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Permissions } from '../decorators/roles/role.enum';
-import { Manager } from '../manager/manager.model';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { Repository } from 'typeorm';
 
 @Injectable({ scope: Scope.DEFAULT })
 export class ManagerSeeding implements OnModuleInit {
   constructor(
-    @InjectModel(Manager.name)
-    private managerRepository: Model<Manager>,
+    @InjectRepository(ManagerEntity)
+    private managerRepository: Repository<ManagerEntity>,
   ) {}
 
   async onModuleInit() {
@@ -17,7 +17,7 @@ export class ManagerSeeding implements OnModuleInit {
   }
 
   private async removeData() {
-    await this.managerRepository.deleteMany({});
+    await this.managerRepository.delete({});
   }
 
   private async seedManagers() {
@@ -25,16 +25,15 @@ export class ManagerSeeding implements OnModuleInit {
     const email = 'admin@example.com';
 
     const exists = await this.managerRepository.findOne({
-      username,
-      email,
+      where: [{ username }, { email }],
     });
     if (!exists) {
-      const hashedPassword = await Manager.hashPassword('Password1$');
+      const hashedPassword = await ManagerEntity.hashPassword('Password1$');
       await this.managerRepository.create({
         username,
         email,
         password: hashedPassword,
-        roles: [Permissions.SuperAdmin],
+        permissions: [Permissions.SuperAdmin],
       });
       console.log('Admin seeded');
     }

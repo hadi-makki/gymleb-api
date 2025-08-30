@@ -2,9 +2,7 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../error/bad-request-error';
 import { GymService } from '../gym/gym.service';
-import { Manager } from '../manager/manager.model';
 import { MemberService } from '../member/member.service';
-
 import { InjectRepository } from '@nestjs/typeorm';
 import { isPhoneNumber } from 'class-validator';
 import { format } from 'date-fns';
@@ -158,7 +156,11 @@ export class TwilioService {
     };
   }
 
-  async notifyManyUsers(manager: Manager, userIds: string[], gymId: string) {
+  async notifyManyUsers(
+    manager: ManagerEntity,
+    userIds: string[],
+    gymId: string,
+  ) {
     for (const userId of userIds) {
       await this.notifySingleMember(userId, gymId);
     }

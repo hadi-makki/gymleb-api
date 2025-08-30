@@ -1,28 +1,20 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreatePersonalTrainerDto } from './dto/create-personal-trainer.dto';
-import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
-import { Model, Types } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { Permissions } from '../decorators/roles/role.enum';
-import { User } from '../user/user.model';
-import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
-import { NotFoundException } from '../error/not-found-error';
-import { CreateSessionDto } from './dto/create-session.dto';
-import { UpdateSessionDto } from './dto/update-session.dto';
-import { PTSession } from './entities/pt-sessions.model';
-import { Gym } from 'src/gym/entities/gym.model';
-import { Member } from 'src/member/entities/member.model';
-import { ManagerService } from 'src/manager/manager.service';
-import { v4 as uuidv4 } from 'uuid';
-import { TransactionType } from 'src/transactions/transaction.model';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ManagerEntity } from 'src/manager/manager.entity';
-import { UserEntity } from 'src/user/user.entity';
-import { ILike, In, Raw, Repository } from 'typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { PTSessionEntity } from './entities/pt-sessions.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { ManagerService } from 'src/manager/manager.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { ILike, Raw, Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+import { Permissions } from '../decorators/roles/role.enum';
+import { NotFoundException } from '../error/not-found-error';
+import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
+import { CreatePersonalTrainerDto } from './dto/create-personal-trainer.dto';
+import { CreateSessionDto } from './dto/create-session.dto';
+import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
+import { UpdateSessionDto } from './dto/update-session.dto';
+import { PTSessionEntity } from './entities/pt-sessions.entity';
 
 @Injectable()
 export class PersonalTrainersService {

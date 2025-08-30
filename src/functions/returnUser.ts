@@ -1,9 +1,8 @@
 import { getNavItems } from 'src/utils/navigations copy';
-import { Manager } from '../manager/manager.model';
-import { User } from '../user/user.model';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { UserEntity } from 'src/user/user.entity';
 
-export function returnUser(user: User) {
+export function returnUser(user: UserEntity) {
   return {
     id: user.id,
     name: user.name,

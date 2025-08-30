@@ -1,18 +1,11 @@
 import { Injectable, OnModuleInit, Scope } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Transaction, TransactionType } from './transaction.model';
-import { SubscriptionInstance } from './subscription-instance.model';
-import { Member } from '../member/entities/member.model';
-import { Gym } from '../gym/entities/gym.model';
-import { Product } from '../products/products.model';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MemberEntity } from 'src/member/entities/member.entity';
-import { SubscriptionInstanceEntity } from './subscription-instance.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { Repository } from 'typeorm';
+import { MemberEntity } from 'src/member/entities/member.entity';
 import { ProductEntity } from 'src/products/products.entity';
-import { TransactionEntity } from './transaction.entity';
+import { Repository } from 'typeorm';
+import { SubscriptionInstanceEntity } from './subscription-instance.entity';
+import { TransactionEntity, TransactionType } from './transaction.entity';
 
 @Injectable({ scope: Scope.DEFAULT })
 export class TransactionSeeding implements OnModuleInit {

@@ -6,10 +6,10 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
-  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,9 +19,11 @@ import {
 } from '@nestjs/swagger';
 
 import { Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import { AuthService } from '../auth/auth.service';
 import { RefreshTokenOutDto } from '../auth/dtos/out/refresh-token-out.dto';
 import { RefreshDto } from '../auth/dtos/refresh-token.dto';
+import { GetDeviceId } from '../decorators/get-device-id.decorator';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
@@ -32,21 +34,18 @@ import {
   ApiUnauthorizedResponse,
 } from '../error/api-responses.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { GymService } from '../gym/gym.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
+import { TransactionService } from '../transactions/subscription-instance.service';
 import { CookieNames, cookieOptions } from '../utils/constants';
 import { CreateManagerDto } from './dtos/create-manager.dto';
 import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
-import { Manager } from './manager.model';
 import { ManagerService } from './manager.service';
-import { SubscriptionInstance } from '../transactions/subscription-instance.model';
-import { TransactionService } from '../transactions/subscription-instance.service';
-import { CreateGymOwnerDto } from './dtos/create-gym-owner.dto';
-import { GymService } from '../gym/gym.service';
-import { GetDeviceId } from '../decorators/get-device-id.decorator';
-import { v4 as uuidv4 } from 'uuid';
+import { ManagerEntity } from './manager.entity';
+import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -82,7 +81,7 @@ export class ManagerController {
   @ApiBearerAuth()
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
-  @ApiOkResponse({ type: Manager })
+  @ApiOkResponse({ type: ManagerEntity })
   @ApiNotFoundResponse('Manager not found')
   findOne(@Param('id') id: string) {
     return this.ManagerService.findOne(id);
@@ -123,7 +122,7 @@ export class ManagerController {
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
   async logout(
-    @User() user: Manager,
+    @User() user: ManagerEntity,
     @Res({ passthrough: true }) response: Response,
     @GetDeviceId() deviceId: string,
   ) {
@@ -135,10 +134,10 @@ export class ManagerController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.Any)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: Manager })
+  @ApiOkResponse({ type: ManagerEntity })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
-  async me(@User() user: Manager) {
+  async me(@User() user: ManagerEntity) {
     return this.ManagerService.getMe(user);
   }
 
@@ -146,8 +145,8 @@ export class ManagerController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: Manager })
-  updateMe(@User() user: Manager, @Body() body: UpdateManagerDto) {
+  @ApiOkResponse({ type: ManagerEntity })
+  updateMe(@User() user: ManagerEntity, @Body() body: UpdateManagerDto) {
     return this.ManagerService.updateManager(user.id, body);
   }
 
@@ -156,7 +155,7 @@ export class ManagerController {
   @ApiBearerAuth()
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
-  @ApiOkResponse({ type: [Manager] })
+  @ApiOkResponse({ type: [ManagerEntity] })
   getAll() {
     return this.ManagerService.getAll();
   }
@@ -180,7 +179,7 @@ export class ManagerController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiNotFoundResponse('Manager not found')
-  @ApiOkResponse({ type: Manager })
+  @ApiOkResponse({ type: ManagerEntity })
   @Roles(Permissions.SuperAdmin)
   async updateManager(@Param('id') id: string, @Body() body: UpdateManagerDto) {
     return await this.ManagerService.updateManager(id, body);
@@ -213,8 +212,8 @@ export class ManagerController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: [SubscriptionInstance] })
-  async getTransactions(@User() user: Manager) {
+  @ApiOkResponse({ type: [SubscriptionInstanceEntity] })
+  async getTransactions(@User() user: ManagerEntity) {
     return await this.TransactionService.findAllSubscriptionInstances(user.id);
   }
 
