@@ -154,12 +154,28 @@ export class PersonalTrainersService {
         profileImage,
         personalTrainer.id,
       );
-      await this.personalTrainerEntity.update(id, {
-        ...updatePersonalTrainerDto,
-        profileImage: imageData,
-      });
+      personalTrainer.profileImage = imageData;
+      personalTrainer.firstName = updatePersonalTrainerDto.firstName;
+      personalTrainer.lastName = updatePersonalTrainerDto.lastName;
+      personalTrainer.email = updatePersonalTrainerDto.email;
+      personalTrainer.phoneNumber = updatePersonalTrainerDto.phone;
+      if (updatePersonalTrainerDto.password) {
+        personalTrainer.password = await ManagerEntity.hashPassword(
+          updatePersonalTrainerDto.password,
+        );
+      }
+      await this.personalTrainerEntity.save(personalTrainer);
     } else {
-      await this.personalTrainerEntity.update(id, updatePersonalTrainerDto);
+      personalTrainer.firstName = updatePersonalTrainerDto.firstName;
+      personalTrainer.lastName = updatePersonalTrainerDto.lastName;
+      personalTrainer.email = updatePersonalTrainerDto.email;
+      personalTrainer.phoneNumber = updatePersonalTrainerDto.phone;
+      if (updatePersonalTrainerDto.password) {
+        personalTrainer.password = await ManagerEntity.hashPassword(
+          updatePersonalTrainerDto.password,
+        );
+      }
+      await this.personalTrainerEntity.save(personalTrainer);
     }
 
     return { message: 'Personal trainer updated successfully' };
