@@ -97,6 +97,7 @@ export class MemberService {
           endDate: Between(startOfTargetDate, endOfTargetDate),
           type: TransactionType.SUBSCRIPTION,
           isInvalidated: false,
+          member: { isNotified: false },
         },
       ],
       relations: {
@@ -126,37 +127,34 @@ export class MemberService {
       throw new BadRequestException('Member data is required');
     }
 
-    // Ensure subscriptionInstances is an array
-    const subscriptionTransactions = member.transactions || [];
+    // Use SQL queries to get subscription data efficiently
+    const [activeSubscription, lastSubscription, attendingDays] =
+      await Promise.all([
+        // Get active subscription using SQL
+        this.transactionModel.findOne({
+          where: {
+            member: { id: member.id },
+            endDate: MoreThan(new Date()),
+            isInvalidated: false,
+          },
+          order: { endDate: 'DESC' },
+        }),
 
-    const checkActiveSubscription = subscriptionTransactions.some(
-      (subscriptionInstance) => {
-        return (
-          subscriptionInstance?.endDate &&
-          new Date(subscriptionInstance.endDate) > new Date() &&
-          !subscriptionInstance.isInvalidated
-        );
-      },
-    );
-    const currentActiveSubscription = subscriptionTransactions.find(
-      (subscriptionInstance) => {
-        return (
-          subscriptionInstance?.endDate &&
-          new Date(subscriptionInstance.endDate) > new Date() &&
-          !subscriptionInstance.isInvalidated
-        );
-      },
-    );
-    const lastSubscription =
-      subscriptionTransactions[subscriptionTransactions.length - 1];
+        // Get last subscription using SQL
+        this.transactionModel.findOne({
+          where: {
+            member: { id: member.id },
+          },
+          order: { createdAt: 'DESC' },
+        }),
 
-    // Use loaded attending days or fetch them if not loaded
-    const attendingDays =
-      member.attendingDays ||
-      (await this.attendingDaysModel.find({
-        where: { member: { id: member.id } },
-        order: { dayOfWeek: 'ASC' },
-      }));
+        // Get attending days using SQL (only if not already loaded)
+        member.attendingDays ||
+          this.attendingDaysModel.find({
+            where: { member: { id: member.id } },
+            order: { dayOfWeek: 'ASC' },
+          }),
+      ]);
 
     return {
       id: member.id,
@@ -168,8 +166,8 @@ export class MemberService {
       subscriptionTransactions: member.transactions,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
-      hasActiveSubscription: checkActiveSubscription,
-      currentActiveSubscription: currentActiveSubscription,
+      hasActiveSubscription: !!activeSubscription,
+      currentActiveSubscription: activeSubscription,
       lastSubscription: lastSubscription,
       isNotified: member.isNotified,
       profileImage: member.profileImage,
@@ -757,7 +755,12 @@ export class MemberService {
     }
     const member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
-      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      relations: {
+        gym: true,
+        subscription: true,
+        transactions: true,
+        attendingDays: true,
+      },
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -1001,7 +1004,12 @@ export class MemberService {
       isNotified: false,
     });
     for (const member of expiringMembers) {
-      console.log('reminding member', member.member.name);
+      console.log(
+        'reminding member',
+        member.member.name,
+        'at gym',
+        member.gym.name,
+      );
       await this.twilioService.notifySingleMember(
         member.member.id,
         member.gym.id,

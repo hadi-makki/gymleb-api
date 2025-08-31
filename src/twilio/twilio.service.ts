@@ -99,9 +99,9 @@ export class TwilioService {
   ) {
     const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
     const gym = await this.gymService.getGymById(gymId);
-    const isExpired = await this.memberService.checkUserSubscriptionExpired(
-      member.id,
-    );
+    const isExpired =
+      !dontCheckExpired &&
+      (await this.memberService.checkUserSubscriptionExpired(member.id));
     if (gym.membersNotified > this.allowedMessagesNumber) {
       throw new BadRequestException('Gym members notified limit reached');
     }
@@ -113,7 +113,6 @@ export class TwilioService {
     }
 
     if (!checkNodeEnv('local') && isPhoneNumber(member.phone)) {
-      console.log('sending notification to', member.phone);
       await this.client.messages
         .create({
           from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
@@ -122,7 +121,7 @@ export class TwilioService {
           contentVariables: JSON.stringify({
             1: member.name,
             2: gym.name,
-            3: member.lastSubscription?.title,
+            3: member.lastSubscription?.title || 'Subscription',
             4: member.lastSubscription.isInvalidated
               ? format(
                   new Date(member.lastSubscription.invalidatedAt),
@@ -147,6 +146,7 @@ export class TwilioService {
           throw new BadRequestException(error);
         });
     } else {
+      console.log('member notified successfully');
       await this.memberService.toggleNotified(member.id, true);
       await this.gymService.addGymMembersNotified(gym.id, 1);
     }

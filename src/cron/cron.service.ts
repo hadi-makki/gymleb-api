@@ -23,13 +23,12 @@ export class CronService {
     private readonly memberService: MemberService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_11AM, {
+  @Cron(CronExpression.EVERY_DAY_AT_10AM, {
     name: 'notify-expired-members',
     timeZone: 'Asia/Beirut', // Lebanon timezone
   })
   async notifyExpiredMembers() {
     this.logger.log('Starting expired members notification cron job');
-
     await this.memberService.notifyMembersWithExpiringSubscriptions();
   }
 }
