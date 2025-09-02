@@ -640,11 +640,42 @@ export class PersonalTrainersService {
       throw new NotFoundException('Member not found');
     }
 
-    const sessions = await this.sessionEntity.find({
+    const targetIds = splitMemberIds.map((s) => s.trim()).filter(Boolean);
+
+    // Single-member: simple IN filter
+    if (targetIds.length <= 1) {
+      const sessions = await this.sessionEntity.find({
+        where: {
+          gym: { id: gymId },
+          personalTrainer: { id: trainerId },
+          members: { id: In(targetIds) },
+        },
+        relations: {
+          members: true,
+          personalTrainer: true,
+          gym: true,
+          transactions: true,
+        },
+      });
+      return sessions.sort((a, b) => {
+        if (a.sessionDate && b.sessionDate) {
+          return (
+            new Date(a.sessionDate).getTime() -
+            new Date(b.sessionDate).getTime()
+          );
+        }
+        if (a.sessionDate && !b.sessionDate) return -1;
+        if (!a.sessionDate && b.sessionDate) return 1;
+        return 0;
+      });
+    }
+
+    // Multi-member: require sessions whose members set exactly matches targetIds
+    const candidateSessions = await this.sessionEntity.find({
       where: {
         gym: { id: gymId },
         personalTrainer: { id: trainerId },
-        members: { id: In(splitMemberIds) },
+        members: { id: In(targetIds) },
       },
       relations: {
         members: true,
@@ -652,6 +683,13 @@ export class PersonalTrainersService {
         gym: true,
         transactions: true,
       },
+    });
+
+    const targetKey = [...new Set(targetIds)].sort().join('|');
+    const sessions = candidateSessions.filter((session) => {
+      const ids = (session.members || []).map((m) => m.id).filter(Boolean);
+      const key = [...new Set(ids)].sort().join('|');
+      return key === targetKey;
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
