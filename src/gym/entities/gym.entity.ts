@@ -5,7 +5,6 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { GymPresetEntity } from './gym-preset.entity';
 import {
@@ -52,9 +51,6 @@ export class GymEntity extends PgMainEntity {
 
   @RelationId((gym: GymEntity) => gym.owner)
   ownerId: string | null;
-
-  @OneToMany(() => SubscriptionInstanceEntity, (instance) => instance.gym)
-  subscriptionInstances: SubscriptionInstanceEntity[];
 
   @OneToMany(() => TransactionEntity, (transaction) => transaction.gym)
   transactions: TransactionEntity[];

@@ -6,19 +6,18 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
-import { SubscriptionEntity, SubscriptionType } from 'src/subscription/entities/subscription.entity';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from 'src/subscription/entities/subscription.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { In, Repository } from 'typeorm';
 import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
-import {
-  TransactionEntity,
-  TransactionType,
-} from './transaction.entity';
+import { TransactionEntity, TransactionType } from './transaction.entity';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -36,8 +35,6 @@ export class TransactionService {
     private readonly managerRepository: Repository<ManagerEntity>,
     @InjectRepository(OwnerSubscriptionTypeEntity)
     private readonly ownerSubscriptionTypeRepository: Repository<OwnerSubscriptionTypeEntity>,
-    @InjectRepository(OwnerSubscriptionEntity)
-    private readonly ownerSubscriptionRepository: Repository<OwnerSubscriptionEntity>,
     @InjectRepository(TransactionEntity)
     private readonly transactionModel: Repository<TransactionEntity>,
     @InjectRepository(RevenueEntity)

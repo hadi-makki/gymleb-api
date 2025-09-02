@@ -7,7 +7,6 @@ import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { TokenEntity } from 'src/token/token.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { AuthService } from '../auth/auth.service';
@@ -24,7 +23,6 @@ import { UserEntity } from 'src/user/user.entity';
       TransactionEntity,
       GymEntity,
       ManagerEntity,
-      OwnerSubscriptionEntity,
       ExpenseEntity,
       UserEntity,
     ]),

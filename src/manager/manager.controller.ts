@@ -45,7 +45,7 @@ import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { ManagerService } from './manager.service';
 import { ManagerEntity } from './manager.entity';
-import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -212,7 +212,7 @@ export class ManagerController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: [SubscriptionInstanceEntity] })
+  @ApiOkResponse({ type: [TransactionEntity] })
   async getTransactions(@User() user: ManagerEntity) {
     return await this.TransactionService.findAllSubscriptionInstances(user.id);
   }

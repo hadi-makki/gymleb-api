@@ -10,13 +10,7 @@ import {
   SubscriptionEntity,
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
-import {
-  Column,
-  Entity,
-  ManyToOne,
-  OneToOne,
-  RelationId
-} from 'typeorm';
+import { Column, Entity, ManyToOne, OneToOne, RelationId } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 
 export enum TransactionType {
@@ -143,6 +137,9 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('float', { nullable: true })
   gymsPTSessionPercentage: number;
+
+  @Column('boolean', { default: false })
+  isTakingPtSessionsCut: boolean;
 
   @Column('boolean', { default: true })
   isPaid: boolean;

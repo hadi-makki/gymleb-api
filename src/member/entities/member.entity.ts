@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
@@ -41,9 +40,6 @@ export class MemberEntity extends PgMainEntity {
   @RelationId((member: MemberEntity) => member.subscription)
   subscriptionId: string | null;
 
-  @OneToMany(() => SubscriptionInstanceEntity, (instance) => instance.member)
-  subscriptionInstances: SubscriptionInstanceEntity[];
-
   @OneToMany(() => TransactionEntity, (transaction) => transaction.member)
   transactions: TransactionEntity[];
 
@@ -69,7 +65,10 @@ export class MemberEntity extends PgMainEntity {
   @OneToMany(() => TokenEntity, (token) => token.member)
   tokens: TokenEntity[];
 
-  @OneToMany(() => MemberAttendingDaysEntity, (attendingDay) => attendingDay.member)
+  @OneToMany(
+    () => MemberAttendingDaysEntity,
+    (attendingDay) => attendingDay.member,
+  )
   attendingDays: MemberAttendingDaysEntity[];
 
   static async isPasswordMatch(

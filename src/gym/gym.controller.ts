@@ -17,14 +17,16 @@ import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { GymEntity } from './entities/gym.entity';
-import { TransactionType } from 'src/transactions/transaction.entity';
+import {
+  TransactionEntity,
+  TransactionType,
+} from 'src/transactions/transaction.entity';
 import { AddOfferDto } from './dto/add-offer.dto';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
 import { GymService } from './gym.service';
-import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -234,7 +236,7 @@ export class GymController {
   @ApiOperation({ summary: 'Get transaction history' })
   @ApiOkResponse({
     description: 'The transaction history has been successfully retrieved.',
-    type: [SubscriptionInstanceEntity],
+    type: [TransactionEntity],
   })
   getTransactionHistory(
     @User() user: ManagerEntity,

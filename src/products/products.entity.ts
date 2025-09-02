@@ -3,7 +3,6 @@ import { PgMainEntity } from '../main-classes/mainEntity';
 import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 import { MediaEntity } from 'src/media/media.entity';
 
 @Entity('products')
