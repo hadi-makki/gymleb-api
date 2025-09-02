@@ -228,4 +228,13 @@ export class ManagerController {
   ) {
     return await this.ManagerService.getAdminAnalytics(start, end);
   }
+
+  @Get('get/gym-owners')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: [ManagerEntity] })
+  async getGymOwners() {
+    return await this.ManagerService.getAllGymOwners();
+  }
 }

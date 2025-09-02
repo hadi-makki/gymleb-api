@@ -388,9 +388,9 @@ export class GymOwnerService {
       owner: gymOwner,
       gymDashedName: gymName.toLowerCase().split(' ').join('-'),
     });
-    gymOwner.ownedGyms.push(gym);
-    await this.gymOwnerModel.save(gymOwner);
 
-    return gym;
+    const savedGym = await this.gymModel.save(gym);
+
+    return savedGym;
   }
 }

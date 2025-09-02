@@ -7,7 +7,7 @@ import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
-import { Between, Repository } from 'typeorm';
+import { Between, Raw, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { returnManager } from '../functions/returnUser';
@@ -20,6 +20,7 @@ import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dt
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { ManagerEntity } from './manager.entity';
+import { Permissions } from 'src/decorators/roles/role.enum';
 @Injectable()
 export class ManagerService {
   constructor(
@@ -333,5 +334,19 @@ export class ManagerService {
       throw new NotFoundException('Manager not found');
     }
     return returnManager(checkManager);
+  }
+
+  async getAllGymOwners() {
+    const gymOwners = await this.managerEntity.find({
+      // where: {
+      //   permissions: Raw(
+      //     (alias) => `NOT (${alias} @> '["${Permissions.GymOwner}"]'::jsonb)`,
+      //   ),
+      // },
+    });
+    console.log('gymOwners', gymOwners);
+    return gymOwners
+      .filter((gymOwner) => gymOwner.permissions.includes(Permissions.GymOwner))
+      .map((gymOwner) => returnManager(gymOwner));
   }
 }
