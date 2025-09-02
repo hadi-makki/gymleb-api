@@ -9,15 +9,12 @@ import {
   CreateOwnerSubscriptionTypeDto,
 } from './dto';
 import { OwnerSubscriptionTypeEntity } from './owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from './owner-subscription.entity';
 
 @Injectable()
 export class OwnerSubscriptionsService {
   constructor(
     @InjectRepository(OwnerSubscriptionTypeEntity)
     private typeModel: Repository<OwnerSubscriptionTypeEntity>,
-    @InjectRepository(OwnerSubscriptionEntity)
-    private subModel: Repository<OwnerSubscriptionEntity>,
     @InjectRepository(ManagerEntity)
     private ownerModel: Repository<ManagerEntity>,
     private readonly transactionService: TransactionService,
@@ -37,43 +34,9 @@ export class OwnerSubscriptionsService {
     return await this.typeModel.find({ order: { createdAt: 'DESC' } });
   }
 
-  async assign(dto: AssignOwnerSubscriptionDto) {
-    const owner = await this.ownerModel.findOne({ where: { id: dto.ownerId } });
-    if (!owner) throw new NotFoundException('Owner not found');
-    const type = await this.typeModel.findOne({ where: { id: dto.typeId } });
-    if (!type) throw new NotFoundException('Type not found');
-    const start = dto.startDate ? new Date(dto.startDate) : new Date();
-    const end = new Date(start);
-    end.setDate(end.getDate() + type.durationDays);
-    // deactivate previous subs
-    await this.subModel.update(
-      { owner: owner, active: true },
-      { active: false },
-    );
-    const createdModel = this.subModel.create({
-      owner: owner,
-      type: type,
-      startDate: start,
-      endDate: end,
-      active: true,
-    });
-    const created = await this.subModel.save(createdModel);
-    // create transaction for the assignment so super admin can see it later
-    await this.transactionService.createOwnerSubscriptionAssignmentInstance({
-      ownerId: owner.id,
-      ownerSubscriptionTypeId: type.id,
-      paidAmount: type.price,
-      endDateIso: end.toISOString(),
-    });
-    return created;
-  }
+  async assign(dto: AssignOwnerSubscriptionDto) {}
 
-  async getOwnerSubscription(ownerId: string) {
-    return await this.subModel.findOne({
-      where: { owner: { id: ownerId }, active: true },
-      relations: ['type'],
-    });
-  }
+  async getOwnerSubscription(ownerId: string) {}
 
   async deleteType(id: string) {
     return await this.typeModel.delete(id);

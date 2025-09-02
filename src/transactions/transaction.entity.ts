@@ -13,9 +13,10 @@ import {
 import {
   Column,
   Entity,
+  ManyToMany,
   ManyToOne,
   OneToOne,
-  RelationId
+  RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 
@@ -145,6 +146,9 @@ export class TransactionEntity extends PgMainEntity {
   gymsPTSessionPercentage: number;
 
   @Column('boolean', { default: true })
+  isTakingPtSessionsCut: boolean;
+
+  @Column('boolean', { default: true })
   isPaid: boolean;
 
   @Column('boolean', { default: false })
@@ -158,4 +162,13 @@ export class TransactionEntity extends PgMainEntity {
     onDelete: 'SET NULL',
   })
   ptSession: PTSessionEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.ptSession)
+  ptSessionId: string | null;
+
+  @ManyToOne(() => PTSessionEntity, (ptSession) => ptSession.transactions)
+  relatedPtSession: PTSessionEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.relatedPtSession)
+  relatedPtSessionId: string | null;
 }

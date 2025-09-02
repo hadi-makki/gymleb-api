@@ -22,7 +22,6 @@ import {
 } from 'typeorm';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import {
   TransactionEntity,
   TransactionType,
@@ -40,8 +39,6 @@ export class GymService {
     private gymOwnerModel: Repository<ManagerEntity>,
     @InjectRepository(MemberEntity)
     private memberModel: Repository<MemberEntity>,
-    @InjectRepository(OwnerSubscriptionEntity)
-    private ownerSubscriptionModel: Repository<OwnerSubscriptionEntity>,
     @InjectRepository(ManagerEntity)
     private managerModel: Repository<ManagerEntity>,
     @InjectRepository(TransactionEntity)
@@ -168,18 +165,17 @@ export class GymService {
 
     // Calculate personal trainer session revenue for current month
     const currentMonthPTSessionRevenue = currentMonthTransactions
-      .filter((t) => t.type === TransactionType.PERSONAL_TRAINER_SESSION)
+      .filter(
+        (t) =>
+          t.type === TransactionType.PERSONAL_TRAINER_SESSION &&
+          t.isTakingPtSessionsCut,
+      )
       .reduce((total, transaction) => {
         const sessionAmount = transaction.paidAmount || 0;
         const gymPercentage = transaction.gymsPTSessionPercentage || 0;
         const gymShare = (gymPercentage / 100) * sessionAmount;
         return total + gymShare;
       }, 0);
-
-    console.log(
-      'this is the current month p t session revenue',
-      currentMonthPTSessionRevenue,
-    );
 
     // Calculate percentage change in subscription revenue
     const revenueChange = lastMonthSubscriptionRevenue
@@ -223,7 +219,10 @@ export class GymService {
         const sessionAmount = transaction.paidAmount || 0;
         const gymPercentage = transaction.gymsPTSessionPercentage || 0;
         // Calculate gym's share: (percentage / 100) * session amount
-        const gymShare = (gymPercentage / 100) * sessionAmount;
+        const gymShare = transaction.isTakingPtSessionsCut
+          ? (gymPercentage / 100) * sessionAmount
+          : sessionAmount;
+
         return total + gymShare;
       }, 0);
 
@@ -377,29 +376,29 @@ export class GymService {
     });
 
     // Get all owner subscriptions in a single query
-    const allOwnerSubscriptions = await this.ownerSubscriptionModel.find({
-      relations: {
-        owner: true,
-      },
-    });
+    // const allOwnerSubscriptions = await this.ownerSubscriptionModel.find({
+    //   relations: {
+    //     owner: true,
+    //   },
+    // });
 
     // Process the data efficiently
     const data = gyms
       .filter((gym) => gym.owner) // Filter out gyms without owners
       .map((gym) => {
         // Find active subscription for this gym's owner
-        const ownerSubscriptions = allOwnerSubscriptions.filter(
-          (subscription) => subscription.owner.id === gym.owner.id,
-        );
+        // const ownerSubscriptions = allOwnerSubscriptions.filter(
+        //   (subscription) => subscription.owner.id === gym.owner.id,
+        // );
 
-        const gymHasActiveSubscription = ownerSubscriptions.find(
-          (subscription) =>
-            subscription.active && new Date(subscription.endDate) > new Date(),
-        );
+        // const gymHasActiveSubscription = ownerSubscriptions.find(
+        //   (subscription) =>
+        //     subscription.active && new Date(subscription.endDate) > new Date(),
+        // );
 
         return {
           ...gym,
-          activeSubscription: gymHasActiveSubscription,
+          // activeSubscription: gymHasActiveSubscription,
         };
       });
 
@@ -816,8 +815,8 @@ export class GymService {
       throw new NotFoundException('Owner not found');
     }
     const gym = owner.gyms[0];
-    const activeOwnerSub = owner.ownerSubscription;
-    return { owner, gym, activeOwnerSub };
+    // const activeOwnerSub = owner.ownerSubscription;
+    return { owner, gym };
   }
 
   async addGymOffer(gymId: string, { offers }: AddOfferDto) {

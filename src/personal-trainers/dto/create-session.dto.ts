@@ -1,7 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
-  IsDate,
+  IsDateString,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,7 +12,7 @@ import {
 
 export class CreateSessionDto {
   @ApiProperty({
-    description: 'The ID of the member',
+    description: 'The ID of the personal trainer',
     example: '6621b0a9b547942bc1111111',
   })
   @IsNotEmpty()
@@ -18,20 +20,21 @@ export class CreateSessionDto {
   personalTrainerId: string;
 
   @ApiProperty({
-    description: 'The ID of the member',
-    example: '6621b0a9b547942bc1111111',
+    description: 'IDs of members attending the session',
+    example: ['6621b0a9b547942bc1111111', '6621b0a9b547942bc2222222'],
   })
-  @IsNotEmpty()
-  @IsString()
-  memberId: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  memberIds: string[];
 
   @ApiProperty({
     description: 'The date of the session',
     example: '2025-01-01',
   })
   @IsNotEmpty()
-  @IsDate()
-  date: Date;
+  @IsDateString()
+  date: string;
 
   @ApiProperty({
     description: 'The price of the session',
@@ -55,4 +58,12 @@ export class CreateSessionDto {
   @IsOptional()
   @IsBoolean()
   willPayLater: boolean;
+
+  @ApiProperty({
+    description: 'The type of the session',
+    example: 'personal_trainer',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isTakingPtSessionsCut: boolean;
 }

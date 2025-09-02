@@ -62,6 +62,25 @@ export class TransactionController {
     );
   }
 
+  @Patch(':gymId/pt-session/:sessionId/payment-status')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  async togglePtSessionPayment(
+    @Param('sessionId') sessionId: string,
+    @Param('gymId') gymId: string,
+    @Body() body: { isPaid: boolean },
+  ) {
+    return this.service.togglePtSessionTransactionsPayment(
+      sessionId,
+      gymId,
+      body.isPaid,
+    );
+  }
+
   @Get('currency-exchange')
   @ApiBearerAuth()
   @ApiOkResponse({ type: SuccessMessageReturn })

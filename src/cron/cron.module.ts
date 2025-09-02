@@ -9,7 +9,6 @@ import { MediaModule } from 'src/media/media.module';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { MemberService } from 'src/member/member.service';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { OwnerSubscriptionsModule } from 'src/owner-subscriptions/owner-subscriptions.module';
 import { PersonalTrainersModule } from 'src/personal-trainers/personal-trainers.module';
 import { ProductEntity } from 'src/products/products.entity';
@@ -36,7 +35,6 @@ import { CronService } from './cron.service';
       SubscriptionEntity,
       ProductEntity,
       UserEntity,
-      OwnerSubscriptionEntity,
       OwnerSubscriptionTypeEntity,
       RevenueEntity,
       ExpenseEntity,

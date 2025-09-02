@@ -7,18 +7,13 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 import { OwnerSubscriptionTypeEntity } from './owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from './owner-subscription.entity';
 
 @Module({
   imports: [
     AuthenticationModule,
     TransactionModule,
 
-    TypeOrmModule.forFeature([
-      OwnerSubscriptionTypeEntity,
-      OwnerSubscriptionEntity,
-      ManagerEntity,
-    ]),
+    TypeOrmModule.forFeature([OwnerSubscriptionTypeEntity, ManagerEntity]),
   ],
   controllers: [OwnerSubscriptionsController],
   providers: [OwnerSubscriptionsService],

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsArray,
   IsDate,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -16,6 +16,16 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsString()
   memberId?: string;
+
+  @ApiProperty({
+    description: 'IDs of members attending the session',
+    example: ['6621b0a9b547942bc1111111', '6621b0a9b547942bc2222222'],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  memberIds?: string[];
 
   @ApiProperty({
     description: 'The date of the session',

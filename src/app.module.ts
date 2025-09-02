@@ -23,7 +23,6 @@ import { MemberAttendingDaysEntity } from './member/entities/member-attending-da
 import { MemberModule } from './member/member.module';
 import { DeviceIdMiddleware } from './middleware/device-id.middleware';
 import { OwnerSubscriptionTypeEntity } from './owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from './owner-subscriptions/owner-subscription.entity';
 import { OwnerSubscriptionsModule } from './owner-subscriptions/owner-subscriptions.module';
 import { PTSessionEntity } from './personal-trainers/entities/pt-sessions.entity';
 import { PersonalTrainersModule } from './personal-trainers/personal-trainers.module';
@@ -39,7 +38,6 @@ import { SubscriptionEntity } from './subscription/entities/subscription.entity'
 import { SubscriptionModule } from './subscription/subscription.module';
 import { TokenEntity } from './token/token.entity';
 import { TokenModule } from './token/token.module';
-import { SubscriptionInstanceEntity } from './transactions/subscription-instance.entity';
 import { TransactionModule } from './transactions/subscription-instance.module';
 import { TransactionEntity } from './transactions/transaction.entity';
 import { TwilioModule } from './twilio/twilio.module';
@@ -58,7 +56,6 @@ import { UserModule } from './user/user.module';
       ManagerEntity,
       GymEntity,
       OwnerSubscriptionTypeEntity,
-      OwnerSubscriptionEntity,
       TokenEntity,
       MemberEntity,
       MemberAttendingDaysEntity,
@@ -67,7 +64,6 @@ import { UserModule } from './user/user.module';
       RevenueEntity,
       ProductEntity,
       SubscriptionEntity,
-      SubscriptionInstanceEntity,
       TransactionEntity,
       PTSessionEntity,
     ]),

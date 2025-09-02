@@ -44,8 +44,6 @@ export class ManagerAuthGuard implements CanActivate {
 
     const userId = validatedData?.sub;
 
-    console.log('this is the userId', userId);
-
     if (!userId) {
       console.log('Unauthorized');
       throw new UnauthorizedException('Unauthorized');

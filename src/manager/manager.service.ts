@@ -6,7 +6,6 @@ import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { Between, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
@@ -30,8 +29,6 @@ export class ManagerService {
     private readonly GymService: GymService,
     @InjectRepository(GymEntity)
     private readonly gymModel: Repository<GymEntity>,
-    @InjectRepository(OwnerSubscriptionEntity)
-    private readonly ownerSubscriptionModel: Repository<OwnerSubscriptionEntity>,
     @InjectRepository(MemberEntity)
     private readonly memberModel: Repository<MemberEntity>,
     @InjectRepository(ExpenseEntity)
@@ -214,7 +211,7 @@ export class ManagerService {
     await this.managerEntity.delete(id);
 
     await this.gymModel.delete(id);
-    await this.ownerSubscriptionModel.update(id, { owner: null });
+    // await this.ownerSubscriptionModel.update(id, { owner: null });
     await this.transactionModel.delete(id);
     await this.memberModel.delete(id);
     await this.expenseModel.delete(id);

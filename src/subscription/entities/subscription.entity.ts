@@ -2,7 +2,6 @@ import { CustomSchema } from '../../decorators/custom-schema.decorator';
 import { Column, Entity, ManyToOne, OneToMany, RelationId } from 'typeorm';
 import { PgMainEntity } from 'src/main-classes/mainEntity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { SubscriptionInstanceEntity } from 'src/transactions/subscription-instance.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 
@@ -35,12 +34,6 @@ export class SubscriptionEntity extends PgMainEntity {
 
   @RelationId((subscription: SubscriptionEntity) => subscription.gym)
   gymId: string | null;
-
-  @OneToMany(
-    () => SubscriptionInstanceEntity,
-    (instance) => instance.subscription,
-  )
-  instances: SubscriptionInstanceEntity[];
 
   @OneToMany(() => TransactionEntity, (transaction) => transaction.subscription)
   transactions: TransactionEntity[];

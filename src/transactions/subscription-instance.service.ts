@@ -6,19 +6,18 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
-import { SubscriptionEntity, SubscriptionType } from 'src/subscription/entities/subscription.entity';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from 'src/subscription/entities/subscription.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { In, Repository } from 'typeorm';
 import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
-import {
-  TransactionEntity,
-  TransactionType,
-} from './transaction.entity';
+import { TransactionEntity, TransactionType } from './transaction.entity';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -36,14 +35,14 @@ export class TransactionService {
     private readonly managerRepository: Repository<ManagerEntity>,
     @InjectRepository(OwnerSubscriptionTypeEntity)
     private readonly ownerSubscriptionTypeRepository: Repository<OwnerSubscriptionTypeEntity>,
-    @InjectRepository(OwnerSubscriptionEntity)
-    private readonly ownerSubscriptionRepository: Repository<OwnerSubscriptionEntity>,
     @InjectRepository(TransactionEntity)
     private readonly transactionModel: Repository<TransactionEntity>,
     @InjectRepository(RevenueEntity)
     private readonly revenueModel: Repository<RevenueEntity>,
     @InjectRepository(ExpenseEntity)
     private readonly expenseModel: Repository<ExpenseEntity>,
+    @InjectRepository(PTSessionEntity)
+    private readonly ptSessionRepository: Repository<PTSessionEntity>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
     console.log('this is the will pay later', paymentDetails.willPayLater);
@@ -295,6 +294,7 @@ export class TransactionService {
         id: ptSessionId,
       },
     });
+    console.log('this is the getTransaction', getTransaction);
     if (!getTransaction) {
       throw new NotFoundException('pt session transaction not found');
     }
@@ -324,8 +324,10 @@ export class TransactionService {
     amount: number;
     willPayLater: boolean;
     ptSession: PTSessionEntity;
+    isTakingPtSessionsCut?: boolean;
   }) {
     const gymsPTSessionPercentage = dto.gym.gymsPTSessionPercentage;
+    console.log('this is the isTakingPtSessionsCut', dto.isTakingPtSessionsCut);
     const newTransactionModel = this.transactionModel.create({
       title:
         'Personal Trainer Session With ' +
@@ -339,7 +341,9 @@ export class TransactionService {
       paidAmount: dto.amount,
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
       isPaid: !dto.willPayLater,
-      ptSession: dto.ptSession,
+      // Use many-to-one relation so multiple transactions can link to the same session
+      relatedPtSession: dto.ptSession,
+      isTakingPtSessionsCut: dto.isTakingPtSessionsCut,
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);
@@ -375,6 +379,30 @@ export class TransactionService {
     return {
       message: `Transaction payment status updated to ${isPaid ? 'paid' : 'unpaid'}`,
       transaction,
+    };
+  }
+
+  async togglePtSessionTransactionsPayment(
+    sessionId: string,
+    gymId: string,
+    isPaid: boolean,
+  ) {
+    const ptSession = await this.ptSessionRepository.findOne({
+      where: { id: sessionId, gym: { id: gymId } },
+      relations: { transactions: true },
+    });
+    if (!ptSession) {
+      throw new NotFoundException('PT session not found');
+    }
+
+    const transactions = ptSession.transactions || [];
+    for (const trx of transactions) {
+      trx.isPaid = isPaid;
+      await this.transactionModel.save(trx);
+    }
+
+    return {
+      message: `All transactions for the session marked as ${isPaid ? 'paid' : 'unpaid'}`,
     };
   }
 }

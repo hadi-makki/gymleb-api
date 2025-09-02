@@ -1,7 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MediaEntity } from 'src/media/media.entity';
-import { OwnerSubscriptionEntity } from 'src/owner-subscriptions/owner-subscription.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { TokenEntity } from 'src/token/token.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
@@ -56,12 +55,6 @@ export class ManagerEntity extends PgMainEntity {
   @OneToMany(() => GymEntity, (gym) => gym.owner)
   ownedGyms: GymEntity[];
 
-  @OneToMany(
-    () => OwnerSubscriptionEntity,
-    (ownerSubscription) => ownerSubscription.owner,
-  )
-  ownerSubscription?: OwnerSubscriptionEntity;
-
   @OneToMany(() => TransactionEntity, (transaction) => transaction.owner)
   transactions: TransactionEntity[];
 
@@ -77,6 +70,9 @@ export class ManagerEntity extends PgMainEntity {
 
   @OneToMany(() => MemberEntity, (member) => member.personalTrainer)
   members: MemberEntity[];
+
+  @Column('boolean', { default: false })
+  isReadOnlyPersonalTrainer: boolean;
 
   static async isPasswordMatch(
     password: string,

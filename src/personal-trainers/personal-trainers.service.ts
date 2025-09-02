@@ -6,7 +6,7 @@ import { ManagerService } from 'src/manager/manager.service';
 import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Permissions } from '../decorators/roles/role.enum';
 import { NotFoundException } from '../error/not-found-error';
@@ -185,6 +185,16 @@ export class PersonalTrainersService {
     return this.personalTrainerEntity.delete(id);
   }
 
+  async toggleReadOnlyPersonalTrainer(id: string, isReadOnly: boolean) {
+    const manager = await this.personalTrainerEntity.findOne({ where: { id } });
+    if (!manager) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+    manager.isReadOnlyPersonalTrainer = isReadOnly;
+    await this.personalTrainerEntity.save(manager);
+    return { message: 'Personal trainer read-only status updated', manager };
+  }
+
   findAllUsers(personalTrainer: ManagerEntity) {
     return this.memberEntity.find({
       where: { personalTrainer: personalTrainer },
@@ -226,13 +236,33 @@ export class PersonalTrainersService {
       throw new NotFoundException('Gym not found');
     }
 
-    const checkIfUserInGym = await this.memberEntity.findOne({
-      where: { id: createSessionDto.memberId },
+    // Decode and normalize memberIds from the DTO
+    // Supports arrays where elements can be single IDs or comma-separated lists
+    const decodedMemberIds = Array.isArray(createSessionDto.memberIds)
+      ? Array.from(
+          new Set(
+            createSessionDto.memberIds
+              .flatMap((raw) => decodeURIComponent(raw).split(','))
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        )
+      : [];
+
+    // Validate members exist in gym
+    const members = await this.memberEntity.find({
+      where: {
+        id: In(decodedMemberIds),
+      },
       relations: ['gym'],
     });
 
-    if (!checkIfUserInGym || checkIfUserInGym.gym.id !== gymId) {
-      throw new NotFoundException('Member not found in gym');
+    if (
+      !members.length ||
+      members.length !== decodedMemberIds.length ||
+      members.some((m) => m.gym.id !== gymId)
+    ) {
+      throw new NotFoundException('One or more members not found in gym');
     }
 
     const checkIfPersonalTrainerInGym =
@@ -250,24 +280,27 @@ export class PersonalTrainersService {
 
     let setDateDone = false;
 
+    const createSessionModel = this.sessionEntity.create({
+      members,
+      personalTrainer: checkIfPersonalTrainerInGym,
+      gym: gym,
+      sessionPrice: createSessionDto.sessionPrice,
+      sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
+    });
+    const createdSession = await this.sessionEntity.save(createSessionModel);
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
-      const createSessionModel = this.sessionEntity.create({
-        member: checkIfUserInGym,
-        personalTrainer: checkIfPersonalTrainerInGym,
-        gym: gym,
-        sessionPrice: createSessionDto.sessionPrice,
-        sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
-      });
-      const createdSession = await this.sessionEntity.save(createSessionModel);
-
-      await this.transactionService.createPersonalTrainerSessionTransaction({
-        personalTrainer: checkIfPersonalTrainerInGym,
-        gym: gym,
-        member: checkIfUserInGym,
-        amount: createSessionDto.sessionPrice,
-        willPayLater: createSessionDto.willPayLater || false,
-        ptSession: createdSession,
-      });
+      // Create a separate transaction per member for this session
+      for (const member of members) {
+        await this.transactionService.createPersonalTrainerSessionTransaction({
+          personalTrainer: checkIfPersonalTrainerInGym,
+          gym: gym,
+          member,
+          amount: createSessionDto.sessionPrice,
+          willPayLater: createSessionDto.willPayLater || false,
+          ptSession: createdSession,
+          isTakingPtSessionsCut: createSessionDto.isTakingPtSessionsCut,
+        });
+      }
 
       setDateDone = true;
     }
@@ -309,6 +342,7 @@ export class PersonalTrainersService {
     const allManagers = await this.personalTrainerEntity.find({
       where: { gyms: { id: gymId } },
       relations: ['gyms', 'profileImage'],
+      order: { createdAt: 'DESC' },
     });
 
     // Filter managers who have personal-trainers permission
@@ -330,11 +364,13 @@ export class PersonalTrainersService {
           personalTrainer: { id: personalTrainer.id },
           gym: { id: gym.id },
         },
-        relations: ['member'],
+        relations: ['members'],
       });
-      const clients = sessions.map((session) => session.member?.id);
+      const clients = sessions.map((session) =>
+        session.members?.map((member) => member.id),
+      );
       // filter out duplicates
-      const uniqueClients = [...new Set(clients)];
+      const uniqueClients = [...new Set(clients.flat())];
       sessionsResult.push({
         personalTrainer,
         clientsCount: uniqueClients.length,
@@ -400,6 +436,7 @@ export class PersonalTrainersService {
   async updateSession(sessionId: string, updateSessionDto: UpdateSessionDto) {
     const session = await this.sessionEntity.findOne({
       where: { id: sessionId },
+      relations: ['members'],
     });
     if (!session) {
       throw new NotFoundException('Session not found');
@@ -407,15 +444,24 @@ export class PersonalTrainersService {
 
     const updateData: any = {};
 
-    // Update member if provided
-    if (updateSessionDto.memberId) {
+    // Update members if provided (supports multi-members)
+    if (updateSessionDto.memberIds && updateSessionDto.memberIds.length > 0) {
+      const members = await this.memberEntity.find({
+        where: updateSessionDto.memberIds.map((id) => ({ id })),
+      });
+      if (!members.length) {
+        throw new NotFoundException('Members not found');
+      }
+      updateData.members = members;
+    } else if (updateSessionDto.memberId) {
+      // Backward compatibility for single member updates
       const member = await this.memberEntity.findOne({
         where: { id: updateSessionDto.memberId },
       });
       if (!member) {
         throw new NotFoundException('Member not found');
       }
-      updateData.member = member;
+      updateData.members = [member];
     }
 
     // Update session date if provided
@@ -428,7 +474,7 @@ export class PersonalTrainersService {
       updateData.sessionPrice = updateSessionDto.sessionPrice;
     }
 
-    await this.sessionEntity.update(sessionId, updateData);
+    await this.sessionEntity.save({ ...session, ...updateData });
 
     return {
       message: 'Session updated successfully',
@@ -496,17 +542,44 @@ export class PersonalTrainersService {
         gym: { id: gymId },
         personalTrainer: { id: trainerId },
       },
-      relations: ['member'],
+      relations: ['members'],
     });
 
-    // Get unique members and their session counts
-    const memberMap = new Map();
+    // Group sessions by the exact set of participating members
+    // Key format: sorted member IDs joined by '|'
+    const groupMap: Map<
+      string,
+      {
+        members: any[];
+        membersLabel: string;
+        totalSessions: number;
+        upcomingSessions: number;
+        completedSessions: number;
+        cancelledSessions: number;
+        totalRevenue: number;
+        unscheduledSessions: number;
+      }
+    > = new Map();
 
     sessions.forEach((session) => {
-      const memberId = session.member?.id;
-      if (!memberMap.has(memberId)) {
-        memberMap.set(memberId, {
-          member: session.member,
+      const members = Array.isArray(session.members) ? session.members : [];
+      // Skip sessions with no members in the group context
+      if (!members.length) return;
+
+      const sortedIds = members
+        .map((m) => m.id)
+        .filter(Boolean)
+        .sort();
+      const groupKey = sortedIds.join('|');
+
+      if (!groupMap.has(groupKey)) {
+        const membersLabel = members
+          .map((m) => m.name)
+          .filter(Boolean)
+          .join(', ');
+        groupMap.set(groupKey, {
+          members,
+          membersLabel,
           totalSessions: 0,
           upcomingSessions: 0,
           completedSessions: 0,
@@ -516,29 +589,29 @@ export class PersonalTrainersService {
         });
       }
 
-      const clientData = memberMap.get(memberId);
-      clientData.totalSessions++;
+      const groupData = groupMap.get(groupKey)!;
+      groupData.totalSessions++;
 
       if (session.isCancelled) {
-        clientData.cancelledSessions++;
+        groupData.cancelledSessions++;
       } else if (
         session.sessionDate &&
         new Date(session.sessionDate) > new Date()
       ) {
-        clientData.upcomingSessions++;
+        groupData.upcomingSessions++;
       } else if (!session.sessionDate) {
         // sessions not scheduled yet
-        clientData.unscheduledSessions++;
+        groupData.unscheduledSessions++;
       } else {
-        clientData.completedSessions++;
+        groupData.completedSessions++;
       }
 
       if (session.sessionPrice) {
-        clientData.totalRevenue += session.sessionPrice;
+        groupData.totalRevenue += session.sessionPrice;
       }
     });
 
-    return Array.from(memberMap.values());
+    return Array.from(groupMap.values());
   }
 
   async getTrainerClientSessions(
@@ -551,6 +624,8 @@ export class PersonalTrainersService {
       throw new NotFoundException('Gym not found');
     }
 
+    console.log('this is the memberId', memberId);
+    const splitMemberIds = memberId.split(',');
     const trainer = await this.managerEntity.findOne({
       where: { id: trainerId },
     });
@@ -558,8 +633,10 @@ export class PersonalTrainersService {
       throw new NotFoundException('Personal trainer not found');
     }
 
-    const member = await this.memberEntity.findOne({ where: { id: memberId } });
-    if (!member) {
+    const member = await this.memberEntity.find({
+      where: { id: In(splitMemberIds) },
+    });
+    if (!member.length) {
       throw new NotFoundException('Member not found');
     }
 
@@ -567,13 +644,13 @@ export class PersonalTrainersService {
       where: {
         gym: { id: gymId },
         personalTrainer: { id: trainerId },
-        member: { id: memberId },
+        members: { id: In(splitMemberIds) },
       },
       relations: {
-        member: true,
+        members: true,
         personalTrainer: true,
         gym: true,
-        transaction: true,
+        transactions: true,
       },
     });
 
@@ -594,6 +671,55 @@ export class PersonalTrainersService {
         return 1;
       }
       // If neither has date, maintain original order
+      return 0;
+    });
+  }
+
+  async getTrainerGroupSessions(
+    trainerId: string,
+    gymId: string,
+    memberIds: string[],
+  ) {
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
+    if (!trainer) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+      },
+      relations: ['members', 'personalTrainer', 'gym'],
+    });
+
+    const targetKey = [...new Set(memberIds)].sort().join('|');
+
+    const filtered = sessions.filter((session) => {
+      const ids = (session.members || []).map((m) => m.id).filter(Boolean);
+      const key = [...new Set(ids)].sort().join('|');
+      return key === targetKey;
+    });
+
+    return filtered.sort((a, b) => {
+      if (a.sessionDate && b.sessionDate) {
+        return (
+          new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
+        );
+      }
+      if (a.sessionDate && !b.sessionDate) {
+        return -1;
+      }
+      if (!a.sessionDate && b.sessionDate) {
+        return 1;
+      }
       return 0;
     });
   }
@@ -646,17 +772,44 @@ export class PersonalTrainersService {
         gym: { id: gymId },
         personalTrainer: { id: personalTrainer.id },
       },
-      relations: ['member', 'personalTrainer', 'gym'],
+      relations: ['members', 'personalTrainer', 'gym'],
     });
 
-    // Get unique members and their session counts
-    const memberMap = new Map();
+    // Group sessions by the exact set of participating members
+    // Key format: sorted member IDs joined by '|'
+    const groupMap: Map<
+      string,
+      {
+        members: any[];
+        membersLabel: string;
+        totalSessions: number;
+        upcomingSessions: number;
+        completedSessions: number;
+        cancelledSessions: number;
+        totalRevenue: number;
+        unscheduledSessions: number;
+      }
+    > = new Map();
 
     sessions.forEach((session) => {
-      const memberId = session.member?.id;
-      if (!memberMap.has(memberId)) {
-        memberMap.set(memberId, {
-          member: session.member,
+      const members = Array.isArray(session.members) ? session.members : [];
+      // Skip sessions with no members in the group context
+      if (!members.length) return;
+
+      const sortedIds = members
+        .map((m) => m.id)
+        .filter(Boolean)
+        .sort();
+      const groupKey = sortedIds.join('|');
+
+      if (!groupMap.has(groupKey)) {
+        const membersLabel = members
+          .map((m) => m.name)
+          .filter(Boolean)
+          .join(', ');
+        groupMap.set(groupKey, {
+          members,
+          membersLabel,
           totalSessions: 0,
           upcomingSessions: 0,
           completedSessions: 0,
@@ -666,29 +819,29 @@ export class PersonalTrainersService {
         });
       }
 
-      const clientData = memberMap.get(memberId);
-      clientData.totalSessions++;
+      const groupData = groupMap.get(groupKey)!;
+      groupData.totalSessions++;
 
       if (session.isCancelled) {
-        clientData.cancelledSessions++;
+        groupData.cancelledSessions++;
       } else if (
         session.sessionDate &&
         new Date(session.sessionDate) > new Date()
       ) {
-        clientData.upcomingSessions++;
+        groupData.upcomingSessions++;
       } else if (!session.sessionDate) {
         // sessions not scheduled yet
-        clientData.unscheduledSessions++;
+        groupData.unscheduledSessions++;
       } else {
-        clientData.completedSessions++;
+        groupData.completedSessions++;
       }
 
       if (session.sessionPrice) {
-        clientData.totalRevenue += session.sessionPrice;
+        groupData.totalRevenue += session.sessionPrice;
       }
     });
 
-    return Array.from(memberMap.values());
+    return Array.from(groupMap.values());
   }
 
   async getClientSessions(
@@ -701,18 +854,49 @@ export class PersonalTrainersService {
       throw new NotFoundException('Gym not found');
     }
 
-    const member = await this.memberEntity.findOne({ where: { id: memberId } });
-    if (!member) {
-      throw new NotFoundException('Member not found');
+    const targetIds = memberId
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => !!s);
+
+    // For single-member: keep existing behavior (sessions containing this member)
+    if (targetIds.length <= 1) {
+      const sessions = await this.sessionEntity.find({
+        where: {
+          gym: { id: gymId },
+          personalTrainer: { id: personalTrainer.id },
+          members: { id: In(targetIds) },
+        },
+        relations: ['members', 'personalTrainer', 'gym'],
+      });
+      return sessions.sort((a, b) => {
+        if (a.sessionDate && b.sessionDate) {
+          return (
+            new Date(a.sessionDate).getTime() -
+            new Date(b.sessionDate).getTime()
+          );
+        }
+        if (a.sessionDate && !b.sessionDate) return -1;
+        if (!a.sessionDate && b.sessionDate) return 1;
+        return 0;
+      });
     }
 
-    const sessions = await this.sessionEntity.find({
+    // Multi-member: require sessions whose members set exactly matches targetIds
+    const candidateSessions = await this.sessionEntity.find({
       where: {
         gym: { id: gymId },
         personalTrainer: { id: personalTrainer.id },
-        member: member,
+        members: { id: In(targetIds) },
       },
-      relations: ['member', 'personalTrainer', 'gym'],
+      relations: ['members', 'personalTrainer', 'gym'],
+    });
+
+    const targetKey = [...new Set(targetIds)].sort().join('|');
+    const sessions = candidateSessions.filter((session) => {
+      const ids = (session.members || []).map((m) => m.id).filter(Boolean);
+      const key = [...new Set(ids)].sort().join('|');
+      return key === targetKey;
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
@@ -740,7 +924,7 @@ export class PersonalTrainersService {
     console.log('this is the sessionId', sessionId);
     const session = await this.sessionEntity.findOne({
       where: { id: sessionId },
-      relations: ['transaction'],
+      relations: ['transaction', 'transactions'],
     });
 
     console.log('this is the session', session);
@@ -749,11 +933,20 @@ export class PersonalTrainersService {
       throw new NotFoundException('Session not found');
     }
 
-    // Delete the associated transaction if it exists
+    // Delete the associated legacy single transaction if it exists
     if (session.transaction) {
       await this.transactionService.deletePtSessionTransaction(
         session.transaction.id,
       );
+    }
+
+    // Delete all associated transactions linked via relatedPtSession if any
+    if (session.transactions && session.transactions.length > 0) {
+      for (const transaction of session.transactions) {
+        await this.transactionService.deletePtSessionTransaction(
+          transaction.id,
+        );
+      }
     }
 
     // Delete the session
