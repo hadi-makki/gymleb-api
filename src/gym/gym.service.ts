@@ -117,13 +117,16 @@ export class GymService {
       if (start && end) {
         dateFilter.createdAt = Between(new Date(start), new Date(end));
       } else if (start) {
-        dateFilter.createdAt = Between(new Date(start), new Date(end));
+        dateFilter.createdAt = MoreThanOrEqual(new Date(start));
       } else if (end) {
-        dateFilter.createdAt = Between(new Date(start), new Date(end));
+        dateFilter.createdAt = LessThanOrEqual(new Date(end));
       }
+    } else {
+      // Default to current month when no custom dates provided
+      dateFilter.createdAt = MoreThanOrEqual(currentMonthStart);
     }
 
-    // Fetch all transactions for the gym in the specified range
+    // Fetch all transactions for the gym in the specified range (defaults to current month)
     const allTransactions = await this.transactionModel.find({
       where: { gym: { id: gym.id }, isPaid: true, ...dateFilter },
       relations: ['subscription', 'revenue', 'expense', 'ptSession'],
@@ -208,7 +211,7 @@ export class GymService {
       ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
       : 0;
 
-    // Calculate totals from all transactions
+    // Calculate totals from all transactions (current range or current month by default)
     const subscriptionRevenue = allTransactions
       .filter((t) => t.type === TransactionType.SUBSCRIPTION)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
@@ -278,9 +281,7 @@ export class GymService {
     });
 
     // Determine the actual date range used
-    const analyticsStartDate = start
-      ? new Date(start)
-      : startOfMonth(subMonths(now, 1));
+    const analyticsStartDate = start ? new Date(start) : currentMonthStart;
     const analyticsEndDate = end ? new Date(end) : now;
 
     return {
