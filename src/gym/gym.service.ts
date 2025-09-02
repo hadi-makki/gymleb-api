@@ -174,11 +174,6 @@ export class GymService {
         return total + gymShare;
       }, 0);
 
-    console.log(
-      'this is the current month p t session revenue',
-      currentMonthPTSessionRevenue,
-    );
-
     // Calculate percentage change in subscription revenue
     const revenueChange = lastMonthSubscriptionRevenue
       ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
@@ -224,11 +219,7 @@ export class GymService {
         const gymShare = transaction.isTakingPtSessionsCut
           ? (gymPercentage / 100) * sessionAmount
           : sessionAmount;
-        console.log({
-          sessionAmount,
-          gymPercentage,
-          isTakingPtSessionsCut: transaction.isTakingPtSessionsCut,
-        });
+
         return total + gymShare;
       }, 0);
 
