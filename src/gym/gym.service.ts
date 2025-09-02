@@ -487,6 +487,18 @@ export class GymService {
     return gym;
   }
 
+  async addGymWelcomeMessageNotified(gymId: string, number: number) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.welcomeMessageNotified += number;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async getGymByManager(manager: ManagerEntity) {
     const gym = await this.gymModel.findOne({
       where: { owner: { id: manager.id } },

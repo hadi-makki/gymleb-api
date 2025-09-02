@@ -200,6 +200,16 @@ export class MemberController {
     return await this.memberService.getMe(member.id);
   }
 
+  @Get('pt-sessions/:gymId')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Get my personal trainer sessions for a gym' })
+  async getMyPtSessions(
+    @User() member: MemberEntity,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.getMyPtSessions(member, gymId);
+  }
+
   @Get(':id')
   async getMember(@Param('id') id: string) {
     return await this.memberService.getMember(id);

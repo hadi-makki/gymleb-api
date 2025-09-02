@@ -69,6 +69,9 @@ export class GymEntity extends PgMainEntity {
   @Column('int', { default: 0 })
   membersNotified: number;
 
+  @Column('int', { default: 0 })
+  welcomeMessageNotified: number;
+
   @Column('jsonb', { default: [] })
   womensTimes: {
     day: string;

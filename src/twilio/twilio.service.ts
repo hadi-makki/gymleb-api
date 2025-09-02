@@ -75,20 +75,28 @@ export class TwilioService {
 
     if (!checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
       console.log('sending notification to', memberPhone);
-      await this.client.messages.create({
-        from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-        to: `whatsapp:${memberPhone}`,
-        contentSid:
-          gym.gymType === GymTypeEnum.CALISTHENICS
-            ? TwilioWhatsappTemplates.WELCOME_MESSAGE_CALISTHENICS
-            : TwilioWhatsappTemplates.WELCOME_MESSAGE,
-        contentVariables: JSON.stringify({
-          1: memberName,
-          2: gym.name,
-          3: `https://gym-leb.com/${gym.gymDashedName}/overview`,
-          4: gym.phone,
-        }),
-      });
+      await this.client.messages
+        .create({
+          from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+          to: `whatsapp:${memberPhone}`,
+          contentSid:
+            gym.gymType === GymTypeEnum.CALISTHENICS
+              ? TwilioWhatsappTemplates.WELCOME_MESSAGE_CALISTHENICS
+              : TwilioWhatsappTemplates.WELCOME_MESSAGE,
+          contentVariables: JSON.stringify({
+            1: memberName,
+            2: gym.name,
+            3: `https://gym-leb.com/${gym.gymDashedName}/overview`,
+            4: gym.phone,
+          }),
+        })
+        .then(async () => {
+          await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
+        })
+        .catch((error) => {
+          console.log('this is twilio error', error);
+          throw new BadRequestException(error);
+        });
     }
   }
 
@@ -111,8 +119,14 @@ export class TwilioService {
     if (member.isNotified) {
       throw new BadRequestException('Member is already notified');
     }
+    const freeTrialGyms = ['b3c78af5-afe1-4246-a030-17bb07091f83'];
 
-    if (!checkNodeEnv('local') && isPhoneNumber(member.phone)) {
+    if (
+      !checkNodeEnv('local') &&
+      isPhoneNumber(member.phone) &&
+      (!freeTrialGyms.includes(gym.id) ||
+        (freeTrialGyms.includes(gym.owner.id) && gym.membersNotified < 100))
+    ) {
       await this.client.messages
         .create({
           from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,

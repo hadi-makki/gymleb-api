@@ -6,6 +6,7 @@ import { Response } from 'express';
 import { FilterOperator, paginate } from 'nestjs-paginate';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
@@ -54,6 +55,8 @@ export class MemberService {
     private readonly twilioService: TwilioService,
     private readonly personalTrainersService: PersonalTrainersService,
     private readonly gymService: GymService,
+    @InjectRepository(PTSessionEntity)
+    private readonly ptSessionRepository: Repository<PTSessionEntity>,
   ) {}
 
   async getActiveSubscription(memberId: string) {
@@ -726,6 +729,20 @@ export class MemberService {
     });
 
     return await this.returnMember(checkMember);
+  }
+
+  async getMyPtSessions(member: MemberEntity, gymId: string) {
+    const sessions = await this.ptSessionRepository.find({
+      where: {
+        gym: {
+          ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }),
+        },
+        members: { id: member.id },
+      },
+      relations: { members: true, personalTrainer: true, gym: true },
+      order: { sessionDate: 'ASC' },
+    });
+    return sessions;
   }
 
   async getMember(id: string) {
