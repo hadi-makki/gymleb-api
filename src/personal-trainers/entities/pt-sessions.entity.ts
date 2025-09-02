@@ -4,7 +4,10 @@ import {
   Column,
   Entity,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
   ManyToOne,
+  OneToMany,
   OneToOne,
   RelationId,
 } from 'typeorm';
@@ -23,6 +26,10 @@ export class PTSessionEntity extends PgMainEntity {
 
   @ManyToOne(() => MemberEntity, (member) => member.ptSessions)
   member: MemberEntity;
+
+  @ManyToMany(() => MemberEntity, (member) => member.userPtSessions)
+  @JoinTable({ name: 'pt_session_members' })
+  members: MemberEntity[];
 
   @RelationId((ptSession: PTSessionEntity) => ptSession.member)
   memberId: string | null;
@@ -53,4 +60,16 @@ export class PTSessionEntity extends PgMainEntity {
   })
   @JoinColumn({ name: 'transactionId' })
   transaction: TransactionEntity;
+
+  @OneToMany(
+    () => TransactionEntity,
+    (transaction) => transaction.relatedPtSession,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
+  transactions: TransactionEntity[];
+
+  @RelationId((ptSession: PTSessionEntity) => ptSession.transactions)
+  transactionIds: string[] | null;
 }

@@ -41,6 +41,8 @@ export class TransactionService {
     private readonly revenueModel: Repository<RevenueEntity>,
     @InjectRepository(ExpenseEntity)
     private readonly expenseModel: Repository<ExpenseEntity>,
+    @InjectRepository(PTSessionEntity)
+    private readonly ptSessionRepository: Repository<PTSessionEntity>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
     console.log('this is the will pay later', paymentDetails.willPayLater);
@@ -292,6 +294,7 @@ export class TransactionService {
         id: ptSessionId,
       },
     });
+    console.log('this is the getTransaction', getTransaction);
     if (!getTransaction) {
       throw new NotFoundException('pt session transaction not found');
     }
@@ -321,8 +324,10 @@ export class TransactionService {
     amount: number;
     willPayLater: boolean;
     ptSession: PTSessionEntity;
+    isTakingPtSessionsCut?: boolean;
   }) {
     const gymsPTSessionPercentage = dto.gym.gymsPTSessionPercentage;
+    console.log('this is the isTakingPtSessionsCut', dto.isTakingPtSessionsCut);
     const newTransactionModel = this.transactionModel.create({
       title:
         'Personal Trainer Session With ' +
@@ -336,7 +341,9 @@ export class TransactionService {
       paidAmount: dto.amount,
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
       isPaid: !dto.willPayLater,
-      ptSession: dto.ptSession,
+      // Use many-to-one relation so multiple transactions can link to the same session
+      relatedPtSession: dto.ptSession,
+      isTakingPtSessionsCut: dto.isTakingPtSessionsCut,
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);
@@ -372,6 +379,30 @@ export class TransactionService {
     return {
       message: `Transaction payment status updated to ${isPaid ? 'paid' : 'unpaid'}`,
       transaction,
+    };
+  }
+
+  async togglePtSessionTransactionsPayment(
+    sessionId: string,
+    gymId: string,
+    isPaid: boolean,
+  ) {
+    const ptSession = await this.ptSessionRepository.findOne({
+      where: { id: sessionId, gym: { id: gymId } },
+      relations: { transactions: true },
+    });
+    if (!ptSession) {
+      throw new NotFoundException('PT session not found');
+    }
+
+    const transactions = ptSession.transactions || [];
+    for (const trx of transactions) {
+      trx.isPaid = isPaid;
+      await this.transactionModel.save(trx);
+    }
+
+    return {
+      message: `All transactions for the session marked as ${isPaid ? 'paid' : 'unpaid'}`,
     };
   }
 }

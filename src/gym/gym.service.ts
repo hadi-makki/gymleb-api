@@ -162,7 +162,11 @@ export class GymService {
 
     // Calculate personal trainer session revenue for current month
     const currentMonthPTSessionRevenue = currentMonthTransactions
-      .filter((t) => t.type === TransactionType.PERSONAL_TRAINER_SESSION)
+      .filter(
+        (t) =>
+          t.type === TransactionType.PERSONAL_TRAINER_SESSION &&
+          t.isTakingPtSessionsCut,
+      )
       .reduce((total, transaction) => {
         const sessionAmount = transaction.paidAmount || 0;
         const gymPercentage = transaction.gymsPTSessionPercentage || 0;
@@ -217,7 +221,14 @@ export class GymService {
         const sessionAmount = transaction.paidAmount || 0;
         const gymPercentage = transaction.gymsPTSessionPercentage || 0;
         // Calculate gym's share: (percentage / 100) * session amount
-        const gymShare = (gymPercentage / 100) * sessionAmount;
+        const gymShare = transaction.isTakingPtSessionsCut
+          ? (gymPercentage / 100) * sessionAmount
+          : sessionAmount;
+        console.log({
+          sessionAmount,
+          gymPercentage,
+          isTakingPtSessionsCut: transaction.isTakingPtSessionsCut,
+        });
         return total + gymShare;
       }, 0);
 

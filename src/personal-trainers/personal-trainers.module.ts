@@ -7,6 +7,7 @@ import { TransactionModule } from 'src/transactions/subscription-instance.module
 import { PTSessionEntity } from './entities/pt-sessions.entity';
 import { PersonalTrainersController } from './personal-trainers.controller';
 import { PersonalTrainersService } from './personal-trainers.service';
+import { PtSessionsSeed } from './pt-sessions.seed';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { PersonalTrainersService } from './personal-trainers.service';
     TransactionModule,
   ],
   controllers: [PersonalTrainersController],
-  providers: [PersonalTrainersService],
+  providers: [PersonalTrainersService, PtSessionsSeed],
   exports: [PersonalTrainersService, TypeOrmModule],
 })
 export class PersonalTrainersModule {}

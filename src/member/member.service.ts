@@ -612,7 +612,7 @@ export class MemberService {
     }
     const member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
-      relations: ['transactions', 'ptSessions'],
+      relations: { transactions: true, userPtSessions: true },
     });
 
     if (!member) {
@@ -631,7 +631,7 @@ export class MemberService {
       });
     }
 
-    if (member.ptSessions && member.ptSessions.length > 0) {
+    if (member.userPtSessions && member.userPtSessions.length > 0) {
       await this.personalTrainersService.removeClientFromTrainer(id, gymId);
     }
 

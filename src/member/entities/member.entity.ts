@@ -3,6 +3,7 @@ import {
   Column,
   Entity,
   JoinColumn,
+  ManyToMany,
   ManyToOne,
   OneToMany,
   RelationId,
@@ -52,6 +53,9 @@ export class MemberEntity extends PgMainEntity {
 
   @OneToMany(() => PTSessionEntity, (session) => session.member)
   ptSessions: PTSessionEntity[];
+
+  @ManyToMany(() => PTSessionEntity, (session) => session.members)
+  userPtSessions: PTSessionEntity[];
 
   @Column('text', { nullable: true })
   password: string | null;

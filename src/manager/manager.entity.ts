@@ -71,6 +71,9 @@ export class ManagerEntity extends PgMainEntity {
   @OneToMany(() => MemberEntity, (member) => member.personalTrainer)
   members: MemberEntity[];
 
+  @Column('boolean', { default: false })
+  isReadOnlyPersonalTrainer: boolean;
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,

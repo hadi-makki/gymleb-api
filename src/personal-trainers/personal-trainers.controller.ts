@@ -184,6 +184,25 @@ export class PersonalTrainersController {
     return this.personalTrainersService.remove(id);
   }
 
+  @Patch(':id/read-only')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Toggle personal trainer read-only status' })
+  @ApiResponse({
+    status: 200,
+    description: 'The personal trainer read-only status has been updated.',
+  })
+  toggleReadOnly(
+    @Param('id') id: string,
+    @Body() body: { isReadOnly: boolean },
+  ) {
+    return this.personalTrainersService.toggleReadOnlyPersonalTrainer(
+      id,
+      body.isReadOnly,
+    );
+  }
+
   @Get('users')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
@@ -374,6 +393,33 @@ export class PersonalTrainersController {
       trainerId,
       memberId,
       gymId,
+    );
+  }
+
+  @Get('trainer/:trainerId/group-sessions/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get sessions for a client group (same session members)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The sessions have been successfully retrieved.',
+  })
+  getTrainerGroupSessions(
+    @Param('trainerId') trainerId: string,
+    @Param('gymId') gymId: string,
+    @Query('memberIds') memberIds: string,
+  ) {
+    const ids = (memberIds || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => !!s);
+    return this.personalTrainersService.getTrainerGroupSessions(
+      trainerId,
+      gymId,
+      ids,
     );
   }
 

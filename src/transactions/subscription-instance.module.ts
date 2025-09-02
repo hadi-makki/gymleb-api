@@ -14,6 +14,7 @@ import { SubscriptionEntity } from 'src/subscription/entities/subscription.entit
 import { UserEntity } from 'src/user/user.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionEntity } from './transaction.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { TransactionEntity } from './transaction.entity';
       SubscriptionEntity,
       OwnerSubscriptionTypeEntity,
       RevenueEntity,
+      PTSessionEntity,
     ]),
     AuthenticationModule,
   ],
