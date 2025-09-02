@@ -41,7 +41,9 @@ import { TokenModule } from './token/token.module';
 import { TransactionModule } from './transactions/subscription-instance.module';
 import { TransactionEntity } from './transactions/transaction.entity';
 import { TwilioModule } from './twilio/twilio.module';
+import { AiChatEntity } from './ai-chat/entities/ai-chat.entity';
 import { UserModule } from './user/user.module';
+import { AiChatModule } from './ai-chat/ai-chat.module';
 
 @Module({
   imports: [
@@ -66,6 +68,7 @@ import { UserModule } from './user/user.module';
       SubscriptionEntity,
       TransactionEntity,
       PTSessionEntity,
+      AiChatEntity,
     ]),
     ConfigModule,
     DatabaseModule,
@@ -89,6 +92,7 @@ import { UserModule } from './user/user.module';
     ProductsModule,
     StaffModule,
     CronModule,
+    AiChatModule,
   ],
   controllers: [AppController],
   providers: [

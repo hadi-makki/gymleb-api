@@ -39,6 +39,7 @@ import { LoginMemberDto } from './dto/login-member.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
+import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
 @Controller('member')
@@ -361,6 +362,43 @@ export class MemberController {
       id,
       gymId,
       updateAttendingDaysDto,
+    );
+  }
+
+  @Patch(':gymId/:id/training-preferences')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Update member training preferences',
+    description:
+      'Update the training level, goals, and preferences for a specific member',
+  })
+  async updateMemberTrainingPreferences(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+    @Body() updateTrainingPreferencesDto: UpdateTrainingPreferencesDto,
+  ) {
+    return await this.memberService.updateMemberTrainingPreferences(
+      id,
+      gymId,
+      updateTrainingPreferencesDto,
+    );
+  }
+
+  @Patch('/training-preferences/update/me')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Update my training preferences',
+    description: 'Update my own training level, goals, and preferences',
+  })
+  async updateMyTrainingPreferences(
+    @User() member: MemberEntity,
+    @Body() updateTrainingPreferencesDto: UpdateTrainingPreferencesDto,
+  ) {
+    return await this.memberService.updateMemberTrainingPreferences(
+      member.id,
+      member.gymId,
+      updateTrainingPreferencesDto,
     );
   }
 }

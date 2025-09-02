@@ -35,6 +35,7 @@ import {
   AttendingDayDto,
   UpdateAttendingDaysDto,
 } from './dto/attending-day.dto';
+import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 
 @Injectable()
 export class MemberService {
@@ -59,6 +60,26 @@ export class MemberService {
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
   ) {}
 
+  async checkIfUserHasActiveSubscription(memberId: string) {
+    const activeSubscription = await this.transactionModel.findOne({
+      where: {
+        member: { id: memberId },
+        endDate: MoreThan(new Date()),
+        isInvalidated: false,
+      },
+      order: { endDate: 'DESC' },
+    });
+    return activeSubscription;
+  }
+
+  async getLatestSubscription(memberId: string) {
+    const latestSubscription = await this.transactionModel.findOne({
+      where: { member: { id: memberId } },
+      order: { createdAt: 'DESC' },
+    });
+    return latestSubscription;
+  }
+
   async getActiveSubscription(memberId: string) {
     const member = await this.memberModel.findOne({
       where: { id: memberId },
@@ -68,13 +89,8 @@ export class MemberService {
     }
 
     // Use database query to find active subscription
-    const activeSubscription = await this.transactionModel.findOne({
-      where: {
-        member: { id: memberId },
-        endDate: MoreThan(new Date()),
-        isInvalidated: false,
-      },
-    });
+    const activeSubscription =
+      await this.checkIfUserHasActiveSubscription(memberId);
 
     return activeSubscription;
   }
@@ -134,22 +150,10 @@ export class MemberService {
     const [activeSubscription, lastSubscription, attendingDays] =
       await Promise.all([
         // Get active subscription using SQL
-        this.transactionModel.findOne({
-          where: {
-            member: { id: member.id },
-            endDate: MoreThan(new Date()),
-            isInvalidated: false,
-          },
-          order: { endDate: 'DESC' },
-        }),
+        this.checkIfUserHasActiveSubscription(member.id),
 
         // Get last subscription using SQL
-        this.transactionModel.findOne({
-          where: {
-            member: { id: member.id },
-          },
-          order: { createdAt: 'DESC' },
-        }),
+        this.getLatestSubscription(member.id),
 
         // Get attending days using SQL (only if not already loaded)
         member.attendingDays ||
@@ -175,6 +179,9 @@ export class MemberService {
       isNotified: member.isNotified,
       profileImage: member.profileImage,
       attendingDays: attendingDays,
+      trainingLevel: member.trainingLevel,
+      trainingGoals: member.trainingGoals,
+      trainingPreferences: member.trainingPreferences,
     };
   }
 
@@ -292,6 +299,9 @@ export class MemberService {
       where: { phone: loginMemberDto.phoneNumber },
       relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
+
+    console.log('loginMemberDto', loginMemberDto);
+    console.log('member', member);
 
     if (!member) {
       throw new BadRequestException('Invalid phone number');
@@ -1156,5 +1166,51 @@ export class MemberService {
     await this.attendingDaysModel.save(defaultAttendingDays);
 
     return defaultAttendingDays;
+  }
+
+  async updateMemberTrainingPreferences(
+    memberId: string,
+    gymId: string,
+    updateTrainingPreferencesDto: UpdateTrainingPreferencesDto,
+  ) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Update training preferences
+    if (updateTrainingPreferencesDto.trainingLevel !== undefined) {
+      member.trainingLevel = updateTrainingPreferencesDto.trainingLevel;
+    }
+    if (updateTrainingPreferencesDto.trainingGoals !== undefined) {
+      member.trainingGoals = updateTrainingPreferencesDto.trainingGoals;
+    }
+    if (updateTrainingPreferencesDto.trainingPreferences !== undefined) {
+      member.trainingPreferences =
+        updateTrainingPreferencesDto.trainingPreferences;
+    }
+
+    await this.memberModel.save(member);
+
+    return {
+      message: 'Training preferences updated successfully',
+      member: await this.returnMember(member),
+    };
   }
 }

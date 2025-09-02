@@ -23,6 +23,7 @@ export class ManagerAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    console.log('in manager auth guard');
     const request = context
       .switchToHttp()
       .getRequest<Request & { user: ManagerEntity }>();

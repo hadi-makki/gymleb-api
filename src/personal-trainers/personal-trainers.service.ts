@@ -16,6 +16,7 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { PTSessionEntity } from './entities/pt-sessions.entity';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class PersonalTrainersService {
@@ -333,14 +334,18 @@ export class PersonalTrainersService {
   }
 
   async findByGym(gymId: string) {
-    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
+    const gym = await this.gymEntity.findOne({
+      where: { ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }) },
+    });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
     // Use a simpler approach to find personal trainers
     const allManagers = await this.personalTrainerEntity.find({
-      where: { gyms: { id: gymId } },
+      where: {
+        gyms: { ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }) },
+      },
       relations: ['gyms', 'profileImage'],
       order: { createdAt: 'DESC' },
     });
@@ -362,7 +367,9 @@ export class PersonalTrainersService {
       const sessions = await this.sessionEntity.find({
         where: {
           personalTrainer: { id: personalTrainer.id },
-          gym: { id: gym.id },
+          gym: {
+            ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }),
+          },
         },
         relations: ['members'],
       });

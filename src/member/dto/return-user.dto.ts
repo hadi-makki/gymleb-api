@@ -18,6 +18,9 @@ export class ReturnUserDto {
   lastSubscription: TransactionEntity;
   profileImage: MediaEntity;
   attendingDays?: MemberAttendingDaysEntity[];
+  trainingLevel: string;
+  trainingGoals: string;
+  trainingPreferences: string;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

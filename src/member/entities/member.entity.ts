@@ -18,6 +18,24 @@ import { MediaEntity } from 'src/media/media.entity';
 import { MemberAttendingDaysEntity } from './member-attending-days.entity';
 import * as bcrypt from 'bcrypt';
 
+export enum TrainingLevel {
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+}
+
+export enum TrainingGoals {
+  LOSE_WEIGHT = 'lose_weight',
+  BUILD_MUSCLE = 'build_muscle',
+  IMPROVE_HEALTH = 'improve_health',
+}
+
+export enum TrainingPreferences {
+  GYM = 'gym',
+  HOME = 'home',
+  OUTDOORS = 'outdoors',
+}
+
 @Entity('members')
 export class MemberEntity extends PgMainEntity {
   @Column('text')
@@ -74,6 +92,15 @@ export class MemberEntity extends PgMainEntity {
     (attendingDay) => attendingDay.member,
   )
   attendingDays: MemberAttendingDaysEntity[];
+
+  @Column('text', { nullable: true })
+  trainingLevel: string | null;
+
+  @Column('text', { nullable: true })
+  trainingGoals: string | null;
+
+  @Column('text', { nullable: true })
+  trainingPreferences: string | null;
 
   static async isPasswordMatch(
     password: string,
