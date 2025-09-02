@@ -1,4 +1,10 @@
-import { IsBoolean, IsMongoId, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class RenewSubscriptionDto {
@@ -8,7 +14,7 @@ export class RenewSubscriptionDto {
    */
   @IsOptional()
   @IsString({ message: 'Subscription ID must be a string' })
-  @IsMongoId({ message: 'Invalid subscription ID format' })
+  @IsUUID()
   subscriptionId?: string;
 
   /**
