@@ -49,14 +49,27 @@ export class PersonalTrainersService {
 
     const trainer = await this.managerEntity.findOne({
       where: { members: { id: member.id } },
+      relations: ['members'],
     });
+    console.log(
+      'this is the trainer inside the removeClientFromTrainer',
+      trainer,
+    );
     if (!trainer) {
+      console.log('we did not find the trainer');
+      const findSessions = await this.sessionEntity.find({
+        where: {
+          members: { id: member.id },
+        },
+      });
+      console.log('this is the sessions', findSessions);
+      await this.sessionEntity.remove(findSessions);
       return;
     }
 
     await this.sessionEntity.delete({
-      member: member,
-      personalTrainer: trainer,
+      member: { id: member.id },
+      personalTrainer: { id: trainer.id },
     });
 
     return {

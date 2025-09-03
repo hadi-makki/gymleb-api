@@ -161,8 +161,8 @@ export class TwilioService {
         });
     } else {
       console.log('member notified successfully');
-      await this.memberService.toggleNotified(member.id, true);
-      await this.gymService.addGymMembersNotified(gym.id, 1);
+      // await this.memberService.toggleNotified(member.id, true);
+      // await this.gymService.addGymMembersNotified(gym.id, 1);
     }
 
     return {

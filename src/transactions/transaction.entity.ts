@@ -166,7 +166,10 @@ export class TransactionEntity extends PgMainEntity {
   @RelationId((transaction: TransactionEntity) => transaction.ptSession)
   ptSessionId: string | null;
 
-  @ManyToOne(() => PTSessionEntity, (ptSession) => ptSession.transactions)
+  @ManyToOne(() => PTSessionEntity, (ptSession) => ptSession.transactions, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   relatedPtSession: PTSessionEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.relatedPtSession)
