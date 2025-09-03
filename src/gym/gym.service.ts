@@ -237,8 +237,7 @@ export class GymService {
       .filter((t) => t.type === TransactionType.EXPENSE)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    const totalRevenue =
-      subscriptionRevenue + additionalRevenue + personalTrainerSessionRevenue;
+    const totalRevenue = subscriptionRevenue + additionalRevenue;
     const netRevenue = totalRevenue - totalExpenses;
 
     const totalMembers = await this.memberModel.count({
