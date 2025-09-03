@@ -29,6 +29,7 @@ import { CreateMemberDto } from './dto/create-member.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { ReturnUserDto } from './dto/return-user.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { SignupMemberDto } from './dto/signup-member.dto';
 import { MemberEntity } from './entities/member.entity';
 import {
   MemberAttendingDaysEntity,
@@ -295,6 +296,80 @@ export class MemberService {
     await this.gymService.addGymMembersNotified(gym.id, 1);
 
     return await this.returnMember(newMember);
+  }
+
+  async signupMember(
+    signupMemberDto: SignupMemberDto,
+    deviceId: string,
+    res: Response,
+  ) {
+    // Check if the gym allows user signup
+    const gym = await this.gymModel.findOne({
+      where: { id: signupMemberDto.gymId },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    if (!gym.allowUserSignUp) {
+      throw new BadRequestException('This gym does not allow public signups');
+    }
+
+    // Check if member already exists with this phone number in this gym
+    const existingMember = await this.memberModel.findOne({
+      where: {
+        phone: signupMemberDto.phone,
+        gym: { id: signupMemberDto.gymId },
+      },
+    });
+
+    if (existingMember) {
+      throw new BadRequestException(
+        'A member with this phone number already exists in this gym',
+      );
+    }
+
+    // Create member without subscription (subscription will be added later by admin)
+    const member = this.memberModel.create({
+      name: signupMemberDto.name,
+      email: signupMemberDto.email,
+      phone: signupMemberDto.phone,
+      gym: { id: signupMemberDto.gymId },
+      password: signupMemberDto.password
+        ? await MemberEntity.hashPassword(signupMemberDto.password)
+        : null,
+    });
+
+    const savedMember = await this.memberModel.save(member);
+
+    // Generate tokens if password is provided
+    if (signupMemberDto.password) {
+      const token = await this.tokenService.generateTokens({
+        managerId: null,
+        userId: savedMember.id,
+        deviceId,
+      });
+
+      res.cookie(CookieNames.MemberToken, token.accessToken, cookieOptions);
+      return await this.returnMember(savedMember);
+    }
+
+    await this.twilioService.sendWelcomeMessage(
+      savedMember.name,
+      savedMember.phone,
+      gym,
+    );
+
+    // Return member without token if no password (they'll need to set it later)
+    return {
+      id: savedMember.id,
+      name: savedMember.name,
+      phone: savedMember.phone,
+      email: savedMember.email,
+      message: 'Account created successfully. Please set a password to login.',
+      hasPassword: false,
+    };
   }
 
   async loginMember(

@@ -28,7 +28,7 @@ export class ProductsService {
       : null;
 
     const products = await this.productRepository.find({
-      where: { gym: gym ? gym : { id: gymId } },
+      where: { gym: gym ? { id: gym.id } : { id: gymId } },
       relations: {
         images: true,
       },

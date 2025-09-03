@@ -1341,6 +1341,18 @@ export class GymService {
     return gym;
   }
 
+  async updateAllowUserSignUp(gymId: string, allowUserSignUp: boolean) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.allowUserSignUp = allowUserSignUp;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async deleteGym(gymId: string) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },

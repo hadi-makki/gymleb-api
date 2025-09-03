@@ -450,6 +450,16 @@ export class GymController {
     );
   }
 
+  @Patch('allow-user-signup/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym allow user signup setting' })
+  updateAllowUserSignUp(
+    @Param('gymId') gymId: string,
+    @Body() body: { allowUserSignUp: boolean },
+  ) {
+    return this.gymService.updateAllowUserSignUp(gymId, body.allowUserSignUp);
+  }
+
   @Delete('admin/delete-gym/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin)

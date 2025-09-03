@@ -40,6 +40,7 @@ import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
+import { SignupMemberDto } from './dto/signup-member.dto';
 import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
 @Controller('member')
@@ -87,6 +88,20 @@ export class MemberController {
       response,
     );
     return loginMember;
+  }
+
+  @Post('signup')
+  async signup(
+    @Body() body: SignupMemberDto,
+    @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
+  ) {
+    const signupMember = await this.memberService.signupMember(
+      body,
+      deviceId,
+      response,
+    );
+    return signupMember;
   }
 
   @Post('logout')
