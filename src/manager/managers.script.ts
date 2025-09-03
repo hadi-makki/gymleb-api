@@ -4,9 +4,7 @@ import { ManagerEntity } from './manager.entity';
 import { Model } from 'mongoose';
 
 export class ManagerScript implements OnModuleInit {
-  constructor(
-    private readonly managerService: ManagerService,
-  ) {}
+  constructor(private readonly managerService: ManagerService) {}
   async onModuleInit() {
     // const managers = await this.managerModel.find();
     // for (const manager of managers) {
@@ -19,7 +17,7 @@ export class ManagerScript implements OnModuleInit {
     //     { gyms: manager.gyms },
     //   );
     // }
-    console.log('Manager module has been initialized.');
+    // console.log('Manager module has been initialized.');
     // You can add any initialization logic here
   }
 }

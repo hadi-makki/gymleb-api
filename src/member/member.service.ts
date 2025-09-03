@@ -9,14 +9,17 @@ import { GymService } from 'src/gym/gym.service';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
-import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from 'src/subscription/entities/subscription.entity';
 import {
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
-import { Between, In, MoreThan, Repository } from 'typeorm';
+import { Between, In, LessThan, MoreThan, Not, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
@@ -117,6 +120,10 @@ export class MemberService {
           type: TransactionType.SUBSCRIPTION,
           isInvalidated: false,
           member: { isNotified: false },
+          subscription: {
+            type: Not(SubscriptionType.DAILY_GYM),
+            duration: Not(LessThan(15)),
+          },
         },
       ],
       relations: {
@@ -625,7 +632,7 @@ export class MemberService {
     }
     const member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
-      relations: { transactions: true, userPtSessions: true },
+      relations: { transactions: true, userPtSessions: true, tokens: true },
     });
 
     if (!member) {
@@ -646,6 +653,10 @@ export class MemberService {
 
     if (member.userPtSessions && member.userPtSessions.length > 0) {
       await this.personalTrainersService.removeClientFromTrainer(id, gymId);
+    }
+
+    if (member.tokens && member.tokens.length > 0) {
+      await this.tokenService.deleteTokensByUserId(id);
     }
 
     await this.memberModel.delete(id);
@@ -1030,6 +1041,7 @@ export class MemberService {
       days: 3,
       isNotified: false,
     });
+    console.log('expiringMembers', expiringMembers);
     for (const member of expiringMembers) {
       console.log(
         'reminding member',

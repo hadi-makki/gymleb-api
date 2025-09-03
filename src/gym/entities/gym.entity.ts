@@ -114,4 +114,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('text', { nullable: true, default: GymTypeEnum.FITNESS })
   gymType: GymTypeEnum;
+
+  @Column('boolean', { default: false })
+  allowUserSignUp: boolean;
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isMongoId, isUUID } from 'class-validator';
+import { isUUID } from 'class-validator';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';

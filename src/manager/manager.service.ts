@@ -1,7 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isMongoId } from 'class-validator';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
@@ -21,6 +20,7 @@ import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { ManagerEntity } from './manager.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
+import { isUUID } from 'class-validator';
 @Injectable()
 export class ManagerService {
   constructor(
@@ -148,7 +148,7 @@ export class ManagerService {
   }
 
   async findOne(id: string): Promise<ManagerCreatedDto> {
-    if (!isMongoId(id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('Invalid id');
     }
     const manager = await this.managerEntity.findOne({

@@ -84,7 +84,9 @@ export class MemberEntity extends PgMainEntity {
   @ManyToOne(() => ManagerEntity, (manager) => manager.members)
   personalTrainer: ManagerEntity;
 
-  @OneToMany(() => TokenEntity, (token) => token.member)
+  @OneToMany(() => TokenEntity, (token) => token.member, {
+    onDelete: 'CASCADE',
+  })
   tokens: TokenEntity[];
 
   @OneToMany(

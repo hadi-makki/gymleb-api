@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isMongoId, isUUID } from 'class-validator';
+import { isUUID } from 'class-validator';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { BadRequestException } from 'src/error/bad-request-error';
 import { NotFoundException } from 'src/error/not-found-error';
