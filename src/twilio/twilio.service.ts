@@ -65,6 +65,31 @@ export class TwilioService {
     const member = await this.memberModel.findOne({
       where: { phone: memberPhone },
     });
+    const freeTrialGyms = [
+      'b3c78af5-afe1-4246-a030-17bb07091f83',
+      'dd94ac67-9378-404f-811e-7e2ec8be4470',
+    ];
+
+    const welcomeAndExpirationMessages =
+      gym.welcomeMessageNotified + gym.membersNotified;
+    console.log('welcomeAndExpirationMessages', welcomeAndExpirationMessages);
+    console.log('freeTrialGyms', freeTrialGyms.includes(gym.id));
+    console.log('gym.id', gym.id);
+    console.log(
+      'welcomeAndExpirationMessages <= 50',
+      welcomeAndExpirationMessages <= 50,
+    );
+
+    if (
+      !freeTrialGyms.includes(gym.id) ||
+      (freeTrialGyms.includes(gym.id) && welcomeAndExpirationMessages >= 50)
+    ) {
+      console.log(
+        'free trial gym or welcome and expiration messages limit reached',
+      );
+      return;
+    }
+
     if (member.isWelcomeMessageSent) {
       console.log('member is already notified');
       return;
@@ -97,6 +122,12 @@ export class TwilioService {
           console.log('this is twilio error', error);
           throw new BadRequestException(error);
         });
+    } else {
+      console.log('member notified successfully');
+      if (checkNodeEnv('local')) {
+        await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
+      }
+      return;
     }
   }
 
@@ -121,11 +152,15 @@ export class TwilioService {
     }
     const freeTrialGyms = ['b3c78af5-afe1-4246-a030-17bb07091f83'];
 
+    const welcomeAndExpirationMessages =
+      gym.welcomeMessageNotified + gym.membersNotified;
+
     if (
       !checkNodeEnv('local') &&
       isPhoneNumber(member.phone) &&
       (!freeTrialGyms.includes(gym.id) ||
-        (freeTrialGyms.includes(gym.owner.id) && gym.membersNotified < 100))
+        (freeTrialGyms.includes(gym.owner.id) &&
+          welcomeAndExpirationMessages < 100))
     ) {
       await this.client.messages
         .create({
@@ -161,8 +196,10 @@ export class TwilioService {
         });
     } else {
       console.log('member notified successfully');
-      // await this.memberService.toggleNotified(member.id, true);
-      // await this.gymService.addGymMembersNotified(gym.id, 1);
+      if (checkNodeEnv('local')) {
+        await this.memberService.toggleNotified(member.id, true);
+        await this.gymService.addGymMembersNotified(gym.id, 1);
+      }
     }
 
     return {

@@ -346,7 +346,15 @@ export class GymService {
     return gym;
   }
 
-  async updateGymDay(gymId: string, dayToUpdate: string) {
+  async updateGymDay(
+    gymId: string,
+    updateData: {
+      day: string;
+      isOpen: boolean;
+      openingTime?: string;
+      closingTime?: string;
+    },
+  ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
     });
@@ -354,12 +362,21 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
     const dayIndex = gym.openingDays.findIndex(
-      (day) => day.day === dayToUpdate,
+      (day) => day.day === updateData.day,
     );
     if (dayIndex === -1) {
       throw new NotFoundException('Day not found');
     }
-    gym.openingDays[dayIndex].isOpen = !gym.openingDays[dayIndex].isOpen;
+
+    // Update the day data
+    gym.openingDays[dayIndex].isOpen = updateData.isOpen;
+    if (updateData.openingTime) {
+      gym.openingDays[dayIndex].openingTime = updateData.openingTime;
+    }
+    if (updateData.closingTime) {
+      gym.openingDays[dayIndex].closingTime = updateData.closingTime;
+    }
+
     return this.gymModel.save(gym);
   }
 

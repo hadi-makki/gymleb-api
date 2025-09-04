@@ -26,6 +26,7 @@ import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
+import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
 import { GymService } from './gym.service';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
@@ -168,15 +169,19 @@ export class GymController {
     return this.gymService.getGymByGymName(gymName);
   }
 
-  @Patch('day/:gymId/:day')
+  @Patch('day/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update a gym day' })
   @ApiOkResponse({
     description: 'The gym day has been successfully updated.',
     type: GymEntity,
   })
-  updateGymDay(@Param('gymId') gymId: string, @Param('day') day: string) {
-    return this.gymService.updateGymDay(gymId, day);
+  @ApiBody({ type: UpdateOpeningDayDto })
+  updateGymDay(
+    @Param('gymId') gymId: string,
+    @Body() updateOpeningDayDto: UpdateOpeningDayDto,
+  ) {
+    return this.gymService.updateGymDay(gymId, updateOpeningDayDto);
   }
 
   @Get('admin/get-all-gyms')

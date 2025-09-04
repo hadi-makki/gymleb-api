@@ -294,15 +294,15 @@ export class PersonalTrainersService {
 
     let setDateDone = false;
 
-    const createSessionModel = this.sessionEntity.create({
-      members,
-      personalTrainer: checkIfPersonalTrainerInGym,
-      gym: gym,
-      sessionPrice: createSessionDto.sessionPrice,
-      sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
-    });
-    const createdSession = await this.sessionEntity.save(createSessionModel);
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
+      const createSessionModel = this.sessionEntity.create({
+        members,
+        personalTrainer: checkIfPersonalTrainerInGym,
+        gym: gym,
+        sessionPrice: createSessionDto.sessionPrice,
+        sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
+      });
+      const createdSession = await this.sessionEntity.save(createSessionModel);
       // Create a separate transaction per member for this session
       for (const member of members) {
         await this.transactionService.createPersonalTrainerSessionTransaction({

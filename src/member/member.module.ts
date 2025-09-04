@@ -3,6 +3,8 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
+import { MemberReservationController } from './member-reservation.controller';
+import { MemberReservationService } from './member-reservation.service';
 import { MediaModule } from '../media/media.module';
 import { TwilioModule } from 'src/twilio/twilio.module';
 import { TwilioService } from 'src/twilio/twilio.service';
@@ -12,6 +14,7 @@ import { SubscriptionEntity } from 'src/subscription/entities/subscription.entit
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from './entities/member.entity';
 import { MemberAttendingDaysEntity } from './entities/member-attending-days.entity';
+import { MemberReservationEntity } from './entities/member-reservation.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 @Module({
   imports: [
@@ -19,6 +22,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     TypeOrmModule.forFeature([
       MemberEntity,
       MemberAttendingDaysEntity,
+      MemberReservationEntity,
       GymEntity,
       SubscriptionEntity,
       PTSessionEntity,
@@ -26,8 +30,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     TransactionModule,
     MediaModule,
   ],
-  controllers: [MemberController],
-  providers: [MemberService, TwilioService, PersonalTrainersService],
+  controllers: [MemberController, MemberReservationController],
+  providers: [
+    MemberService,
+    MemberReservationService,
+    TwilioService,
+    PersonalTrainersService,
+  ],
   exports: [MemberService, TwilioService, TypeOrmModule],
 })
 export class MemberModule {}

@@ -7,6 +7,7 @@ import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { GymPresetEntity } from './gym-preset.entity';
+import { MemberReservationEntity } from '../../member/entities/member-reservation.entity';
 import {
   Column,
   Entity,
@@ -112,9 +113,21 @@ export class GymEntity extends PgMainEntity {
   @OneToMany(() => GymPresetEntity, (preset) => preset.gym)
   presets: GymPresetEntity[];
 
+  @OneToMany(() => MemberReservationEntity, (reservation) => reservation.gym)
+  reservations: MemberReservationEntity[];
+
   @Column('text', { nullable: true, default: GymTypeEnum.FITNESS })
   gymType: GymTypeEnum;
 
   @Column('boolean', { default: false })
   allowUserSignUp: boolean;
+
+  @Column('boolean', { default: false })
+  allowUserResevations: boolean;
+
+  @Column('int', { default: 0 })
+  allowedUserResevationsPerSession: number;
+
+  @Column('decimal', { default: 1 })
+  sessionTimeInHours: number;
 }

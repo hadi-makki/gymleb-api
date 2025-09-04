@@ -16,6 +16,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { TokenEntity } from 'src/token/token.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { MemberAttendingDaysEntity } from './member-attending-days.entity';
+import { MemberReservationEntity } from './member-reservation.entity';
 import * as bcrypt from 'bcrypt';
 
 export enum TrainingLevel {
@@ -94,6 +95,9 @@ export class MemberEntity extends PgMainEntity {
     (attendingDay) => attendingDay.member,
   )
   attendingDays: MemberAttendingDaysEntity[];
+
+  @OneToMany(() => MemberReservationEntity, (reservation) => reservation.member)
+  reservations: MemberReservationEntity[];
 
   @Column('text', { nullable: true })
   trainingLevel: string | null;
