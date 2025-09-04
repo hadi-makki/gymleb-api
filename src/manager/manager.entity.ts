@@ -55,7 +55,10 @@ export class ManagerEntity extends PgMainEntity {
   @OneToMany(() => GymEntity, (gym) => gym.owner)
   ownedGyms: GymEntity[];
 
-  @OneToMany(() => TransactionEntity, (transaction) => transaction.owner)
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.owner, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   transactions: TransactionEntity[];
 
   @OneToMany(() => MediaEntity, (media) => media.manager)

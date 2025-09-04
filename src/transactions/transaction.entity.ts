@@ -84,7 +84,9 @@ export class TransactionEntity extends PgMainEntity {
   memberId: string | null;
 
   // Owner subscription assignment transaction
-  @ManyToOne(() => ManagerEntity, (manager) => manager.transactions)
+  @ManyToOne(() => ManagerEntity, (manager) => manager.transactions, {
+    onDelete: 'SET NULL',
+  })
   owner: ManagerEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.owner)
@@ -139,7 +141,9 @@ export class TransactionEntity extends PgMainEntity {
   @Column('timestamp with time zone', { nullable: true })
   date: Date;
 
-  @ManyToOne(() => ManagerEntity, (manager) => manager.transactions)
+  @ManyToOne(() => ManagerEntity, (manager) => manager.transactions, {
+    onDelete: 'SET NULL',
+  })
   personalTrainer: ManagerEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.personalTrainer)
