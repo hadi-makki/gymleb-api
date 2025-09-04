@@ -65,6 +65,9 @@ export class TransactionEntity extends PgMainEntity {
   @ManyToOne(
     () => SubscriptionEntity,
     (subscription) => subscription.transactions,
+    {
+      onDelete: 'SET NULL',
+    },
   )
   subscription: SubscriptionEntity;
 

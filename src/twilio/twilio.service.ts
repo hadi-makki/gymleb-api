@@ -80,10 +80,7 @@ export class TwilioService {
       welcomeAndExpirationMessages <= 50,
     );
 
-    if (
-      !freeTrialGyms.includes(gym.id) ||
-      (freeTrialGyms.includes(gym.id) && welcomeAndExpirationMessages >= 50)
-    ) {
+    if (freeTrialGyms.includes(gym.id) && welcomeAndExpirationMessages >= 50) {
       console.log(
         'free trial gym or welcome and expiration messages limit reached',
       );
