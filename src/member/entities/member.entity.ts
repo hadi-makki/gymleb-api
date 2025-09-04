@@ -54,7 +54,9 @@ export class MemberEntity extends PgMainEntity {
   @RelationId((member: MemberEntity) => member.gym)
   gymId: string | null;
 
-  @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.members)
+  @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.members, {
+    onDelete: 'SET NULL',
+  })
   subscription: SubscriptionEntity;
 
   @RelationId((member: MemberEntity) => member.subscription)

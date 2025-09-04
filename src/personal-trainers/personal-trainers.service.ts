@@ -195,8 +195,21 @@ export class PersonalTrainersService {
     return { message: 'Personal trainer updated successfully' };
   }
 
-  remove(id: string) {
-    return this.personalTrainerEntity.delete(id);
+  async remove(id: string) {
+    const personalTrainer = await this.personalTrainerEntity.findOne({
+      where: { id },
+      relations: ['ptSessions'],
+    });
+    if (!personalTrainer) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+    if (personalTrainer.ptSessions.length > 0) {
+      for (const session of personalTrainer.ptSessions) {
+        await this.deleteSession(session.id);
+      }
+    }
+    await this.personalTrainerEntity.delete(id);
+    return { message: 'Personal trainer deleted successfully' };
   }
 
   async toggleReadOnlyPersonalTrainer(id: string, isReadOnly: boolean) {
@@ -982,7 +995,10 @@ export class PersonalTrainersService {
     console.log('this is the sessionId', sessionId);
     const session = await this.sessionEntity.findOne({
       where: { id: sessionId },
-      relations: ['transaction', 'transactions'],
+      relations: {
+        transaction: true,
+        transactions: true,
+      },
     });
 
     console.log('this is the session', session);
