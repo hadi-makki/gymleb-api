@@ -11,6 +11,7 @@ import { MemberEntity } from './entities/member.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { GetAvailableSlotsDto } from './dto/get-available-slots.dto';
 import { isUUID } from 'class-validator';
+import { Between } from 'typeorm';
 
 export interface TimeSlot {
   startTime: string;
@@ -238,6 +239,30 @@ export class MemberReservationService {
 
     reservation.isActive = false;
     await this.reservationRepository.save(reservation);
+  }
+
+  async getGymReservations(
+    gymId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<MemberReservationEntity[]> {
+    const whereCondition: any = {
+      gym: { id: gymId },
+      isActive: true,
+    };
+
+    if (startDate && endDate) {
+      whereCondition.reservationDate = Between(
+        new Date(startDate),
+        new Date(endDate),
+      );
+    }
+
+    return this.reservationRepository.find({
+      where: whereCondition,
+      relations: ['member', 'gym'],
+      order: { reservationDate: 'ASC', startTime: 'ASC' },
+    });
   }
 
   private generateTimeSlots(

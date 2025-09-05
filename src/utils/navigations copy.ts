@@ -148,6 +148,14 @@ export const navItems: NavItem[] = [
     items: [],
     roles: [Permissions.SuperAdmin],
   },
+  {
+    title: 'Calendar',
+    url: '/calendar',
+    icon: 'calendar',
+    isActive: false,
+    items: [],
+    roles: [Permissions.GymOwner],
+  },
 ];
 
 export const getNavItems = (permissions: Permissions[]) => {

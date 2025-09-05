@@ -416,4 +416,15 @@ export class MemberController {
       updateTrainingPreferencesDto,
     );
   }
+
+  @Get('gym-attendances/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Get all member attendances for a gym',
+    description: 'Get all member attending days for a specific gym',
+  })
+  async getGymAttendances(@Param('gymId') gymId: string) {
+    return await this.memberService.getGymAttendances(gymId);
+  }
 }

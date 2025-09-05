@@ -1314,4 +1314,42 @@ export class MemberService {
       member: await this.returnMember(member),
     };
   }
+
+  async getGymAttendances(gymId: string) {
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const members = await this.memberModel.find({
+      where: { gym: { id: checkGym.id } },
+      relations: ['attendingDays'],
+    });
+
+    const attendances = [];
+    for (const member of members) {
+      if (member.attendingDays && member.attendingDays.length > 0) {
+        for (const attendingDay of member.attendingDays) {
+          if (attendingDay.isActive) {
+            attendances.push({
+              memberId: member.id,
+              memberName: member.name,
+              dayOfWeek: attendingDay.dayOfWeek,
+              startTime: attendingDay.startTime,
+              endTime: attendingDay.endTime,
+              isActive: attendingDay.isActive,
+            });
+          }
+        }
+      }
+    }
+
+    return attendances;
+  }
 }

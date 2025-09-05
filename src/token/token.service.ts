@@ -252,6 +252,8 @@ export class TokenService {
       tokenToUse,
     );
 
+    console.log('checkToken', checkToken);
+
     if (!checkToken) {
       // Token not found in database
       isTokenExpired = true;
@@ -264,6 +266,8 @@ export class TokenService {
 
     // If token is expired, try to refresh it
     if (isTokenExpired) {
+      console.log('isTokenExpired', isTokenExpired);
+      console.log('tokenToUse', tokenToUse);
       const newToken = await this.refreshToken(
         tokenToUse,
         req.cookies.deviceId,
