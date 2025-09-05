@@ -36,7 +36,7 @@ export const navItems: NavItem[] = [
   {
     title: 'My Gym',
     url: '/my-gym',
-    icon: 'logo',
+    icon: 'building',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.gyms],
@@ -54,7 +54,7 @@ export const navItems: NavItem[] = [
   {
     title: 'All Members',
     url: '/members',
-    icon: 'user',
+    icon: 'users',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.members],
@@ -62,7 +62,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Expired Memberships',
     url: '/members/expired',
-    icon: 'user',
+    icon: 'user-x',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.members],
@@ -72,7 +72,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Staff',
     url: '/staff',
-    icon: 'user',
+    icon: 'user-check',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner],
@@ -80,7 +80,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Personal Trainers',
     url: '/personal-trainers',
-    icon: 'user',
+    icon: 'dumbbell',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner],
@@ -88,7 +88,7 @@ export const navItems: NavItem[] = [
   {
     title: 'PT Sessions',
     url: '/pt-sessions',
-    icon: 'user',
+    icon: 'clock',
     isActive: false,
     items: [],
     roles: [Permissions.personalTrainers],
@@ -98,7 +98,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Products',
     url: '/products',
-    icon: 'product',
+    icon: 'package',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.products],
@@ -114,7 +114,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Expenses',
     url: '/expenses',
-    icon: 'cards',
+    icon: 'trending-down',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.expenses],
@@ -122,7 +122,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Transactions',
     url: '/transactions',
-    icon: 'billing',
+    icon: 'receipt',
     isActive: false,
     items: [],
     roles: [
@@ -136,7 +136,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Available Subscriptions',
     url: '/subscriptions/available',
-    icon: 'cards',
+    icon: 'credit-card',
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.subscriptions],
@@ -146,7 +146,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Gyms Management',
     url: '/gyms-management',
-    icon: 'user',
+    icon: 'building-2',
     isActive: false,
     items: [],
     roles: [Permissions.SuperAdmin],
@@ -154,7 +154,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Owner Subscriptions',
     url: '/subscriptions/owner',
-    icon: 'cards',
+    icon: 'crown',
     isActive: false,
     items: [],
     roles: [Permissions.SuperAdmin],
@@ -162,7 +162,7 @@ export const navItems: NavItem[] = [
   {
     title: 'Inbound Messages',
     url: '/inbound-messages',
-    icon: 'cards',
+    icon: 'mail',
     isActive: false,
     items: [],
     roles: [Permissions.SuperAdmin],
