@@ -8,4 +8,8 @@ export class LoginMemberDto {
   @IsOptional()
   @IsString()
   password: string;
+
+  @IsNotEmpty()
+  @IsString()
+  gymId: string;
 }

@@ -388,12 +388,16 @@ export class MemberService {
     res: Response,
   ): Promise<ReturnUserDto | { hasPassword: boolean; message: string }> {
     const member = await this.memberModel.findOne({
-      where: { phone: loginMemberDto.phoneNumber },
+      where: {
+        phone: loginMemberDto.phoneNumber,
+        gym: {
+          ...(isUUID(loginMemberDto.gymId)
+            ? { id: loginMemberDto.gymId }
+            : { gymDashedName: loginMemberDto.gymId }),
+        },
+      },
       relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
-
-    console.log('loginMemberDto', loginMemberDto);
-    console.log('member', member);
 
     if (!member) {
       throw new BadRequestException('Invalid phone number');
