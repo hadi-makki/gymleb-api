@@ -43,4 +43,9 @@ export class CreateRevenueDto {
   @IsOptional()
   @IsNumber()
   numberSold?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  offerId?: string;
 }

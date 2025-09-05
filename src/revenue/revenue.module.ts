@@ -8,6 +8,7 @@ import { TransactionModule } from '../transactions/subscription-instance.module'
 import { RevenueController } from './revenue.controller';
 import { RevenueEntity } from './revenue.entity';
 import { RevenueService } from './revenue.service';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RevenueService } from './revenue.service';
       GymEntity,
       ProductEntity,
       TransactionEntity,
+      ProductsOffersEntity,
     ]),
     TransactionModule,
   ],

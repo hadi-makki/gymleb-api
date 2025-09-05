@@ -18,6 +18,7 @@ import { In, Repository } from 'typeorm';
 import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
 import { TransactionEntity, TransactionType } from './transaction.entity';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -236,6 +237,7 @@ export class TransactionService {
     numberSold: number;
     date: Date;
     revenue: RevenueEntity;
+    offer: ProductsOffersEntity;
   }) {
     const newTransactionModel = this.transactionModel.create({
       title: dto.revenue.title,
@@ -246,6 +248,7 @@ export class TransactionService {
       numberSold: dto.numberSold,
       revenue: dto.revenue,
       date: dto.date,
+      offer: dto.offer,
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);

@@ -43,6 +43,7 @@ import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
+import { UpdateShiftTimesDto } from './dto/update-shift-times.dto';
 import { ManagerService } from './manager.service';
 import { ManagerEntity } from './manager.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
@@ -236,5 +237,20 @@ export class ManagerController {
   @ApiOkResponse({ type: [ManagerEntity] })
   async getGymOwners() {
     return await this.ManagerService.getAllGymOwners();
+  }
+
+  @Patch('update-shift-times/:managerId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Shift times updated successfully' })
+  async updateShiftTimes(
+    @Param('managerId') managerId: string,
+    @Body() updateShiftTimesDto: UpdateShiftTimesDto,
+  ) {
+    return await this.ManagerService.updateShiftTimes(
+      managerId,
+      updateShiftTimesDto,
+    );
   }
 }

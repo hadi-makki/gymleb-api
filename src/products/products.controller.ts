@@ -33,6 +33,10 @@ import {
   UpdateProductDto,
   UploadFileDto,
 } from './dto/create-product.dto';
+import {
+  CreateProductsOfferDto,
+  UpdateProductsOfferDto,
+} from './dto/create-products-offer.dto';
 import { TransferProductDto } from './dto/transfer-product.dto';
 import { ReturnProductDto } from './dto/return-product.dto';
 import { ProductsService } from './products.service';
@@ -251,5 +255,98 @@ export class ProductsController {
       returnProductDto.returnerGymId,
       returnProductDto.returnQuantity,
     );
+  }
+
+  // Product Offers endpoints
+  @Get('offers/all')
+  @ApiOperation({
+    summary: 'Get all product offers',
+    description: 'Retrieve all product offers',
+  })
+  @ApiOkResponse({
+    description: 'Product offers retrieved successfully',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async getProductsOffers() {
+    return await this.productsService.getProductsOffers();
+  }
+
+  @Get('offers/:id')
+  @ApiOperation({
+    summary: 'Get product offer by ID',
+    description: 'Retrieve a specific product offer by its ID',
+  })
+  @ApiOkResponse({
+    description: 'Product offer retrieved successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Product offer not found',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async getProductsOfferById(@Param('id') id: string) {
+    return await this.productsService.getProductsOfferById(id);
+  }
+
+  @Post('offers/create')
+  @ApiOperation({
+    summary: 'Create product offer',
+    description: 'Create a new product offer',
+  })
+  @ApiCreatedResponse({
+    type: SuccessMessageReturn,
+    description: 'Product offer created successfully',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async createProductsOffer(
+    @Body() createProductsOfferDto: CreateProductsOfferDto,
+  ) {
+    return await this.productsService.createProductsOffer(
+      createProductsOfferDto,
+    );
+  }
+
+  @Put('offers/:id')
+  @ApiOperation({
+    summary: 'Update product offer',
+    description: 'Update an existing product offer',
+  })
+  @ApiOkResponse({
+    type: SuccessMessageReturn,
+    description: 'Product offer updated successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Product offer not found',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async updateProductsOffer(
+    @Param('id') id: string,
+    @Body() updateProductsOfferDto: UpdateProductsOfferDto,
+  ) {
+    return await this.productsService.updateProductsOffer(
+      id,
+      updateProductsOfferDto,
+    );
+  }
+
+  @Delete('offers/delete/:offerId')
+  @ApiOperation({
+    summary: 'Delete product offer',
+    description: 'Delete a product offer by ID',
+  })
+  @ApiOkResponse({
+    type: SuccessMessageReturn,
+    description: 'Product offer deleted successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Product offer not found',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async deleteProductsOffer(@Param('offerId') id: string) {
+    return await this.productsService.deleteProductsOffer(id);
   }
 }

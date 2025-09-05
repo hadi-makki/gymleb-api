@@ -12,10 +12,16 @@ import { ProductEntity } from './products.entity';
 import { SubscriptionPlanSeeding } from './products.seed';
 import { ProductsService } from './products.service';
 import { TransactionModule } from 'src/transactions/subscription-instance.module';
+import { ProductsOffersEntity } from './products-offers.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ProductEntity, UserEntity, MediaEntity]),
+    TypeOrmModule.forFeature([
+      ProductEntity,
+      UserEntity,
+      MediaEntity,
+      ProductsOffersEntity,
+    ]),
     AuthenticationModule,
     TransactionModule,
   ],

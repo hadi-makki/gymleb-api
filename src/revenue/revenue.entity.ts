@@ -10,6 +10,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 
 @Entity('revenues')
 export class RevenueEntity extends PgMainEntity {
@@ -39,4 +40,10 @@ export class RevenueEntity extends PgMainEntity {
   })
   @JoinColumn()
   transaction: TransactionEntity;
+
+  @ManyToOne(() => ProductsOffersEntity, (offer) => offer.productRevenues)
+  offer: ProductsOffersEntity;
+
+  @RelationId((revenue: RevenueEntity) => revenue.offer)
+  offerId: string | null;
 }

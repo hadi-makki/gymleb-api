@@ -10,11 +10,16 @@ import { Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';
 import { MediaService } from '../media/media.service';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
+import {
+  CreateProductsOfferDto,
+  UpdateProductsOfferDto,
+} from './dto/create-products-offer.dto';
 import { ProductEntity } from './products.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { ProductsOffersEntity } from './products-offers.entity';
 
 @Injectable()
 export class ProductsService {
@@ -26,6 +31,8 @@ export class ProductsService {
     @InjectRepository(GymEntity)
     private readonly gymModel: Repository<GymEntity>,
     private readonly transactionService: TransactionService,
+    @InjectRepository(ProductsOffersEntity)
+    private readonly productsOfferRepository: Repository<ProductsOffersEntity>,
   ) {}
 
   async getProducts(gymId: string) {
@@ -319,6 +326,85 @@ export class ProductsService {
 
     return {
       message: 'Product returned to original gym successfully',
+    };
+  }
+
+  async createProductsOffer(createProductsOfferDto: CreateProductsOfferDto) {
+    const productsOffer = this.productsOfferRepository.create(
+      createProductsOfferDto,
+    );
+    return await this.productsOfferRepository.save(productsOffer);
+  }
+
+  async getProductsOffers() {
+    return await this.productsOfferRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getProductsOfferById(id: string) {
+    console.log('this is the id get products offer by id  ', id);
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid offer ID format');
+    }
+
+    const offer = await this.productsOfferRepository.findOne({
+      where: { id },
+    });
+
+    if (!offer) {
+      throw new NotFoundException('Product offer not found');
+    }
+
+    return offer;
+  }
+
+  async updateProductsOffer(
+    id: string,
+    updateProductsOfferDto: UpdateProductsOfferDto,
+  ) {
+    console.log('this is the id update products offer by id  ', id);
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid offer ID format');
+    }
+
+    const offer = await this.productsOfferRepository.findOne({
+      where: { id },
+    });
+
+    if (!offer) {
+      throw new NotFoundException('Product offer not found');
+    }
+
+    // Update only provided fields
+    if (updateProductsOfferDto.name !== undefined) {
+      offer.name = updateProductsOfferDto.name;
+    }
+    if (updateProductsOfferDto.discountPercentage !== undefined) {
+      offer.discountPercentage = updateProductsOfferDto.discountPercentage;
+    }
+
+    return await this.productsOfferRepository.save(offer);
+  }
+
+  async deleteProductsOffer(id: string) {
+    console.log('this is the id delete products offer by id  ', id);
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid offer ID format');
+    }
+
+    const offer = await this.productsOfferRepository.findOne({
+      where: { id },
+    });
+
+    if (!offer) {
+      throw new NotFoundException('Product offer not found');
+    }
+
+    await this.productsOfferRepository.delete(id);
+
+    return {
+      message: 'Product offer deleted successfully',
     };
   }
 }

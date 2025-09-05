@@ -20,6 +20,7 @@ import { GymOwnerController } from './gym-owner.controller';
 import { GymOwnerService } from './gym-owner.service';
 import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-days.entity';
 import { MemberReservationEntity } from 'src/member/entities/member-reservation.entity';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -32,6 +33,7 @@ import { MemberReservationEntity } from 'src/member/entities/member-reservation.
       ProductEntity,
       MemberAttendingDaysEntity,
       MemberReservationEntity,
+      ProductsOffersEntity,
     ]),
     AuthenticationModule,
     TransactionModule,

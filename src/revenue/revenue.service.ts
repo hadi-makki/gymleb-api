@@ -9,6 +9,7 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 
 @Injectable()
 export class RevenueService {
@@ -20,11 +21,19 @@ export class RevenueService {
     @InjectRepository(ProductEntity)
     private productModel: Repository<ProductEntity>,
     private readonly transactionService: TransactionService,
+    @InjectRepository(ProductsOffersEntity)
+    private productsOfferModel: Repository<ProductsOffersEntity>,
   ) {}
 
   async create(manager: ManagerEntity, dto: CreateRevenueDto, gymId: string) {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
+
+    const offer = dto.offerId
+      ? await this.productsOfferModel.findOne({
+          where: { id: dto.offerId },
+        })
+      : null;
 
     let product: ProductEntity | null = null;
 
@@ -46,28 +55,35 @@ export class RevenueService {
     }
     const amount =
       product && dto.numberSold ? product.price * dto.numberSold : dto.amount;
+    let amountToUse = amount;
     const title =
       product && dto.numberSold
         ? `Sold ${dto.numberSold} ${product.name}`
         : dto.title;
 
+    if (offer) {
+      amountToUse = amount * (1 - offer.discountPercentage / 100);
+    }
+
     const createRevenueModel = this.revenueModel.create({
       title,
-      amount,
+      amount: amountToUse,
       category: dto.category,
       notes: dto.notes,
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: gym,
+      offer: offer,
     });
     const revenue = await this.revenueModel.save(createRevenueModel);
 
     const transaction = await this.transactionService.createRevenueTransaction({
-      paidAmount: amount,
+      paidAmount: amountToUse,
       gym: gym,
       product: product,
       numberSold: dto.numberSold,
       revenue: revenue,
       date: dto.date ? new Date(dto.date) : new Date(),
+      offer: offer,
     });
     revenue.transaction = transaction;
 

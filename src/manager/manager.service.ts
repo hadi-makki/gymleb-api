@@ -18,6 +18,7 @@ import { LoginManagerDto } from './dtos/login-manager.dto';
 import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dto';
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
+import { UpdateShiftTimesDto } from './dto/update-shift-times.dto';
 import { ManagerEntity } from './manager.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
@@ -348,5 +349,41 @@ export class ManagerService {
     return gymOwners
       .filter((gymOwner) => gymOwner.permissions.includes(Permissions.GymOwner))
       .map((gymOwner) => returnManager(gymOwner));
+  }
+
+  async updateShiftTimes(
+    managerId: string,
+    updateShiftTimesDto: UpdateShiftTimesDto,
+  ) {
+    if (!isUUID(managerId)) {
+      throw new BadRequestException('Invalid manager ID format');
+    }
+
+    const manager = await this.managerEntity.findOne({
+      where: { id: managerId },
+    });
+
+    if (!manager) {
+      throw new NotFoundException('Manager not found');
+    }
+
+    // Update shift times if provided
+    if (updateShiftTimesDto.shiftStartTime !== undefined) {
+      manager.shiftStartTime = updateShiftTimesDto.shiftStartTime;
+    }
+    if (updateShiftTimesDto.shiftEndTime !== undefined) {
+      manager.shiftEndTime = updateShiftTimesDto.shiftEndTime;
+    }
+
+    await this.managerEntity.save(manager);
+
+    return {
+      message: 'Shift times updated successfully',
+      data: {
+        id: manager.id,
+        shiftStartTime: manager.shiftStartTime,
+        shiftEndTime: manager.shiftEndTime,
+      },
+    };
   }
 }

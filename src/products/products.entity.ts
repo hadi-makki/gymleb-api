@@ -12,6 +12,7 @@ import {
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MediaEntity } from 'src/media/media.entity';
+import { ProductsOffersEntity } from './products-offers.entity';
 
 @Entity('products')
 export class ProductEntity extends PgMainEntity {

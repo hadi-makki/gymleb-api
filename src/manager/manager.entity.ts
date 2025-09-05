@@ -77,6 +77,12 @@ export class ManagerEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isReadOnlyPersonalTrainer: boolean;
 
+  @Column('time', { nullable: true })
+  shiftStartTime: string;
+
+  @Column('time', { nullable: true })
+  shiftEndTime: string;
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,

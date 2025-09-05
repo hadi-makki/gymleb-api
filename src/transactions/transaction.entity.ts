@@ -20,6 +20,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -209,4 +210,10 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('int', { nullable: true })
   returnedQuantity: number;
+
+  @ManyToOne(() => ProductsOffersEntity, (offer) => offer.products)
+  offer: ProductsOffersEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.offer)
+  offerId: string | null;
 }
