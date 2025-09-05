@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { GymEntity } from 'src/gym/entities/gym.entity';
@@ -10,6 +14,7 @@ import { ProductEntity } from './products.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { UserEntity } from 'src/user/user.entity';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
 
 @Injectable()
 export class ProductsService {
@@ -20,6 +25,7 @@ export class ProductsService {
     private readonly gymService: GymService,
     @InjectRepository(GymEntity)
     private readonly gymModel: Repository<GymEntity>,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async getProducts(gymId: string) {
@@ -149,6 +155,170 @@ export class ProductsService {
 
     return {
       message: 'Product deleted successfully',
+    };
+  }
+
+  async transferProduct(
+    productId: string,
+    gymId: string,
+    transferedToId: string,
+    transferQuantity: number,
+  ) {
+    if (gymId === transferedToId) {
+      throw new BadRequestException(
+        'Transfered to gym is the same as the transfered from gym',
+      );
+    }
+    const transferedFrom = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!transferedFrom) {
+      throw new NotFoundException('Transfered from gym not found');
+    }
+
+    const transferedTo = await this.gymModel.findOne({
+      where: { id: transferedToId },
+    });
+    if (!transferedTo) {
+      throw new NotFoundException('Transfered to gym not found');
+    }
+
+    const product = await this.productRepository.findOne({
+      where: { id: productId, gym: { id: gymId } },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    if (product.stock < transferQuantity) {
+      throw new BadRequestException('Product stock is not enough');
+    }
+
+    const createdTransactions =
+      await this.transactionService.createProductsTransferTransaction({
+        transferedFrom: transferedFrom,
+        transferedTo: transferedTo,
+        product: product,
+        transferQuantity: transferQuantity,
+        receiveQuantity: transferQuantity,
+      });
+
+    product.stock -= transferQuantity;
+    await this.productRepository.save(product);
+
+    const checkIfRecieverAlreadyHasProduct =
+      await this.productRepository.findOne({
+        where: { originalProductId: product.id, gym: { id: transferedToId } },
+      });
+
+    if (checkIfRecieverAlreadyHasProduct) {
+      checkIfRecieverAlreadyHasProduct.stock += transferQuantity;
+      await this.productRepository.save(checkIfRecieverAlreadyHasProduct);
+      return {
+        createdTransactions,
+        checkIfRecieverAlreadyHasProduct,
+      };
+    } else {
+      const createProductInReceiveGym = this.productRepository.create({
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        images: product.images,
+        maxDurationSeconds: product.maxDurationSeconds,
+        stripeProductId: product.stripeProductId,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        stock: transferQuantity,
+        gym: transferedTo,
+        originalProductId: product.id,
+        transferedFromId: gymId,
+      });
+      await this.productRepository.save(createProductInReceiveGym);
+      return {
+        createdTransactions,
+        createProductInReceiveGym,
+      };
+    }
+  }
+
+  async returnProductToGym(
+    productId: string,
+    returnerGymId: string,
+    returnQuantity: number,
+  ) {
+    // Find the product in the current gym (the one returning it)
+    const product = await this.productRepository.findOne({
+      where: { id: productId, gym: { id: returnerGymId } },
+      relations: ['gym'],
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found in current gym');
+    }
+
+    // Check if this product was actually transferred (has originalProductId)
+    if (!product.originalProductId || !product.transferedFromId) {
+      throw new BadRequestException(
+        'This product was not transferred and cannot be returned',
+      );
+    }
+
+    if (product.stock < returnQuantity) {
+      throw new BadRequestException('Product stock is not enough');
+    }
+
+    // Find the original gym (where the product should be returned to)
+    const originalGym = await this.gymModel.findOne({
+      where: { id: product.transferedFromId },
+    });
+
+    if (!originalGym) {
+      throw new NotFoundException('Original gym not found');
+    }
+
+    // Reduce stock in the current gym
+    product.stock -= returnQuantity;
+    await this.productRepository.save(product);
+
+    // Check if the original gym already has this product
+    const originalProduct = await this.productRepository.findOne({
+      where: {
+        id: product.originalProductId,
+        gym: { id: product.transferedFromId },
+      },
+    });
+
+    if (originalProduct) {
+      // Add stock to the existing product in the original gym
+      originalProduct.stock += returnQuantity;
+      await this.productRepository.save(originalProduct);
+    } else {
+      // Create a new product entry in the original gym
+      const createProductInOriginalGym = this.productRepository.create({
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        images: product.images,
+        maxDurationSeconds: product.maxDurationSeconds,
+        stripeProductId: product.stripeProductId,
+        stock: returnQuantity,
+        gym: originalGym,
+        originalProductId: product.originalProductId,
+        transferedFromId: null, // This is now back in the original gym
+      });
+      await this.productRepository.save(createProductInOriginalGym);
+    }
+
+    // Create transaction record
+    await this.transactionService.createProductsReturnTransaction({
+      returnedFrom: product.gym, // Current gym (returning)
+      returnedTo: originalGym, // Original gym (receiving)
+      product: product,
+      returnQuantity: returnQuantity,
+    });
+
+    return {
+      message: 'Product returned to original gym successfully',
     };
   }
 }

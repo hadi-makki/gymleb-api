@@ -497,4 +497,29 @@ export class PersonalTrainersController {
       personalTrainer,
     );
   }
+
+  @Get('calendar-sessions/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.personalTrainers)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get all PT sessions for calendar view',
+    description: 'Get all PT sessions for a gym with calendar-specific data',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'The PT sessions have been successfully retrieved for calendar view.',
+  })
+  async getCalendarSessions(
+    @Param('gymId') gymId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.personalTrainersService.getCalendarSessions(
+      gymId,
+      startDate,
+      endDate,
+    );
+  }
 }

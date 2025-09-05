@@ -13,6 +13,7 @@ import {
 import {
   Column,
   Entity,
+  JoinColumn,
   ManyToMany,
   ManyToOne,
   OneToOne,
@@ -26,6 +27,9 @@ export enum TransactionType {
   REVENUE = 'revenue',
   EXPENSE = 'expense',
   PERSONAL_TRAINER_SESSION = 'personal_trainer_session',
+  PRODUCTS_TRANSFER = 'products_transfer',
+  PRODUCTS_RECEIVE = 'products_receive',
+  PRODUCTS_RETURN = 'products_return',
 }
 
 export enum Currency {
@@ -116,7 +120,10 @@ export class TransactionEntity extends PgMainEntity {
   @Column('timestamp with time zone', { nullable: true })
   invalidatedAt: Date;
 
-  @ManyToOne(() => ProductEntity, (product) => product.transactions)
+  @ManyToOne(() => ProductEntity, (product) => product.transactions, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   product: ProductEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.product)
@@ -181,4 +188,25 @@ export class TransactionEntity extends PgMainEntity {
 
   @RelationId((transaction: TransactionEntity) => transaction.relatedPtSession)
   relatedPtSessionId: string | null;
+
+  @ManyToOne(() => GymEntity, (gym) => gym.productTransferTransactions)
+  transferedFrom: GymEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.transferedFrom)
+  transferedFromId: string | null;
+
+  @ManyToOne(() => GymEntity, (gym) => gym.productReceiveTransactions)
+  transferedTo: GymEntity;
+
+  @RelationId((transaction: TransactionEntity) => transaction.transferedTo)
+  transferedToId: string | null;
+
+  @Column('int', { nullable: true })
+  transferQuantity: number;
+
+  @Column('int', { nullable: true })
+  receiveQuantity: number;
+
+  @Column('int', { nullable: true })
+  returnedQuantity: number;
 }

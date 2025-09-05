@@ -16,6 +16,7 @@ import {
   ManyToMany,
   ManyToOne,
   OneToMany,
+  OneToOne,
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../../main-classes/mainEntity';
@@ -97,6 +98,12 @@ export class GymEntity extends PgMainEntity {
 
   @OneToMany(() => ProductEntity, (product) => product.gym)
   products: ProductEntity[];
+
+  @OneToMany(() => TransactionEntity, (product) => product.transferedFrom)
+  productTransferTransactions: TransactionEntity[];
+
+  @OneToMany(() => TransactionEntity, (product) => product.transferedTo)
+  productReceiveTransactions: TransactionEntity[];
 
   @OneToMany(() => MemberEntity, (member) => member.gym)
   members: MemberEntity[];

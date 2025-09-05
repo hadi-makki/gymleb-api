@@ -6,7 +6,7 @@ import { ManagerService } from 'src/manager/manager.service';
 import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
-import { ILike, In, Repository } from 'typeorm';
+import { Between, ILike, In, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Permissions } from '../decorators/roles/role.enum';
 import { NotFoundException } from '../error/not-found-error';
@@ -1029,5 +1029,68 @@ export class PersonalTrainersService {
     return {
       message: 'Session deleted successfully',
     };
+  }
+
+  async getCalendarSessions(
+    gymId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const checkGym = await this.gymEntity.findOne({ where: { id: gymId } });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    let whereCondition: any = {
+      gym: { id: gymId },
+    };
+
+    // Add date filtering if provided
+    if (startDate && endDate) {
+      whereCondition.sessionDate = Between(
+        new Date(startDate),
+        new Date(endDate),
+      );
+    }
+
+    const sessions = await this.sessionEntity.find({
+      where: whereCondition,
+      relations: ['personalTrainer', 'members', 'gym', 'transactions'],
+      order: {
+        sessionDate: 'ASC',
+      },
+    });
+
+    // Transform sessions for calendar view
+    const calendarSessions = sessions.map((session) => ({
+      id: session.id,
+      personalTrainer: {
+        id: session.personalTrainer?.id,
+        firstName: session.personalTrainer?.firstName,
+        lastName: session.personalTrainer?.lastName,
+        email: session.personalTrainer?.email,
+        phone: session.personalTrainer?.phoneNumber,
+      },
+      members:
+        session.members?.map((member) => ({
+          id: member.id,
+          name: member.name,
+          phone: member.phone,
+          email: member.email,
+        })) || [],
+      sessionDate: session.sessionDate,
+      isCancelled: session.isCancelled,
+      cancelledReason: session.cancelledReason,
+      cancelledAt: session.cancelledAt,
+      sessionPrice: session.sessionPrice,
+      gym: {
+        id: session.gym?.id,
+        name: session.gym?.name,
+      },
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+    }));
+
+    return calendarSessions;
   }
 }

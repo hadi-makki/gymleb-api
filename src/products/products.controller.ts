@@ -33,6 +33,8 @@ import {
   UpdateProductDto,
   UploadFileDto,
 } from './dto/create-product.dto';
+import { TransferProductDto } from './dto/transfer-product.dto';
+import { ReturnProductDto } from './dto/return-product.dto';
 import { ProductsService } from './products.service';
 import { Permissions } from '../decorators/roles/role.enum';
 import { Roles } from '../decorators/roles/Role';
@@ -42,6 +44,7 @@ import { validateImage } from '../utils/helprt-functions';
 import { BadRequestException } from '../error/bad-request-error';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { UserEntity } from 'src/user/user.entity';
+import { isUUID } from 'class-validator';
 
 @ApiTags('Products')
 @Controller('products')
@@ -189,5 +192,64 @@ export class ProductsController {
     @User() user: UserEntity,
   ) {
     return await this.productsService.deleteProduct(id, user, gymId);
+  }
+
+  @Post('transfer/:productId')
+  @ApiOperation({
+    summary: 'Transfer product between gyms',
+    description:
+      'Transfer a product from one gym to another gym owned by the same owner',
+  })
+  @ApiCreatedResponse({
+    description: 'Product transferred successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Product or gym not found',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async transferProduct(
+    @Param('productId') productId: string,
+    @Body() transferProductDto: TransferProductDto,
+    @User() user: UserEntity,
+  ) {
+    if (!isUUID(productId)) {
+      throw new BadRequestException('Invalid product ID');
+    }
+
+    return await this.productsService.transferProduct(
+      productId,
+      transferProductDto.gymId,
+      transferProductDto.transferedToId,
+      transferProductDto.transferQuantity,
+    );
+  }
+
+  @Post('return/:productId')
+  @ApiOperation({
+    summary: 'Return transferred product to original gym',
+    description: 'Return a transferred product back to its original gym',
+  })
+  @ApiCreatedResponse({
+    description: 'Product returned successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Product or gym not found',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async returnProduct(
+    @Param('productId') productId: string,
+    @Body() returnProductDto: ReturnProductDto,
+    @User() user: UserEntity,
+  ) {
+    if (!isUUID(productId)) {
+      throw new BadRequestException('Invalid product ID');
+    }
+    return await this.productsService.returnProductToGym(
+      productId,
+      returnProductDto.returnerGymId,
+      returnProductDto.returnQuantity,
+    );
   }
 }

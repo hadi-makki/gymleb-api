@@ -252,8 +252,6 @@ export class TokenService {
       tokenToUse,
     );
 
-    console.log('checkToken', checkToken);
-
     if (!checkToken) {
       // Token not found in database
       isTokenExpired = true;

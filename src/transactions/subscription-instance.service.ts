@@ -405,4 +405,99 @@ export class TransactionService {
       message: `All transactions for the session marked as ${isPaid ? 'paid' : 'unpaid'}`,
     };
   }
+
+  async createProductsTransferTransaction(dto: {
+    transferedFrom: GymEntity;
+    transferedTo: GymEntity;
+    product: ProductEntity;
+    transferQuantity: number;
+    receiveQuantity: number;
+  }) {
+    const newSendTransactionModel = this.transactionModel.create({
+      title:
+        `Transferred ${dto.transferQuantity} ${dto.product.name} From ` +
+        dto.transferedFrom.name +
+        ' To ' +
+        dto.transferedTo.name,
+      type: TransactionType.PRODUCTS_TRANSFER,
+      transferedFrom: dto.transferedFrom,
+      transferedTo: dto.transferedTo,
+      product: dto.product,
+      transferQuantity: dto.transferQuantity,
+      receiveQuantity: dto.receiveQuantity,
+      paidAmount: 0,
+      gym: dto.transferedFrom,
+    });
+    const createdSendTransaction = await this.transactionModel.save(
+      newSendTransactionModel,
+    );
+    const newReceiveTransactionModel = this.transactionModel.create({
+      title:
+        `Received ${dto.receiveQuantity} ${dto.product.name} From ` +
+        dto.transferedFrom.name +
+        ' To ' +
+        dto.transferedTo.name,
+      type: TransactionType.PRODUCTS_RECEIVE,
+      transferedFrom: dto.transferedTo,
+      transferedTo: dto.transferedFrom,
+      product: dto.product,
+      receiveQuantity: dto.receiveQuantity,
+      paidAmount: 0,
+      gym: dto.transferedTo,
+    });
+    const createdReceiveTransaction = await this.transactionModel.save(
+      newReceiveTransactionModel,
+    );
+    return {
+      newSendTransaction: createdSendTransaction,
+      newReceiveTransaction: createdReceiveTransaction,
+    };
+  }
+
+  async createProductsReturnTransaction(dto: {
+    returnedFrom: GymEntity;
+    returnedTo: GymEntity;
+    product: ProductEntity;
+    returnQuantity: number;
+  }) {
+    const newReturnTransactionModel = this.transactionModel.create({
+      title:
+        `Returned ${dto.returnQuantity} ${dto.product.name} From ` +
+        dto.returnedFrom.name +
+        ' To ' +
+        dto.returnedTo.name,
+      type: TransactionType.PRODUCTS_RETURN,
+      transferedFrom: dto.returnedFrom,
+      transferedTo: dto.returnedTo,
+      product: dto.product,
+      returnedQuantity: dto.returnQuantity,
+      paidAmount: 0,
+      gym: dto.returnedFrom,
+    });
+    const createdReturnTransaction = await this.transactionModel.save(
+      newReturnTransactionModel,
+    );
+
+    const newReceiveTransactionModel = this.transactionModel.create({
+      title:
+        `Returned ${dto.returnQuantity} ${dto.product.name} From ` +
+        dto.returnedTo.name +
+        ' To ' +
+        dto.returnedFrom.name,
+      type: TransactionType.PRODUCTS_RETURN,
+      transferedFrom: dto.returnedTo,
+      transferedTo: dto.returnedFrom,
+      product: dto.product,
+      receiveQuantity: dto.returnQuantity,
+      paidAmount: 0,
+      gym: dto.returnedTo,
+    });
+    const createdReceiveTransaction = await this.transactionModel.save(
+      newReceiveTransactionModel,
+    );
+    return {
+      newReturnTransaction: createdReturnTransaction,
+      newReceiveTransaction: createdReceiveTransaction,
+    };
+  }
 }
