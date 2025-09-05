@@ -585,7 +585,6 @@ export class MemberService {
         transactions: true,
       },
     });
-
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -642,7 +641,7 @@ export class MemberService {
         checkSubscription = getCheckSubscription;
       } else {
         checkSubscription = await this.subscriptionModel.findOne({
-          where: { gym: checkGym },
+          where: { gym: { id: checkGym.id } },
         });
 
         if (!checkSubscription) {
