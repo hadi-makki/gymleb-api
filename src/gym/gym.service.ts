@@ -29,6 +29,8 @@ import {
 import { paginate, FilterOperator } from 'nestjs-paginate';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
+import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
+import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 
 @Injectable()
 export class GymService {
@@ -1446,5 +1448,55 @@ export class GymService {
       sessionTimeInHours: gym.sessionTimeInHours,
       allowedUserResevationsPerSession: gym.allowedUserResevationsPerSession,
     };
+  }
+
+  async updateGymAddress(gymId: string, data: UpdateGymLocationDto) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.address = data.address;
+    // validate google maps link
+    const googleMapsLinkPattern =
+      /^(https?:\/\/)?(www\.)?google\.com\/maps\/.+$/;
+    if (
+      data.googleMapsLink &&
+      googleMapsLinkPattern.test(data.googleMapsLink)
+    ) {
+      gym.googleMapsLink = data.googleMapsLink;
+    }
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
+  async updateSocialMediaLinks(
+    gymId: string,
+    updateSocialMediaDto: UpdateSocialMediaDto,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.socialMediaLinks = {
+      ...gym.socialMediaLinks,
+      ...updateSocialMediaDto,
+    };
+    // Update social media links if provided
+    if (updateSocialMediaDto.instagram) {
+      gym.socialMediaLinks.instagram = updateSocialMediaDto.instagram;
+    }
+    if (updateSocialMediaDto.facebook) {
+      gym.socialMediaLinks.facebook = updateSocialMediaDto.facebook;
+    }
+    if (updateSocialMediaDto.youtube) {
+      gym.socialMediaLinks.youtube = updateSocialMediaDto.youtube;
+    }
+    if (updateSocialMediaDto.tiktok) {
+      gym.socialMediaLinks.tiktok = updateSocialMediaDto.tiktok;
+    }
+
+    await this.gymModel.save(gym);
+    return gym;
   }
 }

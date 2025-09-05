@@ -36,6 +36,9 @@ export class GymEntity extends PgMainEntity {
   address: string;
 
   @Column('text', { nullable: true })
+  googleMapsLink: string;
+
+  @Column('text', { nullable: true })
   email: string;
 
   @Column('text')
@@ -137,4 +140,19 @@ export class GymEntity extends PgMainEntity {
 
   @Column('decimal', { default: 1 })
   sessionTimeInHours: number;
+
+  @Column('jsonb', {
+    default: {
+      instagram: '',
+      facebook: '',
+      youtube: '',
+      tiktok: '',
+    },
+  })
+  socialMediaLinks: {
+    instagram: string;
+    facebook: string;
+    youtube: string;
+    tiktok: string;
+  };
 }

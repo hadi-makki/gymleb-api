@@ -28,6 +28,8 @@ import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
 import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
 import { GymService } from './gym.service';
+import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
+import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -538,5 +540,25 @@ export class GymController {
   @Roles(Permissions.SuperAdmin)
   deleteGym(@Param('gymId') gymId: string) {
     return this.gymService.deleteGym(gymId);
+  }
+
+  @Patch('location/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym location' })
+  async updateGymAddress(
+    @Param('gymId') gymId: string,
+    @Body() body: UpdateGymLocationDto,
+  ) {
+    return await this.gymService.updateGymAddress(gymId, body);
+  }
+
+  @Patch('social-media/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym social media links' })
+  async updateSocialMediaLinks(
+    @Param('gymId') gymId: string,
+    @Body() body: UpdateSocialMediaDto,
+  ) {
+    return await this.gymService.updateSocialMediaLinks(gymId, body);
   }
 }
