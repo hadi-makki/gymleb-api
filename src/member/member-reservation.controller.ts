@@ -26,7 +26,7 @@ export class MemberReservationController {
     private readonly memberReservationService: MemberReservationService,
   ) {}
 
-  @Post('available-slots')
+  @Post('available-slots/:dayOfWeek')
   @ApiOperation({ summary: 'Get available time slots for a specific date' })
   @ApiOkResponse({
     description: 'Available time slots retrieved successfully',
@@ -45,9 +45,11 @@ export class MemberReservationController {
     },
   })
   async getAvailableSlots(
+    @Param('dayOfWeek') dayOfWeek: string,
     @Body() getAvailableSlotsDto: GetAvailableSlotsDto,
   ): Promise<TimeSlot[]> {
     return this.memberReservationService.getAvailableSlots(
+      dayOfWeek,
       getAvailableSlotsDto,
     );
   }
@@ -77,9 +79,10 @@ export class MemberReservationController {
   })
   async getMyReservations(
     @Request() req: any,
+    @Param('gymId') gymId?: string,
   ): Promise<MemberReservationEntity[]> {
     const memberId = req.user.id;
-    return this.memberReservationService.getMemberReservations(memberId);
+    return this.memberReservationService.getMemberReservations(memberId, gymId);
   }
 
   @Delete(':id')

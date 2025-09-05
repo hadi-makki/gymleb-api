@@ -20,6 +20,7 @@ import {
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
 import { Between, In, LessThan, MoreThan, Not, Repository } from 'typeorm';
+import { MemberReservationEntity } from './entities/member-reservation.entity';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
@@ -62,6 +63,8 @@ export class MemberService {
     private readonly gymService: GymService,
     @InjectRepository(PTSessionEntity)
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
+    @InjectRepository(MemberReservationEntity)
+    private readonly reservationModel: Repository<MemberReservationEntity>,
   ) {}
 
   async checkIfUserHasActiveSubscription(memberId: string) {
@@ -155,7 +158,7 @@ export class MemberService {
     }
 
     // Use SQL queries to get subscription data efficiently
-    const [activeSubscription, lastSubscription, attendingDays] =
+    const [activeSubscription, lastSubscription, attendingDays, reservations] =
       await Promise.all([
         // Get active subscription using SQL
         this.checkIfUserHasActiveSubscription(member.id),
@@ -169,6 +172,12 @@ export class MemberService {
             where: { member: { id: member.id } },
             order: { dayOfWeek: 'ASC' },
           }),
+        // Get active reservations for this member in their gym
+        this.reservationModel.find({
+          where: { member: { id: member.id }, isActive: true },
+          relations: ['gym'],
+          order: { reservationDate: 'ASC', startTime: 'ASC' },
+        }),
       ]);
 
     return {
@@ -187,6 +196,7 @@ export class MemberService {
       isNotified: member.isNotified,
       profileImage: member.profileImage,
       attendingDays: attendingDays,
+      reservations,
       trainingLevel: member.trainingLevel,
       trainingGoals: member.trainingGoals,
       trainingPreferences: member.trainingPreferences,

@@ -95,10 +95,19 @@ export class MemberEntity extends PgMainEntity {
   @OneToMany(
     () => MemberAttendingDaysEntity,
     (attendingDay) => attendingDay.member,
+    {
+      onDelete: 'SET NULL',
+    },
   )
   attendingDays: MemberAttendingDaysEntity[];
 
-  @OneToMany(() => MemberReservationEntity, (reservation) => reservation.member)
+  @OneToMany(
+    () => MemberReservationEntity,
+    (reservation) => reservation.member,
+    {
+      onDelete: 'SET NULL',
+    },
+  )
   reservations: MemberReservationEntity[];
 
   @Column('text', { nullable: true })

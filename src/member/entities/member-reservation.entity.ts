@@ -5,14 +5,18 @@ import { GymEntity } from '../../gym/entities/gym.entity';
 
 @Entity('member_reservations')
 export class MemberReservationEntity extends PgMainEntity {
-  @ManyToOne(() => MemberEntity, (member) => member.reservations)
+  @ManyToOne(() => MemberEntity, (member) => member.reservations, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'memberId' })
   member: MemberEntity;
 
   @RelationId((reservation: MemberReservationEntity) => reservation.member)
   memberId: string;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.reservations)
+  @ManyToOne(() => GymEntity, (gym) => gym.reservations, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'gymId' })
   gym: GymEntity;
 

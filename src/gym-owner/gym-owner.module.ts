@@ -19,6 +19,7 @@ import { TransactionModule } from '../transactions/subscription-instance.module'
 import { GymOwnerController } from './gym-owner.controller';
 import { GymOwnerService } from './gym-owner.service';
 import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-days.entity';
+import { MemberReservationEntity } from 'src/member/entities/member-reservation.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -30,6 +31,7 @@ import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-
       PTSessionEntity,
       ProductEntity,
       MemberAttendingDaysEntity,
+      MemberReservationEntity,
     ]),
     AuthenticationModule,
     TransactionModule,

@@ -1,6 +1,7 @@
 import { MediaEntity } from 'src/media/media.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { MemberAttendingDaysEntity } from '../entities/member-attending-days.entity';
+import { MemberReservationEntity } from '../entities/member-reservation.entity';
 
 export class ReturnUserDto {
   id: string;
@@ -21,6 +22,7 @@ export class ReturnUserDto {
   trainingLevel: string;
   trainingGoals: string;
   trainingPreferences: string;
+  reservations?: MemberReservationEntity[];
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

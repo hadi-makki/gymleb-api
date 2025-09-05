@@ -1370,6 +1370,59 @@ export class GymService {
     return gym;
   }
 
+  async updateAllowUserReservations(
+    gymId: string,
+    allowUserResevations: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.allowUserResevations = allowUserResevations;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
+  async updateMaxReservationsPerSession(
+    gymId: string,
+    allowedUserResevationsPerSession: number,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    if (
+      typeof allowedUserResevationsPerSession !== 'number' ||
+      allowedUserResevationsPerSession < 0
+    ) {
+      throw new BadRequestException('Invalid reservations per session value');
+    }
+    gym.allowedUserResevationsPerSession = allowedUserResevationsPerSession;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
+  async updateSessionTimeInHours(gymId: string, sessionTimeInHours: number) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    if (
+      typeof sessionTimeInHours !== 'number' ||
+      sessionTimeInHours <= 0 ||
+      Math.round((sessionTimeInHours * 100) % 25) !== 0
+    ) {
+      throw new BadRequestException(
+        'Session time must be a positive number in 0.25 increments',
+      );
+    }
+    gym.sessionTimeInHours = sessionTimeInHours;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async deleteGym(gymId: string) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -1379,5 +1432,19 @@ export class GymService {
     }
     await this.gymModel.remove(gym);
     return { message: 'Gym deleted successfully' };
+  }
+
+  async getPublicReservationConfig(gymId: string) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    return {
+      allowUserResevations: gym.allowUserResevations,
+      openingDays: gym.openingDays,
+      sessionTimeInHours: gym.sessionTimeInHours,
+      allowedUserResevationsPerSession: gym.allowedUserResevationsPerSession,
+    };
   }
 }

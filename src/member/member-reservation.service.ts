@@ -10,6 +10,7 @@ import { GymEntity } from '../gym/entities/gym.entity';
 import { MemberEntity } from './entities/member.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { GetAvailableSlotsDto } from './dto/get-available-slots.dto';
+import { isUUID } from 'class-validator';
 
 export interface TimeSlot {
   startTime: string;
@@ -36,7 +37,11 @@ export class MemberReservationService {
   ): Promise<MemberReservationEntity> {
     // Check if gym allows reservations
     const gym = await this.gymRepository.findOne({
-      where: { id: createReservationDto.gymId },
+      where: {
+        ...(isUUID(createReservationDto.gymId)
+          ? { id: createReservationDto.gymId }
+          : { gymDashedName: createReservationDto.gymId }),
+      },
     });
 
     if (!gym) {
@@ -56,45 +61,69 @@ export class MemberReservationService {
       throw new NotFoundException('Member not found');
     }
 
-    // Check if member already has a reservation for this time slot
-    const existingReservation = await this.reservationRepository.findOne({
+    // Enforce 1 active reservation per member per day (replace if exists)
+    const reservationDateOnly = new Date(createReservationDto.reservationDate);
+
+    const existingForDay = await this.reservationRepository.findOne({
       where: {
-        memberId,
-        gymId: createReservationDto.gymId,
-        reservationDate: new Date(createReservationDto.reservationDate),
+        member: { id: memberId },
+        gym: {
+          ...(isUUID(createReservationDto.gymId)
+            ? { id: createReservationDto.gymId }
+            : { gymDashedName: createReservationDto.gymId }),
+        },
+        reservationDate: reservationDateOnly,
+        isActive: true,
+      },
+    });
+
+    // Count current reservations for requested slot (capacity check)
+    const currentReservations = await this.reservationRepository.count({
+      where: {
+        gym: {
+          ...(isUUID(createReservationDto.gymId)
+            ? { id: createReservationDto.gymId }
+            : { gymDashedName: createReservationDto.gymId }),
+        },
+        reservationDate: reservationDateOnly,
         startTime: createReservationDto.startTime,
         endTime: createReservationDto.endTime,
         isActive: true,
       },
     });
 
-    if (existingReservation) {
-      throw new BadRequestException(
-        'You already have a reservation for this time slot',
-      );
+    const maxReservations = gym.allowedUserResevationsPerSession;
+
+    if (existingForDay) {
+      // If same slot, return existing
+      if (
+        existingForDay.startTime === createReservationDto.startTime &&
+        existingForDay.endTime === createReservationDto.endTime
+      ) {
+        return existingForDay;
+      }
+
+      if (currentReservations >= maxReservations) {
+        throw new BadRequestException('This time slot is fully booked');
+      }
+
+      // Update existing reservation times (replace)
+      existingForDay.startTime = createReservationDto.startTime;
+      existingForDay.endTime = createReservationDto.endTime;
+      existingForDay.dayOfWeek = createReservationDto.dayOfWeek;
+      existingForDay.notes = createReservationDto.notes;
+      return this.reservationRepository.save(existingForDay);
     }
 
-    // Check availability
-    const availableSlots = await this.getAvailableSlots({
-      gymId: createReservationDto.gymId,
-      date: createReservationDto.reservationDate,
-      dayOfWeek: createReservationDto.dayOfWeek,
-    });
-    const requestedSlot = availableSlots.find(
-      (slot) =>
-        slot.startTime === createReservationDto.startTime &&
-        slot.endTime === createReservationDto.endTime,
-    );
-
-    if (!requestedSlot || !requestedSlot.isAvailable) {
-      throw new BadRequestException('This time slot is not available');
+    if (currentReservations >= maxReservations) {
+      throw new BadRequestException('This time slot is fully booked');
     }
 
-    // Create reservation
+    // Create new reservation
     const reservation = this.reservationRepository.create({
-      memberId,
-      gymId: createReservationDto.gymId,
-      reservationDate: new Date(createReservationDto.reservationDate),
+      member: member,
+      gym: gym,
+      reservationDate: reservationDateOnly,
       startTime: createReservationDto.startTime,
       endTime: createReservationDto.endTime,
       dayOfWeek: createReservationDto.dayOfWeek,
@@ -105,10 +134,19 @@ export class MemberReservationService {
   }
 
   async getAvailableSlots(
+    dayOfWeek: string,
     getAvailableSlotsDto: GetAvailableSlotsDto,
   ): Promise<TimeSlot[]> {
     const gym = await this.gymRepository.findOne({
-      where: { id: getAvailableSlotsDto.gymId },
+      where: {
+        ...(isUUID(getAvailableSlotsDto.gymId)
+          ? {
+              id: getAvailableSlotsDto.gymId,
+            }
+          : {
+              gymDashedName: getAvailableSlotsDto.gymId,
+            }),
+      },
     });
 
     if (!gym) {
@@ -117,8 +155,7 @@ export class MemberReservationService {
 
     // Find the opening day configuration
     const openingDay = gym.openingDays.find(
-      (day) =>
-        day.day.toLowerCase() === getAvailableSlotsDto.dayOfWeek.toLowerCase(),
+      (day) => day.day.toLowerCase() === dayOfWeek.toLowerCase(),
     );
 
     if (!openingDay || !openingDay.isOpen) {
@@ -135,7 +172,11 @@ export class MemberReservationService {
     // Get existing reservations for this date
     const existingReservations = await this.reservationRepository.find({
       where: {
-        gymId: getAvailableSlotsDto.gymId,
+        gym: {
+          ...(isUUID(getAvailableSlotsDto.gymId)
+            ? { id: getAvailableSlotsDto.gymId }
+            : { gymDashedName: getAvailableSlotsDto.gymId }),
+        },
         reservationDate: new Date(getAvailableSlotsDto.date),
         isActive: true,
       },
@@ -143,11 +184,14 @@ export class MemberReservationService {
 
     // Calculate availability for each slot
     const availableSlots: TimeSlot[] = timeSlots.map((slot) => {
+      console.log('slot', slot);
       const slotReservations = existingReservations.filter(
         (reservation) =>
-          reservation.startTime === slot.startTime &&
-          reservation.endTime === slot.endTime,
+          reservation.startTime.includes(slot.startTime) &&
+          reservation.endTime.includes(slot.endTime),
       );
+
+      console.log('slotReservations', slotReservations);
 
       const currentReservations = slotReservations.length;
       const maxReservations = gym.allowedUserResevationsPerSession;
@@ -167,9 +211,14 @@ export class MemberReservationService {
 
   async getMemberReservations(
     memberId: string,
+    gymId?: string,
   ): Promise<MemberReservationEntity[]> {
     return this.reservationRepository.find({
-      where: { memberId, isActive: true },
+      where: {
+        member: { id: memberId },
+        gym: { ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }) },
+        isActive: true,
+      },
       relations: ['gym'],
       order: { reservationDate: 'ASC', startTime: 'ASC' },
     });

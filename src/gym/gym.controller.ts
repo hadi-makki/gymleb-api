@@ -169,6 +169,35 @@ export class GymController {
     return this.gymService.getGymByGymName(gymName);
   }
 
+  @Get('public-reservation-config/:gymId')
+  @ApiOperation({ summary: 'Get public reservation configuration for a gym' })
+  @ApiOkResponse({
+    description: 'Reservation configuration retrieved successfully.',
+    schema: {
+      type: 'object',
+      properties: {
+        allowUserResevations: { type: 'boolean' },
+        openingDays: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              day: { type: 'string' },
+              openingTime: { type: 'string' },
+              closingTime: { type: 'string' },
+              isOpen: { type: 'boolean' },
+            },
+          },
+        },
+        sessionTimeInHours: { type: 'number' },
+        allowedUserResevationsPerSession: { type: 'number' },
+      },
+    },
+  })
+  getPublicReservationConfig(@Param('gymId') gymId: string) {
+    return this.gymService.getPublicReservationConfig(gymId);
+  }
+
   @Patch('day/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update a gym day' })
@@ -463,6 +492,45 @@ export class GymController {
     @Body() body: { allowUserSignUp: boolean },
   ) {
     return this.gymService.updateAllowUserSignUp(gymId, body.allowUserSignUp);
+  }
+
+  @Patch('allow-user-reservations/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym allow user reservations setting' })
+  updateAllowUserReservations(
+    @Param('gymId') gymId: string,
+    @Body() body: { allowUserResevations: boolean },
+  ) {
+    return this.gymService.updateAllowUserReservations(
+      gymId,
+      body.allowUserResevations,
+    );
+  }
+
+  @Patch('max-reservations-per-session/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update max reservations allowed per session' })
+  updateMaxReservationsPerSession(
+    @Param('gymId') gymId: string,
+    @Body() body: { allowedUserResevationsPerSession: number },
+  ) {
+    return this.gymService.updateMaxReservationsPerSession(
+      gymId,
+      body.allowedUserResevationsPerSession,
+    );
+  }
+
+  @Patch('session-time/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym session time in hours (0.25 steps)' })
+  updateSessionTime(
+    @Param('gymId') gymId: string,
+    @Body() body: { sessionTimeInHours: number },
+  ) {
+    return this.gymService.updateSessionTimeInHours(
+      gymId,
+      body.sessionTimeInHours,
+    );
   }
 
   @Delete('admin/delete-gym/:gymId')
