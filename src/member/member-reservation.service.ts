@@ -185,14 +185,11 @@ export class MemberReservationService {
 
     // Calculate availability for each slot
     const availableSlots: TimeSlot[] = timeSlots.map((slot) => {
-      console.log('slot', slot);
       const slotReservations = existingReservations.filter(
         (reservation) =>
           reservation.startTime.includes(slot.startTime) &&
           reservation.endTime.includes(slot.endTime),
       );
-
-      console.log('slotReservations', slotReservations);
 
       const currentReservations = slotReservations.length;
       const maxReservations = gym.allowedUserResevationsPerSession;

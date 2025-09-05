@@ -200,6 +200,7 @@ export class MemberService {
       trainingLevel: member.trainingLevel,
       trainingGoals: member.trainingGoals,
       trainingPreferences: member.trainingPreferences,
+      trainingPrograms: member.trainingPrograms,
     };
   }
 
@@ -834,7 +835,13 @@ export class MemberService {
   async getMe(id: string) {
     const checkMember = await this.memberModel.findOne({
       where: { id },
-      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      relations: [
+        'gym',
+        'subscription',
+        'transactions',
+        'attendingDays',
+        'trainingPrograms',
+      ],
     });
 
     return await this.returnMember(checkMember);

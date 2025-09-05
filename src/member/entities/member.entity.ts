@@ -18,6 +18,7 @@ import { MediaEntity } from 'src/media/media.entity';
 import { MemberAttendingDaysEntity } from './member-attending-days.entity';
 import { MemberReservationEntity } from './member-reservation.entity';
 import * as bcrypt from 'bcrypt';
+import { MemberTrainingProgramEntity } from './member-training-program.entity';
 
 export enum TrainingLevel {
   BEGINNER = 'beginner',
@@ -118,6 +119,12 @@ export class MemberEntity extends PgMainEntity {
 
   @Column('text', { nullable: true })
   trainingPreferences: string | null;
+
+  @OneToMany(
+    () => MemberTrainingProgramEntity,
+    (trainingProgram) => trainingProgram.member,
+  )
+  trainingPrograms: MemberTrainingProgramEntity[];
 
   static async isPasswordMatch(
     password: string,
