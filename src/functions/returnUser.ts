@@ -1,4 +1,4 @@
-import { getNavItems } from 'src/utils/navigations copy';
+import { getNavItems } from 'src/utils/navigations';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { UserEntity } from 'src/user/user.entity';
 
