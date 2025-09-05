@@ -29,4 +29,19 @@ export class CreatePersonalTrainerDto {
   @ApiProperty({ required: false, type: 'string', format: 'binary' })
   @IsOptional()
   profileImage?: Express.Multer.File;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  shiftStartTime?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  shiftEndTime?: string;
 }

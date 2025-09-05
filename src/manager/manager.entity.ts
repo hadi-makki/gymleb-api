@@ -83,6 +83,9 @@ export class ManagerEntity extends PgMainEntity {
   @Column('time', { nullable: true })
   shiftEndTime: string;
 
+  @Column('text', { nullable: true })
+  description: string;
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,

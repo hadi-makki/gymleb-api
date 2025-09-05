@@ -128,6 +128,22 @@ export class PersonalTrainersService {
       });
     }
 
+    // Update additional fields if provided
+    const updateData: any = {};
+    if (createPersonalTrainerDto.description !== undefined) {
+      updateData.description = createPersonalTrainerDto.description;
+    }
+    if (createPersonalTrainerDto.shiftStartTime !== undefined) {
+      updateData.shiftStartTime = createPersonalTrainerDto.shiftStartTime;
+    }
+    if (createPersonalTrainerDto.shiftEndTime !== undefined) {
+      updateData.shiftEndTime = createPersonalTrainerDto.shiftEndTime;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.personalTrainerEntity.update(personalTrainer.id, updateData);
+    }
+
     return personalTrainer;
   }
 
@@ -173,6 +189,16 @@ export class PersonalTrainersService {
       personalTrainer.lastName = updatePersonalTrainerDto.lastName;
       personalTrainer.email = updatePersonalTrainerDto.email;
       personalTrainer.phoneNumber = updatePersonalTrainerDto.phone;
+      if (updatePersonalTrainerDto.description) {
+        personalTrainer.description = updatePersonalTrainerDto.description;
+      }
+      if (updatePersonalTrainerDto.shiftStartTime) {
+        personalTrainer.shiftStartTime =
+          updatePersonalTrainerDto.shiftStartTime;
+      }
+      if (updatePersonalTrainerDto.shiftEndTime) {
+        personalTrainer.shiftEndTime = updatePersonalTrainerDto.shiftEndTime;
+      }
       if (updatePersonalTrainerDto.password) {
         personalTrainer.password = await ManagerEntity.hashPassword(
           updatePersonalTrainerDto.password,
@@ -184,6 +210,16 @@ export class PersonalTrainersService {
       personalTrainer.lastName = updatePersonalTrainerDto.lastName;
       personalTrainer.email = updatePersonalTrainerDto.email;
       personalTrainer.phoneNumber = updatePersonalTrainerDto.phone;
+      if (updatePersonalTrainerDto.description) {
+        personalTrainer.description = updatePersonalTrainerDto.description;
+      }
+      if (updatePersonalTrainerDto.shiftStartTime) {
+        personalTrainer.shiftStartTime =
+          updatePersonalTrainerDto.shiftStartTime;
+      }
+      if (updatePersonalTrainerDto.shiftEndTime) {
+        personalTrainer.shiftEndTime = updatePersonalTrainerDto.shiftEndTime;
+      }
       if (updatePersonalTrainerDto.password) {
         personalTrainer.password = await ManagerEntity.hashPassword(
           updatePersonalTrainerDto.password,
