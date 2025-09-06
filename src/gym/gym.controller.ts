@@ -104,6 +104,18 @@ export class GymController {
     return this.gymService.getGymAnalytics(user, start, end, gymId);
   }
 
+  @Get('super-admin/analytics/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  getSuperAdminGymAnalytics(
+    @User() user: ManagerEntity,
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getGymAnalytics(user, start, end, gymId);
+  }
+
   // Admin endpoints to query by owner id
   @Get('admin/:ownerId/analytics')
   @UseGuards(ManagerAuthGuard)
