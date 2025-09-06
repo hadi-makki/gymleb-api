@@ -129,6 +129,15 @@ export const navItems: NavItem[] = [
   },
 
   // Subscriptions
+  // Admin Only (SuperAdmin)
+  {
+    title: 'Super Admin Dashboard',
+    url: '/super-admin/overview',
+    icon: 'building-2',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
   {
     title: 'Available Subscriptions',
     url: '/subscriptions/available',
@@ -148,15 +157,6 @@ export const navItems: NavItem[] = [
     roles: [Permissions.SuperAdmin],
   },
 
-  // Admin Only (SuperAdmin)
-  {
-    title: 'Super Admin Dashboard',
-    url: '/super-admin/overview',
-    icon: 'building-2',
-    isActive: false,
-    items: [],
-    roles: [Permissions.SuperAdmin],
-  },
   {
     title: 'Owners Management',
     url: '/super-admin/owners-management',
