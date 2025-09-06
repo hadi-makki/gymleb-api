@@ -92,6 +92,7 @@ export class TransactionService {
     ownerSubscriptionTypeId: string;
     startDate?: string;
     endDate?: string;
+    resetNotifications: boolean;
   }) {
     const type = await this.ownerSubscriptionTypeRepository.findOne({
       where: { id: params.ownerSubscriptionTypeId },
@@ -100,10 +101,11 @@ export class TransactionService {
       throw new NotFoundException('Owner subscription type not found');
     }
 
-    params.gym.membersNotified = 0;
-    params.gym.welcomeMessageNotified = 0;
-
-    await this.gymRepository.save(params.gym);
+    if (params.resetNotifications) {
+      params.gym.membersNotified = 0;
+      params.gym.welcomeMessageNotified = 0;
+      await this.gymRepository.save(params.gym);
+    }
 
     const endDate = params.endDate
       ? new Date(params.endDate)

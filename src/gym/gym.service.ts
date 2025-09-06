@@ -1592,6 +1592,7 @@ export class GymService {
   async setSubscriptionToGym(
     subscriptionTypeId: string,
     gymId: string,
+    resetNotifications: boolean,
     startDate?: string,
     endDate?: string,
   ) {
@@ -1607,11 +1608,14 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
+    console.log('resetNotifications', resetNotifications);
+
     await this.transactionService.createOwnerSubscriptionAssignmentInstance({
       gym: gym,
       ownerSubscriptionTypeId: subscriptionTypeId,
       startDate,
       endDate,
+      resetNotifications,
     });
 
     return {

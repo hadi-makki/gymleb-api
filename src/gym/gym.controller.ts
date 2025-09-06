@@ -575,6 +575,7 @@ export class GymController {
     return await this.gymService.setSubscriptionToGym(
       body.subscriptionTypeId,
       gymId,
+      body.resetNotifications,
       body.startDate,
       body.endDate,
     );

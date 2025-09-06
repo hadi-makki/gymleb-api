@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID, IsOptional, IsDateString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsDateString,
+  IsBoolean,
+} from 'class-validator';
 
 export class SetSubscriptionDto {
   @ApiProperty({
@@ -28,4 +35,13 @@ export class SetSubscriptionDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @ApiProperty({
+    description: 'Whether to reset notifications',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  resetNotifications?: boolean;
 }
