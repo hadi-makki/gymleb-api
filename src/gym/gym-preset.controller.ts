@@ -14,6 +14,7 @@ import { CreateGymPresetDto, UpdateGymPresetDto } from './dto/gym-preset.dto';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Permissions } from '../decorators/roles/role.enum';
 import { Roles } from '../decorators/roles/Role';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 
 @ApiTags('Gym Presets')
 @Controller('gym-presets')
@@ -59,6 +60,7 @@ export class GymPresetController {
   @Patch(':gymId/:id')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Update gym preset',
     description: 'Update a time preset for a gym',
@@ -74,6 +76,7 @@ export class GymPresetController {
   @Delete(':gymId/:id')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Delete gym preset',
     description: 'Delete a time preset for a gym',

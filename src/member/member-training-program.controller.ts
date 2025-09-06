@@ -20,6 +20,8 @@ import { MemberEntity } from './entities/member.entity';
 import { CreateTrainingProgramDto } from './dto/create-training-program.dto';
 import { UpdateTrainingProgramDto } from './dto/update-training-program.dto';
 import { MemberTrainingProgramService } from './member-training-program.service';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
+import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 
 @ApiTags('Member Training Programs')
 @Controller('member-training-program')
@@ -31,6 +33,8 @@ export class MemberTrainingProgramController {
   @Post(':gymId/:memberId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   @ApiOperation({
     summary: 'Create or update training program for a member',
     description:
@@ -57,6 +61,8 @@ export class MemberTrainingProgramController {
   @Get(':gymId/:memberId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateMemberRelatedToGym()
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Get all training programs for a member',
     description: 'Get all training programs for a specific member',
@@ -80,6 +86,8 @@ export class MemberTrainingProgramController {
   @Get(':gymId/:memberId/:dayOfWeek')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateMemberRelatedToGym()
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Get training program for a specific day',
     description:
@@ -106,6 +114,8 @@ export class MemberTrainingProgramController {
   @Patch(':gymId/:memberId/:dayOfWeek')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateMemberRelatedToGym()
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Update training program for a specific day',
     description:
@@ -134,6 +144,8 @@ export class MemberTrainingProgramController {
   @Delete(':gymId/:memberId/:dayOfWeek')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateMemberRelatedToGym()
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Delete training program for a specific day',
     description:

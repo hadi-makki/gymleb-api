@@ -16,6 +16,7 @@ import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 
 @Controller('subscription')
 @UseGuards(ManagerAuthGuard)
@@ -23,6 +24,7 @@ export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 
   @Post('create/:gymId')
+  @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner, Permissions.subscriptions)
   async create(
     @Body() createSubscriptionDto: CreateSubscriptionDto,
@@ -37,6 +39,7 @@ export class SubscriptionController {
   }
 
   @Get('/gym/:gymId')
+  @ValidateGymRelatedToOwner()
   @Roles(Permissions.Any)
   async findAll(@Param('gymId') gymId: string) {
     return await this.subscriptionService.findAll(gymId);
@@ -49,6 +52,7 @@ export class SubscriptionController {
   }
 
   @Patch(':gymId/:id')
+  @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner, Permissions.subscriptions)
   async update(
     @Param('id') id: string,
@@ -63,6 +67,7 @@ export class SubscriptionController {
   }
 
   @Delete(':gymId/:id')
+  @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner, Permissions.subscriptions)
   async remove(@Param('id') id: string, @Param('gymId') gymId: string) {
     return await this.subscriptionService.remove(id, gymId);
@@ -75,6 +80,7 @@ export class SubscriptionController {
   }
 
   @Delete('delete/subscription-instance/:gymId/:id')
+  @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner, Permissions.subscriptions)
   async deleteSubscriptionInstance(
     @Param('id') id: string,

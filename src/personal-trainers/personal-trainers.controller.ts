@@ -32,6 +32,8 @@ import { PersonalTrainersService } from './personal-trainers.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
+import { ValidatePersonalTrainerRelatedToGym } from 'src/decorators/validate-personal-trainer-related-to-gym.decorator';
 
 @Controller('personal-trainers')
 export class PersonalTrainersController {
@@ -42,6 +44,7 @@ export class PersonalTrainersController {
   @Post(':gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
+  @ValidateGymRelatedToOwner()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new personal trainer' })
   @ApiConsumes('multipart/form-data')
@@ -89,6 +92,7 @@ export class PersonalTrainersController {
   @Get('gym/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all personal trainers for a specific gym' })
   @ApiResponse({
@@ -139,9 +143,11 @@ export class PersonalTrainersController {
     return this.personalTrainersService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':gymId/:personalpersonalTrainerId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a personal trainer by ID' })
   @ApiConsumes('multipart/form-data')
@@ -152,7 +158,8 @@ export class PersonalTrainersController {
   })
   @UseInterceptors(FileInterceptor('profileImage'))
   update(
-    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+    @Param('personalpersonalTrainerId') personalpersonalTrainerId: string,
     @Body() updatePersonalTrainerDto: UpdatePersonalTrainerDto,
     @UploadedFile(
       new ParseFilePipe({
@@ -165,28 +172,35 @@ export class PersonalTrainersController {
     profileImage?: Express.Multer.File,
   ) {
     return this.personalTrainersService.update(
-      id,
+      personalpersonalTrainerId,
       updatePersonalTrainerDto,
       profileImage,
     );
   }
 
-  @Delete(':id')
+  @Delete(':gymId/:personalpersonalTrainerId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a personal trainer by ID' })
   @ApiResponse({
     status: 200,
     description: 'The personal trainer has been successfully deleted.',
   })
-  remove(@Param('id') id: string) {
-    return this.personalTrainersService.remove(id);
+  remove(
+    @Param('gymId') gymId: string,
+    @Param('personalpersonalTrainerId') personalpersonalTrainerId: string,
+  ) {
+    return this.personalTrainersService.remove(personalpersonalTrainerId);
   }
 
-  @Patch(':id/read-only')
+  @Patch(':gymId/:personalpersonalTrainerId/read-only')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Toggle personal trainer read-only status' })
   @ApiResponse({
@@ -194,11 +208,12 @@ export class PersonalTrainersController {
     description: 'The personal trainer read-only status has been updated.',
   })
   toggleReadOnly(
-    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+    @Param('personalpersonalTrainerId') personalpersonalTrainerId: string,
     @Body() body: { isReadOnly: boolean },
   ) {
     return this.personalTrainersService.toggleReadOnlyPersonalTrainer(
-      id,
+      personalpersonalTrainerId,
       body.isReadOnly,
     );
   }
@@ -341,9 +356,11 @@ export class PersonalTrainersController {
     return this.personalTrainersService.deleteSession(sessionId);
   }
 
-  @Get('trainer/:trainerId/sessions/:gymId')
+  @Get('trainer/:gymId/:personalTrainerId/sessions')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all sessions for a specific trainer' })
   @ApiResponse({
@@ -351,15 +368,20 @@ export class PersonalTrainersController {
     description: 'The sessions have been successfully retrieved.',
   })
   getTrainerSessions(
-    @Param('trainerId') trainerId: string,
     @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
   ) {
-    return this.personalTrainersService.getTrainerSessions(trainerId, gymId);
+    return this.personalTrainersService.getTrainerSessions(
+      personalTrainerId,
+      gymId,
+    );
   }
 
-  @Get('trainer/:trainerId/clients/:gymId')
+  @Get('trainer/:gymId/:personalTrainerId/clients')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all clients for a specific trainer' })
   @ApiResponse({
@@ -367,15 +389,20 @@ export class PersonalTrainersController {
     description: 'The clients have been successfully retrieved.',
   })
   getTrainerClients(
-    @Param('trainerId') trainerId: string,
     @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
   ) {
-    return this.personalTrainersService.getTrainerClients(trainerId, gymId);
+    return this.personalTrainersService.getTrainerClients(
+      personalTrainerId,
+      gymId,
+    );
   }
 
-  @Get('trainer/:trainerId/client/:memberId/sessions/:gymId')
+  @Get('trainer/:gymId/:personalTrainerId/client/:memberId/sessions')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get all sessions for a specific client of a specific trainer',
@@ -385,20 +412,22 @@ export class PersonalTrainersController {
     description: 'The sessions have been successfully retrieved.',
   })
   getTrainerClientSessions(
-    @Param('trainerId') trainerId: string,
-    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
+    @Param('memberId') memberId: string,
   ) {
     return this.personalTrainersService.getTrainerClientSessions(
-      trainerId,
+      personalTrainerId,
       memberId,
       gymId,
     );
   }
 
-  @Get('trainer/:trainerId/group-sessions/:gymId')
+  @Get('trainer/:gymId/:personalTrainerId/group-sessions')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get sessions for a client group (same session members)',
@@ -408,8 +437,8 @@ export class PersonalTrainersController {
     description: 'The sessions have been successfully retrieved.',
   })
   getTrainerGroupSessions(
-    @Param('trainerId') trainerId: string,
     @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
     @Query('memberIds') memberIds: string,
   ) {
     const ids = (memberIds || '')
@@ -417,7 +446,7 @@ export class PersonalTrainersController {
       .map((s) => s.trim())
       .filter((s) => !!s);
     return this.personalTrainersService.getTrainerGroupSessions(
-      trainerId,
+      personalTrainerId,
       gymId,
       ids,
     );

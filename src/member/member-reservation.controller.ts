@@ -21,6 +21,8 @@ import { AuthGuard } from '../guards/auth.guard';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
+import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 
 @ApiTags('Member Reservations')
 @Controller('member-reservations')

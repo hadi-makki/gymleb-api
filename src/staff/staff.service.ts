@@ -64,6 +64,9 @@ export class StaffService {
           (alias) => `NOT (${alias} @> '["${Permissions.GymOwner}"]'::jsonb)`,
         ),
       },
+      order: {
+        createdAt: 'DESC',
+      },
     });
     return staff.map((m) => returnManager(m));
   }

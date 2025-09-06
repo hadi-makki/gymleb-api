@@ -32,6 +32,7 @@ import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { SetSubscriptionDto } from './dto/set-subscription.dto';
 import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -74,6 +75,7 @@ export class GymController {
 
   @Delete(':id')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
   @ApiOperation({ summary: 'Delete a gym by id' })
   @ApiOkResponse({
     description: 'The gym has been successfully deleted.',
@@ -86,6 +88,7 @@ export class GymController {
   @Get('analytics/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get gym analytics' })
+  @ValidateGymRelatedToOwner()
   getGymAnalytics(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
@@ -110,6 +113,7 @@ export class GymController {
   @Get('admin/analytics/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
+  @ValidateGymRelatedToOwner()
   async getGymAnalyticsByOwnerIdAndGymId(
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
@@ -205,6 +209,7 @@ export class GymController {
   @Patch('day/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update a gym day' })
+  @ValidateGymRelatedToOwner()
   @ApiOkResponse({
     description: 'The gym day has been successfully updated.',
     type: GymEntity,
@@ -227,6 +232,7 @@ export class GymController {
   @Patch('update/name/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym name' })
+  @ValidateGymRelatedToOwner()
   updateGymName(
     @Param('gymId') gymId: string,
     @Body() updateGymNameDto: UpdateGymNameDto,
@@ -237,6 +243,7 @@ export class GymController {
   @Patch('finished-page-setup/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set gym finished page setup' })
+  @ValidateGymRelatedToOwner()
   async setGymFinishedPageSetup(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
@@ -248,6 +255,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: "Update women's-only times" })
+  @ValidateGymRelatedToOwner()
   async setWomensTimes(
     @Param('gymId') gymId: string,
     @Body()
@@ -261,6 +269,7 @@ export class GymController {
   @Patch('update/note/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym note' })
+  @ValidateGymRelatedToOwner()
   updateGymNote(
     @Param('gymId') gymId: string,
     @Body() updateGymNoteDto: UpdateGymNoteDto,
@@ -276,6 +285,7 @@ export class GymController {
     description: 'The transaction history has been successfully retrieved.',
     type: [TransactionEntity],
   })
+  @ValidateGymRelatedToOwner()
   getTransactionHistory(
     @User() user: ManagerEntity,
     @Query('page') page = '1',
@@ -301,6 +311,7 @@ export class GymController {
     description: 'The gym offer has been successfully added.',
     type: GymEntity,
   })
+  @ValidateGymRelatedToOwner()
   addGymOffer(@Param('gymId') gymId: string, @Body() addOfferDto: AddOfferDto) {
     return this.gymService.addGymOffer(gymId, addOfferDto);
   }
@@ -310,6 +321,7 @@ export class GymController {
   @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: "Update gym's PT session cut percentage" })
   @ApiOkResponse({ description: 'Updated gym', type: GymEntity })
+  @ValidateGymRelatedToOwner()
   updatePTPercentage(
     @Param('gymId') gymId: string,
     @Body() body: UpdatePTPercentageDto,
@@ -478,6 +490,7 @@ export class GymController {
   @Patch('show-personal-trainers/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym show personal trainers setting' })
+  @ValidateGymRelatedToOwner()
   updateShowPersonalTrainers(
     @Param('gymId') gymId: string,
     @Body() body: { showPersonalTrainers: boolean },
@@ -491,6 +504,7 @@ export class GymController {
   @Patch('allow-user-signup/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym allow user signup setting' })
+  @ValidateGymRelatedToOwner()
   updateAllowUserSignUp(
     @Param('gymId') gymId: string,
     @Body() body: { allowUserSignUp: boolean },
@@ -501,6 +515,7 @@ export class GymController {
   @Patch('allow-user-reservations/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym allow user reservations setting' })
+  @ValidateGymRelatedToOwner()
   updateAllowUserReservations(
     @Param('gymId') gymId: string,
     @Body() body: { allowUserResevations: boolean },
@@ -514,6 +529,7 @@ export class GymController {
   @Patch('max-reservations-per-session/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update max reservations allowed per session' })
+  @ValidateGymRelatedToOwner()
   updateMaxReservationsPerSession(
     @Param('gymId') gymId: string,
     @Body() body: { allowedUserResevationsPerSession: number },
@@ -527,6 +543,7 @@ export class GymController {
   @Patch('session-time/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym session time in hours (0.25 steps)' })
+  @ValidateGymRelatedToOwner()
   updateSessionTime(
     @Param('gymId') gymId: string,
     @Body() body: { sessionTimeInHours: number },
@@ -547,6 +564,7 @@ export class GymController {
   @Patch('location/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym location' })
+  @ValidateGymRelatedToOwner()
   async updateGymAddress(
     @Param('gymId') gymId: string,
     @Body() body: UpdateGymLocationDto,
@@ -557,6 +575,7 @@ export class GymController {
   @Patch('social-media/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym social media links' })
+  @ValidateGymRelatedToOwner()
   async updateSocialMediaLinks(
     @Param('gymId') gymId: string,
     @Body() body: UpdateSocialMediaDto,
@@ -568,6 +587,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set subscription to gym' })
   @ApiBody({ type: SetSubscriptionDto })
+  @ValidateGymRelatedToOwner()
   async setSubscriptionToGym(
     @Param('gymId') gymId: string,
     @Body() body: SetSubscriptionDto,
@@ -585,6 +605,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym auto-renewal status' })
   @ApiOkResponse({ description: 'Auto-renewal status updated successfully' })
+  @ValidateGymRelatedToOwner()
   async updateAutoRenew(
     @Param('gymId') gymId: string,
     @Body() updateAutoRenewDto: UpdateAutoRenewDto,

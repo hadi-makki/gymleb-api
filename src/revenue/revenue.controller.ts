@@ -18,6 +18,7 @@ import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { ValidateRevenueRelatedToGym } from 'src/decorators/validate-revenue-related-to-gym.decorator';
 
 @Controller('revenue')
 @Roles(Permissions.GymOwner, Permissions.revenue)
@@ -26,6 +27,7 @@ export class RevenueController {
   constructor(private readonly revenueService: RevenueService) {}
 
   @Post(':gymId')
+  @ValidateRevenueRelatedToGym()
   @ApiOperation({ summary: 'Create a revenue entry' })
   create(
     @User() user: ManagerEntity,
@@ -36,6 +38,7 @@ export class RevenueController {
   }
 
   @Get('/gym/:gymId')
+  @ValidateRevenueRelatedToGym()
   @ApiOperation({
     summary: 'List revenue entries (optionally filtered by date range)',
   })
@@ -51,6 +54,7 @@ export class RevenueController {
   }
 
   @Get('total/:gymId')
+  @ValidateRevenueRelatedToGym()
   @ApiOperation({ summary: 'Get total revenue for a date range' })
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
@@ -66,6 +70,7 @@ export class RevenueController {
   }
 
   @Patch(':gymId/:id')
+  @ValidateRevenueRelatedToGym()
   @ApiOperation({ summary: 'Update a revenue entry' })
   update(
     @User() user: ManagerEntity,
@@ -77,6 +82,7 @@ export class RevenueController {
   }
 
   @Delete(':gymId/:id')
+  @ValidateRevenueRelatedToGym()
   @ApiOperation({ summary: 'Delete a revenue entry' })
   remove(
     @User() user: ManagerEntity,

@@ -123,6 +123,9 @@ export class MemberEntity extends PgMainEntity {
   @OneToMany(
     () => MemberTrainingProgramEntity,
     (trainingProgram) => trainingProgram.member,
+    {
+      onDelete: 'SET NULL',
+    },
   )
   trainingPrograms: MemberTrainingProgramEntity[];
 

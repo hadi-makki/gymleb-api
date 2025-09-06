@@ -20,6 +20,7 @@ import {
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { TransactionService } from './subscription-instance.service';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -39,6 +40,26 @@ export class TransactionController {
     @Param('gymId') gymId: string,
   ) {
     return this.service.deleteSubscriptionInstance(id, manager, gymId);
+  }
+
+  @Delete('/delete/bulk/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ValidateGymRelatedToOwner()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  async bulkDelete(
+    @Param('gymId') gymId: string,
+    @User() manager: ManagerEntity,
+    @Body() body: { ids: string[] },
+  ) {
+    return this.service.bulkDeleteSubscriptionInstances(
+      body.ids,
+      manager,
+      gymId,
+    );
   }
 
   @Patch(':gymId/:id/payment-status')

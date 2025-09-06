@@ -43,6 +43,8 @@ import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.
 import { SignupMemberDto } from './dto/signup-member.dto';
 import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
+import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -51,6 +53,7 @@ export class MemberController {
   @ApiConsumes('multipart/form-data')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createMemberDto: CreateMemberDto,
@@ -119,6 +122,7 @@ export class MemberController {
   @Get('gym/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   async findAll(
     @User() manager: ManagerEntity,
     @Query('search') search: string,
@@ -136,49 +140,60 @@ export class MemberController {
     );
   }
 
-  @Get('get-member/:gymId/:id')
+  @Get('get-member/:gymId/:memberId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
-  async findOne(@Param('id') id: string, @Param('gymId') gymId: string) {
-    return await this.memberService.findOne(id, gymId);
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  async findOne(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.findOne(memberId, gymId);
   }
 
-  @Patch(':gymId/:id')
+  @Patch(':gymId/:memberId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   async update(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Body() updateMemberDto: UpdateMemberDto,
     @Param('gymId') gymId: string,
   ) {
-    return await this.memberService.update(id, updateMemberDto, gymId);
+    return await this.memberService.update(memberId, updateMemberDto, gymId);
   }
 
-  @Post(':gymId/:id/delete')
+  @Post(':gymId/:memberId/delete')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   async remove(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
     @Body() deleteMemberDto: DeleteMemberDto,
   ) {
     return await this.memberService.remove(
-      id,
+      memberId,
       gymId,
       deleteMemberDto.deleteTransactions || false,
     );
   }
 
-  @Post(':gymId/:id/renew')
+  @Post(':gymId/:memberId/renew')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   async renewSubscription(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Body() renewSubscriptionDto: RenewSubscriptionDto,
     @Param('gymId') gymId: string,
   ) {
     return await this.memberService.renewSubscription(
-      id,
+      memberId,
       renewSubscriptionDto.subscriptionId,
       gymId,
       renewSubscriptionDto.giveFullDay,
@@ -189,6 +204,7 @@ export class MemberController {
   @Get('expired/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   async getExpiredMembers(
     @User() manager: ManagerEntity,
     @Query('page') page = '1',
@@ -231,14 +247,19 @@ export class MemberController {
     return await this.memberService.getMember(id);
   }
 
-  @Post(':gymId/:id/invalidate')
+  @Post(':gymId/:memberId/invalidate')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   async invalidateMemberSubscription(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
   ) {
-    return await this.memberService.invalidateMemberSubscription(id, gymId);
+    return await this.memberService.invalidateMemberSubscription(
+      memberId,
+      gymId,
+    );
   }
 
   @Post('fix-usernames-and-passcodes')
@@ -246,7 +267,7 @@ export class MemberController {
     return await this.memberService.fixMemberUsernamesAndPasscodes();
   }
 
-  @Post('update-profile-image/:gymId/:id')
+  @Post('update-profile-image/:gymId/:memberId')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Update profile image',
@@ -262,9 +283,11 @@ export class MemberController {
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   async updateProfileImage(
     @User() manager: ManagerEntity,
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
     @UploadedFile(
       new ParseFilePipe({
@@ -281,7 +304,7 @@ export class MemberController {
       throw new BadRequestException('File must be an image');
     }
     return await this.memberService.updateProfileImage(
-      id,
+      memberId,
       file,
       manager,
       gymId,
@@ -293,19 +316,22 @@ export class MemberController {
     return await this.memberService.fixGymPhoneNumbers();
   }
 
-  @Post(':gymId/:id/reset-password')
+  @Post(':gymId/:memberId/reset-password')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   async resetMemberPassword(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
   ) {
-    return await this.memberService.resetMemberPassword(id, gymId);
+    return await this.memberService.resetMemberPassword(memberId, gymId);
   }
 
   @Post('send-welcome-messages/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   async sendWelcomeMessagesToAllMembers(@Param('gymId') gymId: string) {
     return await this.memberService.sendWelcomeMessageToAllMembers(gymId);
   }
@@ -313,6 +339,7 @@ export class MemberController {
   @Post('bulk-delete/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   async bulkDeleteMembers(
     @Param('gymId') gymId: string,
     @Body() body: { memberIds: string[]; deleteTransactions?: boolean },
@@ -327,6 +354,7 @@ export class MemberController {
   @Post('bulk-notify/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   async bulkNotifyMembers(
     @Param('gymId') gymId: string,
     @Body() body: { memberIds: string[] },
@@ -347,54 +375,60 @@ export class MemberController {
   }
 
   // Attending Days Endpoints
-  @Get(':gymId/:id/attending-days')
+  @Get(':gymId/:memberId/attending-days')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   @ApiOperation({
     summary: 'Get member attending days',
     description: 'Get the attending days and times for a specific member',
   })
   async getMemberAttendingDays(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
   ) {
-    return await this.memberService.getMemberAttendingDays(id, gymId);
+    return await this.memberService.getMemberAttendingDays(memberId, gymId);
   }
 
-  @Patch(':gymId/:id/attending-days')
+  @Patch(':gymId/:memberId/attending-days')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   @ApiOperation({
     summary: 'Update member attending days',
     description: 'Update the attending days and times for a specific member',
   })
   async updateMemberAttendingDays(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
     @Body() updateAttendingDaysDto: UpdateAttendingDaysDto,
   ) {
     return await this.memberService.updateMemberAttendingDays(
-      id,
+      memberId,
       gymId,
       updateAttendingDaysDto,
     );
   }
 
-  @Patch(':gymId/:id/training-preferences')
+  @Patch(':gymId/:memberId/training-preferences')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
   @ApiOperation({
     summary: 'Update member training preferences',
     description:
       'Update the training level, goals, and preferences for a specific member',
   })
   async updateMemberTrainingPreferences(
-    @Param('id') id: string,
+    @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
     @Body() updateTrainingPreferencesDto: UpdateTrainingPreferencesDto,
   ) {
     return await this.memberService.updateMemberTrainingPreferences(
-      id,
+      memberId,
       gymId,
       updateTrainingPreferencesDto,
     );
@@ -420,6 +454,7 @@ export class MemberController {
   @Get('gym-attendances/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
   @ApiOperation({
     summary: 'Get all member attendances for a gym',
     description: 'Get all member attending days for a specific gym',

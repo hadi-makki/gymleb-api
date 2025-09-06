@@ -252,6 +252,81 @@ export class TransactionService {
     };
   }
 
+  async bulkDeleteSubscriptionInstances(
+    subscriptionIds: string[],
+    manager: ManagerEntity,
+    gymId: string,
+  ) {
+    if (!subscriptionIds || subscriptionIds.length === 0) {
+      throw new ForbiddenException('No subscription instances provided');
+    }
+
+    // Find all subscription instances
+    const subscriptionInstances = await this.transactionModel.find({
+      where: { id: In(subscriptionIds) },
+      relations: {
+        gym: {
+          owner: true,
+        },
+        revenue: true,
+        expense: true,
+      },
+    });
+
+    if (subscriptionInstances.length === 0) {
+      throw new NotFoundException('No subscription instances found');
+    }
+
+    // Validate permissions for each subscription instance
+    for (const subscriptionInstance of subscriptionInstances) {
+      if (
+        subscriptionInstance.type ===
+          TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT &&
+        !subscriptionInstance.gym.owner.permissions.includes(
+          Permissions.SuperAdmin,
+        )
+      ) {
+        throw new ForbiddenException(
+          'You are not allowed to delete Owner Subscription Assignment',
+        );
+      }
+    }
+
+    const getManagerGym = await this.gymRepository.findOne({
+      where: { id: gymId },
+    });
+
+    if (!getManagerGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Delete related revenue and expense records first
+    const revenueIds = subscriptionInstances
+      .filter((instance) => instance.type === TransactionType.REVENUE)
+      .map((instance) => instance.revenue?.id)
+      .filter(Boolean);
+
+    const expenseIds = subscriptionInstances
+      .filter((instance) => instance.type === TransactionType.EXPENSE)
+      .map((instance) => instance.expense?.id)
+      .filter(Boolean);
+
+    if (revenueIds.length > 0) {
+      await this.revenueModel.delete({ id: In(revenueIds) });
+    }
+
+    if (expenseIds.length > 0) {
+      await this.expenseModel.delete({ id: In(expenseIds) });
+    }
+
+    // Delete the subscription instances
+    await this.transactionModel.delete({ id: In(subscriptionIds) });
+
+    return {
+      message: `${subscriptionInstances.length} subscription instances deleted successfully`,
+    };
+  }
+
   async createRevenueTransaction(dto: {
     paidAmount: number;
     gym: GymEntity;
