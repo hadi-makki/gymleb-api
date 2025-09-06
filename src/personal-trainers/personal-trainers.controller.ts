@@ -143,7 +143,7 @@ export class PersonalTrainersController {
     return this.personalTrainersService.findOne(id);
   }
 
-  @Patch(':gymId/:personalpersonalTrainerId')
+  @Patch('/update/personal-trainer/:gymId/:personalTrainerId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   @ValidateGymRelatedToOwner()
@@ -159,7 +159,7 @@ export class PersonalTrainersController {
   @UseInterceptors(FileInterceptor('profileImage'))
   update(
     @Param('gymId') gymId: string,
-    @Param('personalpersonalTrainerId') personalpersonalTrainerId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
     @Body() updatePersonalTrainerDto: UpdatePersonalTrainerDto,
     @UploadedFile(
       new ParseFilePipe({
@@ -172,13 +172,13 @@ export class PersonalTrainersController {
     profileImage?: Express.Multer.File,
   ) {
     return this.personalTrainersService.update(
-      personalpersonalTrainerId,
+      personalTrainerId,
       updatePersonalTrainerDto,
       profileImage,
     );
   }
 
-  @Delete(':gymId/:personalpersonalTrainerId')
+  @Delete(':gymId/:personalTrainerId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   @ValidateGymRelatedToOwner()
@@ -191,12 +191,12 @@ export class PersonalTrainersController {
   })
   remove(
     @Param('gymId') gymId: string,
-    @Param('personalpersonalTrainerId') personalpersonalTrainerId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
   ) {
-    return this.personalTrainersService.remove(personalpersonalTrainerId);
+    return this.personalTrainersService.remove(personalTrainerId);
   }
 
-  @Patch(':gymId/:personalpersonalTrainerId/read-only')
+  @Patch(':gymId/:personalTrainerId/read-only')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   @ValidateGymRelatedToOwner()
@@ -209,11 +209,11 @@ export class PersonalTrainersController {
   })
   toggleReadOnly(
     @Param('gymId') gymId: string,
-    @Param('personalpersonalTrainerId') personalpersonalTrainerId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
     @Body() body: { isReadOnly: boolean },
   ) {
     return this.personalTrainersService.toggleReadOnlyPersonalTrainer(
-      personalpersonalTrainerId,
+      personalTrainerId,
       body.isReadOnly,
     );
   }
