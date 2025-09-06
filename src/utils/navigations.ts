@@ -125,11 +125,7 @@ export const navItems: NavItem[] = [
     icon: 'receipt',
     isActive: false,
     items: [],
-    roles: [
-      Permissions.SuperAdmin,
-      Permissions.GymOwner,
-      Permissions.transactions,
-    ],
+    roles: [Permissions.GymOwner, Permissions.transactions],
   },
 
   // Subscriptions
@@ -140,6 +136,16 @@ export const navItems: NavItem[] = [
     isActive: false,
     items: [],
     roles: [Permissions.GymOwner, Permissions.subscriptions],
+  },
+
+  // Transactions
+  {
+    title: 'Super Admin Transactions',
+    url: '/super-admin/transactions',
+    icon: 'receipt',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
   },
 
   // Admin Only (SuperAdmin)

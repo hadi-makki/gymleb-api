@@ -171,4 +171,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isAutoRenew: boolean;
+
+  @Column('boolean', { default: false })
+  isAiChatEnabled: boolean;
 }

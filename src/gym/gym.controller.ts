@@ -32,7 +32,13 @@ import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { SetSubscriptionDto } from './dto/set-subscription.dto';
 import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
+import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
+import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
+import {
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+} from 'src/error/api-responses.decorator';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -375,6 +381,55 @@ export class GymController {
     );
   }
 
+  @Get('admin/all-transactions')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  getAllTransactions(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('type') type?: string,
+    @Query('ownerId') ownerId?: string,
+    @Query('gymId') gymId?: string,
+  ) {
+    return this.gymService.getAllTransactions(
+      Number(limit),
+      Number(page),
+      search || '',
+      type || '',
+      ownerId || '',
+      gymId || '',
+    );
+  }
+
+  @Delete('admin/transaction/:transactionId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiOperation({ summary: 'Delete any transaction (Super Admin only)' })
+  @ApiOkResponse({
+    description: 'Transaction deleted successfully.',
+    type: SuccessMessageReturn,
+  })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  deleteTransaction(@Param('transactionId') transactionId: string) {
+    return this.gymService.deleteTransaction(transactionId);
+  }
+
+  @Delete('admin/transactions/bulk')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiOperation({ summary: 'Bulk delete transactions (Super Admin only)' })
+  @ApiOkResponse({
+    description: 'Transactions deleted successfully.',
+    type: SuccessMessageReturn,
+  })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  bulkDeleteTransactions(@Body() body: { transactionIds: string[] }) {
+    return this.gymService.bulkDeleteTransactions(body.transactionIds);
+  }
+
   @Get('admin/graphs/revenue/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
@@ -587,7 +642,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set subscription to gym' })
   @ApiBody({ type: SetSubscriptionDto })
-  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.SuperAdmin)
   async setSubscriptionToGym(
     @Param('gymId') gymId: string,
     @Body() body: SetSubscriptionDto,
@@ -605,7 +660,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym auto-renewal status' })
   @ApiOkResponse({ description: 'Auto-renewal status updated successfully' })
-  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.SuperAdmin)
   async updateAutoRenew(
     @Param('gymId') gymId: string,
     @Body() updateAutoRenewDto: UpdateAutoRenewDto,
@@ -613,6 +668,21 @@ export class GymController {
     return await this.gymService.updateAutoRenew(
       gymId,
       updateAutoRenewDto.isAutoRenew,
+    );
+  }
+
+  @Patch('update/ai-chat/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym AI chat feature status' })
+  @ApiOkResponse({ description: 'AI chat status updated successfully' })
+  @Roles(Permissions.SuperAdmin)
+  async updateAiChatStatus(
+    @Param('gymId') gymId: string,
+    @Body() updateAiChatDto: UpdateAiChatDto,
+  ) {
+    return await this.gymService.updateAiChatStatus(
+      gymId,
+      updateAiChatDto.isAiChatEnabled,
     );
   }
 }

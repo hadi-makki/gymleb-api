@@ -17,11 +17,14 @@ export function loggerMiddleware(
     return '\x1b[37m'; // White
   };
 
-  const { statusCode } = res;
-  const duration = Date.now() - start;
-  const color = getColor(statusCode);
+  // Listen for the response to finish before logging
+  res.on('finish', () => {
+    const { statusCode } = res;
+    const duration = Date.now() - start;
+    const color = getColor(statusCode);
 
-  Logger.log(`${color}${method} ${url} ${statusCode} - ${duration}ms\x1b[0m`);
+    Logger.log(`${color}${method} ${url} ${statusCode} - ${duration}ms\x1b[0m`);
+  });
 
   next();
 }

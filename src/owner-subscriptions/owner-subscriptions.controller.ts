@@ -46,7 +46,6 @@ export class OwnerSubscriptionsController {
   @Get('me')
   @Roles(Permissions.Any)
   getMy(@User() user: ManagerEntity, @Query('gymId') gymId: string) {
-    console.log('this is the gymId', gymId);
     return this.service.getOwnerSubscription(gymId);
   }
 

@@ -899,7 +899,6 @@ export class GymService {
     });
     let returnData = [];
     for (const gym of gyms) {
-      console.log('this is the gym', await this.getGymActiveSubscription(gym));
       returnData.push({
         ...gym,
         activeSubscription: (await this.getGymActiveSubscription(gym))
@@ -1136,6 +1135,129 @@ export class GymService {
         maxLimit: 100,
       },
     );
+  }
+
+  async getAllTransactions(
+    limit: number = 20,
+    page: number = 1,
+    search: string = '',
+    type: string = '',
+    ownerId: string = '',
+    gymId: string = '',
+  ) {
+    // Build where conditions
+    const whereConditions: any = {};
+
+    // Filter by gym if specified
+    if (gymId && gymId.trim() !== '') {
+      whereConditions.gym = { id: gymId };
+    }
+
+    // Filter by owner if specified
+    if (ownerId && ownerId.trim() !== '') {
+      whereConditions.owner = { id: ownerId };
+    }
+
+    // Filter by transaction type if specified
+    if (type && type.trim() !== '') {
+      whereConditions.type = type;
+    }
+
+    // Search functionality
+    let memberIds: string[] = [];
+    if (search && search.trim() !== '') {
+      const matchingMembers = await this.memberModel.find({
+        where: { name: ILike(`%${search}%`) },
+        select: ['id'],
+      });
+      memberIds = matchingMembers.map((m) => m.id);
+    }
+
+    // Build the final where condition
+    const finalWhere: any = {};
+
+    // Add basic filters
+    if (Object.keys(whereConditions).length > 0) {
+      Object.assign(finalWhere, whereConditions);
+    }
+
+    // Add member search if applicable
+    if (search && search.trim() !== '' && memberIds.length > 0) {
+      finalWhere.member = { id: In(memberIds) };
+    }
+
+    // Build the paginate options
+    const paginateOptions: any = {
+      relations: [
+        'subscription',
+        'member',
+        'gym',
+        'owner',
+        'product',
+        'revenue',
+        'expense',
+        'relatedPtSession',
+        'personalTrainer',
+      ],
+      sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
+      searchableColumns: ['title', 'paidBy'],
+      defaultSortBy: [['createdAt', 'DESC']],
+      filterableColumns: { type: [FilterOperator.EQ] },
+      maxLimit: 100,
+    };
+
+    // Only add where clause if we have actual conditions
+    if (Object.keys(finalWhere).length > 0) {
+      paginateOptions.where = finalWhere;
+    }
+
+    return paginate(
+      {
+        page,
+        limit,
+        search: search && search.trim() !== '' ? search : undefined,
+        path: '/gym/admin/all-transactions',
+      },
+      this.transactionModel,
+      paginateOptions,
+    );
+  }
+
+  async deleteTransaction(transactionId: string) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+      relations: ['gym', 'owner', 'member'],
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    await this.transactionModel.remove(transaction);
+
+    return {
+      message: 'Transaction deleted successfully',
+    };
+  }
+
+  async bulkDeleteTransactions(transactionIds: string[]) {
+    if (!transactionIds || transactionIds.length === 0) {
+      throw new BadRequestException('Transaction IDs are required');
+    }
+
+    const transactions = await this.transactionModel.find({
+      where: { id: In(transactionIds) },
+    });
+
+    if (transactions.length === 0) {
+      throw new NotFoundException('No transactions found');
+    }
+
+    await this.transactionModel.remove(transactions);
+
+    return {
+      message: `${transactions.length} transaction(s) deleted successfully`,
+    };
   }
 
   async getGymRevenueGraphData(
@@ -1635,6 +1757,21 @@ export class GymService {
     return {
       message: 'Auto-renewal status updated successfully',
       isAutoRenew: gym.isAutoRenew,
+    };
+  }
+
+  async updateAiChatStatus(gymId: string, isAiChatEnabled: boolean) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.isAiChatEnabled = isAiChatEnabled;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'AI chat status updated successfully',
+      isAiChatEnabled: gym.isAiChatEnabled,
     };
   }
 }
