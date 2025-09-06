@@ -298,10 +298,14 @@ export class MemberService {
       relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
 
+    const getLatestGymSubscription =
+      await this.gymService.getGymActiveSubscription(gym.id);
+
     await this.twilioService.sendWelcomeMessage(
       newMember.name,
       newMember.phone,
       gym,
+      getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
     );
 
     await this.gymService.addGymMembersNotified(gym.id, 1);
@@ -366,10 +370,14 @@ export class MemberService {
       return await this.returnMember(savedMember);
     }
 
+    const getLatestGymSubscription =
+      await this.gymService.getGymActiveSubscription(gym.id);
+
     await this.twilioService.sendWelcomeMessage(
       savedMember.name,
       savedMember.phone,
       gym,
+      getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
     );
 
     // Return member without token if no password (they'll need to set it later)
@@ -511,6 +519,9 @@ export class MemberService {
       relations: ['gym'],
     });
 
+    const getLatestGymSubscription =
+      await this.gymService.getGymActiveSubscription(gymId);
+
     for (const member of members) {
       if (!member.gym) {
         throw new NotFoundException('Gym not found');
@@ -520,6 +531,7 @@ export class MemberService {
         member.name,
         member.phone,
         member.gym,
+        getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
       );
     }
   }
@@ -1121,7 +1133,15 @@ export class MemberService {
 
     // Notify each member
     for (const member of members) {
-      await this.twilioService.notifySingleMember(member.id, checkGym.id);
+      const getLatestGymSubscription =
+        await this.gymService.getGymActiveSubscription(member.gym.id);
+      await this.twilioService.notifySingleMember({
+        userId: member.id,
+        gymId: checkGym.id,
+        dontCheckExpired: true,
+        activeSubscription:
+          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+      });
     }
 
     return {
@@ -1138,17 +1158,14 @@ export class MemberService {
     });
     console.log('expiringMembers', expiringMembers);
     for (const member of expiringMembers) {
-      console.log(
-        'reminding member',
-        member.member.name,
-        'at gym',
-        member.gym.name,
-      );
-      await this.twilioService.notifySingleMember(
-        member.member.id,
-        member.gym.id,
-        true,
-      );
+      const getLatestGymSubscription =
+        await this.gymService.getGymActiveSubscription(member.gym.id);
+      await this.twilioService.notifySingleMember({
+        userId: member.member.id,
+        gymId: member.gym.id,
+        activeSubscription:
+          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+      });
     }
 
     return {

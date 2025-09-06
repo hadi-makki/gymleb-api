@@ -20,12 +20,17 @@ export class OwnerSubscriptionTypeEntity extends PgMainEntity {
   @OneToMany(
     () => TransactionEntity,
     (transaction) => transaction.ownerSubscriptionType,
+    {
+      onDelete: 'SET NULL',
+    },
   )
   transactions: TransactionEntity[];
 
   @Column('int', { nullable: true })
   allowedNotificationsNumber: number;
 
-  @OneToMany(() => GymEntity, (gym) => gym.ownerSubscriptionType)
+  @OneToMany(() => GymEntity, (gym) => gym.ownerSubscriptionType, {
+    onDelete: 'SET NULL',
+  })
   gyms: GymEntity[];
 }

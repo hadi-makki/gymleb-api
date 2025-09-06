@@ -4,7 +4,6 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
-  IsPositive,
   IsString,
   Min,
 } from 'class-validator';
@@ -16,7 +15,7 @@ export class CreateOwnerSubscriptionTypeDto {
   title: string;
 
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   @ApiProperty()
   price: number;
 
@@ -29,6 +28,11 @@ export class CreateOwnerSubscriptionTypeDto {
   @IsString()
   @ApiProperty({ required: false })
   description?: string;
+
+  @IsNumber()
+  @Min(0)
+  @ApiProperty()
+  allowedNotificationsNumber: number;
 }
 
 export class AssignOwnerSubscriptionDto {

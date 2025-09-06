@@ -94,10 +94,10 @@ export class GymService {
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    console.log('this is the gym', await this.getGymActiveSubscription(gym));
     return {
       ...gym,
-      activeSubscription: await this.getGymActiveSubscription(gym),
+      activeSubscription: (await this.getGymActiveSubscription(gym))
+        .activeSubscription,
     };
   }
 
@@ -899,9 +899,11 @@ export class GymService {
     });
     let returnData = [];
     for (const gym of gyms) {
+      console.log('this is the gym', await this.getGymActiveSubscription(gym));
       returnData.push({
         ...gym,
-        activeSubscription: await this.getGymActiveSubscription(gym),
+        activeSubscription: (await this.getGymActiveSubscription(gym))
+          .activeSubscription,
       });
     }
     return returnData;
@@ -1555,13 +1557,36 @@ export class GymService {
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    const activeSubscription = gym.transactions.find(
+    const activeSubscription = gym.transactions?.find(
       (transaction) =>
         transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT &&
         new Date(transaction.endDate) > new Date(),
     );
 
-    return activeSubscription;
+    const getLastSubscription =
+      gym.transactions
+        ?.filter(
+          (transaction) =>
+            transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0] || null;
+
+    return {
+      activeSubscription: activeSubscription,
+      lastSubscription: getLastSubscription,
+      gym: gym,
+    };
+  }
+
+  async checkIfGymExpired(gymId: GymEntity | string) {
+    const getActiveSubscription = this.getGymActiveSubscription(gymId);
+    if (!getActiveSubscription) {
+      return false;
+    }
+    return true;
   }
 
   async setSubscriptionToGym(
@@ -1582,30 +1607,6 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
-    console.log('this is the gym', gym.transactions);
-
-    // check if the subscription type is expired
-    const getLastestOwnerSubscriptionTypeTransaction = gym.transactions
-      .filter(
-        (transaction) =>
-          transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )[0];
-
-    console.log(
-      'this is the getLastestOwnerSubscriptionTypeTransaction',
-      getLastestOwnerSubscriptionTypeTransaction,
-    );
-    if (
-      getLastestOwnerSubscriptionTypeTransaction &&
-      isBefore(new Date(), getLastestOwnerSubscriptionTypeTransaction.endDate)
-    ) {
-      throw new BadRequestException('Subscription type is not expired');
-    }
-
     await this.transactionService.createOwnerSubscriptionAssignmentInstance({
       gym: gym,
       ownerSubscriptionTypeId: subscriptionTypeId,
@@ -1615,6 +1616,21 @@ export class GymService {
 
     return {
       message: 'Subscription set to gym successfully',
+    };
+  }
+
+  async updateAutoRenew(gymId: string, isAutoRenew: boolean) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.isAutoRenew = isAutoRenew;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'Auto-renewal status updated successfully',
+      isAutoRenew: gym.isAutoRenew,
     };
   }
 }

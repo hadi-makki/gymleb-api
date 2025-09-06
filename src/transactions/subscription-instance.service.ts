@@ -99,7 +99,12 @@ export class TransactionService {
     if (!type) {
       throw new NotFoundException('Owner subscription type not found');
     }
-    console.log('this is the gym', params.gym);
+
+    params.gym.membersNotified = 0;
+    params.gym.welcomeMessageNotified = 0;
+
+    await this.gymRepository.save(params.gym);
+
     const endDate = params.endDate
       ? new Date(params.endDate)
       : addDays(new Date(), type.durationDays);

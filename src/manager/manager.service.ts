@@ -329,6 +329,7 @@ export class ManagerService {
       relations: {
         ownedGyms: true,
         gyms: true,
+        transactions: true,
       },
     });
 

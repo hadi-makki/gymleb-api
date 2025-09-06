@@ -402,7 +402,33 @@ export class GymOwnerService {
           (alias) => `${alias} @> '["${Permissions.GymOwner}"]'::jsonb`,
         ),
       },
+      relations: {
+        ownedGyms: {
+          transactions: true,
+        },
+      },
     });
-    return gymOwners;
+
+    let dataToReturn = [];
+    for (const gymOwner of gymOwners) {
+      for (const gym of gymOwner.ownedGyms) {
+        let expiredGymsCount = 0;
+        let activeGymsCount = 0;
+        const activeSubscription =
+          await this.gymService.getGymActiveSubscription(gym);
+        if (!activeSubscription.activeSubscription) {
+          expiredGymsCount++;
+        } else {
+          activeGymsCount++;
+        }
+        dataToReturn.push({
+          ...gymOwner,
+          expiredGymsCount: expiredGymsCount,
+          activeGymsCount: activeGymsCount,
+        });
+      }
+    }
+
+    return dataToReturn;
   }
 }

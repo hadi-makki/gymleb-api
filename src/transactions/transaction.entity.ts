@@ -100,7 +100,7 @@ export class TransactionEntity extends PgMainEntity {
   @ManyToOne(
     () => OwnerSubscriptionTypeEntity,
     (ownerSubscriptionType) => ownerSubscriptionType.transactions,
-    { nullable: true },
+    { nullable: true, onDelete: 'SET NULL' },
   )
   ownerSubscriptionType: OwnerSubscriptionTypeEntity;
 

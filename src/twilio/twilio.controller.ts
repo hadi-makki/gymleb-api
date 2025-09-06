@@ -30,18 +30,18 @@ export class TwilioController {
     return await this.twilioService.notifyExpiredMembers(manager, gymId);
   }
 
-  @Post('notify-single-member/:gymId/:userId')
-  @UseGuards(ManagerAuthGuard)
-  @ApiOperation({ summary: 'Notify single member' })
-  @ApiBearerAuth()
-  @Roles(Permissions.GymOwner)
-  async notifySingleMember(
-    @User() manager: ManagerEntity,
-    @Param('userId') userId: string,
-    @Param('gymId') gymId: string,
-  ) {
-    return await this.twilioService.notifySingleMember(userId, gymId);
-  }
+  // @Post('notify-single-member/:gymId/:userId')
+  // @UseGuards(ManagerAuthGuard)
+  // @ApiOperation({ summary: 'Notify single member' })
+  // @ApiBearerAuth()
+  // @Roles(Permissions.GymOwner)
+  // async notifySingleMember(
+  //   @User() manager: ManagerEntity,
+  //   @Param('userId') userId: string,
+  //   @Param('gymId') gymId: string,
+  // ) {
+  //   return await this.twilioService.notifySingleMember(userId, gymId);
+  // }
 
   @Get('inbound-messages')
   @ApiOperation({ summary: 'Get inbound messages' })

@@ -1,15 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { Repository } from 'typeorm';
 import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionType } from '../transactions/transaction.entity';
 import {
   AssignOwnerSubscriptionDto,
   CreateOwnerSubscriptionTypeDto,
 } from './dto';
 import { OwnerSubscriptionTypeEntity } from './owner-subscription-type.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
+import { GymService } from 'src/gym/gym.service';
 
 @Injectable()
 export class OwnerSubscriptionsService {
@@ -21,6 +27,7 @@ export class OwnerSubscriptionsService {
     private readonly transactionService: TransactionService,
     @InjectRepository(GymEntity)
     private gymModel: Repository<GymEntity>,
+    private readonly gymService: GymService,
   ) {}
 
   async createType(dto: CreateOwnerSubscriptionTypeDto) {
@@ -29,6 +36,7 @@ export class OwnerSubscriptionsService {
       price: dto.price,
       durationDays: dto.durationDays,
       description: dto.description,
+      allowedNotificationsNumber: dto.allowedNotificationsNumber,
     });
     return await this.typeModel.save(createTypeModel);
   }
@@ -39,10 +47,38 @@ export class OwnerSubscriptionsService {
 
   async assign(dto: AssignOwnerSubscriptionDto) {}
 
-  async getOwnerSubscription(ownerId: string) {}
+  async getOwnerSubscription(gymId: string) {
+    // Get the gym with its transactions
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: {
+        transactions: {
+          ownerSubscriptionType: true,
+        },
+      },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    return await this.gymService.getGymActiveSubscription(gym);
+  }
 
   async deleteType(id: string) {
-    return await this.typeModel.delete(id);
+    // Check if the subscription type exists
+    const subscriptionType = await this.typeModel.findOne({ where: { id } });
+    if (!subscriptionType) {
+      throw new NotFoundException('Subscription type not found');
+    }
+
+    // Delete the subscription type
+    await this.typeModel.remove(subscriptionType);
+
+    return {
+      message: 'Subscription type deleted successfully',
+      deletedType: subscriptionType.title,
+    };
   }
 
   async updateType(id: string, dto: CreateOwnerSubscriptionTypeDto) {
@@ -67,6 +103,8 @@ export class OwnerSubscriptionsService {
       throw new NotFoundException('Gym not found');
     }
     gym.ownerSubscriptionType = subscriptionType;
+    gym.membersNotified = 0;
+    gym.welcomeMessageNotified = 0;
     return await this.gymModel.save(gym);
   }
 }

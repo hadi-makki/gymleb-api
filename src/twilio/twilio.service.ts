@@ -12,6 +12,7 @@ import { MemberEntity } from 'src/member/entities/member.entity';
 import { Twilio } from 'twilio';
 import { Repository } from 'typeorm';
 import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 
 export enum TwilioWhatsappTemplates {
   EXPIARY_REMINDER = 'HXe8f26377490ff319bae6b9c1d9538486',
@@ -61,34 +62,25 @@ export class TwilioService {
     memberName: string,
     memberPhone: string,
     gym: GymEntity,
+    activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
     const member = await this.memberModel.findOne({
       where: { phone: memberPhone },
     });
-    const freeTrialGyms = [
-      'b3c78af5-afe1-4246-a030-17bb07091f83',
-      'dd94ac67-9378-404f-811e-7e2ec8be4470',
-    ];
 
     const welcomeAndExpirationMessages =
       gym.welcomeMessageNotified + gym.membersNotified;
-    console.log('welcomeAndExpirationMessages', welcomeAndExpirationMessages);
-    console.log('freeTrialGyms', freeTrialGyms.includes(gym.id));
-    console.log('gym.id', gym.id);
-    console.log(
-      'welcomeAndExpirationMessages <= 50',
-      welcomeAndExpirationMessages <= 50,
-    );
-
-    if (freeTrialGyms.includes(gym.id) && welcomeAndExpirationMessages >= 50) {
-      console.log(
-        'free trial gym or welcome and expiration messages limit reached',
-      );
-      return;
-    }
 
     if (member.isWelcomeMessageSent) {
       console.log('member is already notified');
+      return;
+    }
+
+    if (
+      welcomeAndExpirationMessages >=
+      activeSubscription.allowedNotificationsNumber
+    ) {
+      console.log('welcome and expiration messages limit reached');
       return;
     }
 
@@ -128,17 +120,23 @@ export class TwilioService {
     }
   }
 
-  async notifySingleMember(
-    userId: string,
-    gymId: string,
+  async notifySingleMember({
+    userId,
+    gymId,
     dontCheckExpired = false,
-  ) {
+    activeSubscription,
+  }: {
+    userId: string;
+    gymId: string;
+    dontCheckExpired?: boolean;
+    activeSubscription: OwnerSubscriptionTypeEntity;
+  }) {
     const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
     const gym = await this.gymService.getGymById(gymId);
     const isExpired =
       !dontCheckExpired &&
       (await this.memberService.checkUserSubscriptionExpired(member.id));
-    if (gym.membersNotified > this.allowedMessagesNumber) {
+    if (gym.membersNotified > activeSubscription.allowedNotificationsNumber) {
       throw new BadRequestException('Gym members notified limit reached');
     }
     if (!isExpired && !dontCheckExpired) {
@@ -147,18 +145,11 @@ export class TwilioService {
     if (member.isNotified) {
       throw new BadRequestException('Member is already notified');
     }
-    const freeTrialGyms = ['b3c78af5-afe1-4246-a030-17bb07091f83'];
 
     const welcomeAndExpirationMessages =
       gym.welcomeMessageNotified + gym.membersNotified;
 
-    if (
-      !checkNodeEnv('local') &&
-      isPhoneNumber(member.phone) &&
-      (!freeTrialGyms.includes(gym.id) ||
-        (freeTrialGyms.includes(gym.owner.id) &&
-          welcomeAndExpirationMessages < 100))
-    ) {
+    if (!checkNodeEnv('local') && isPhoneNumber(member.phone)) {
       await this.client.messages
         .create({
           from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
@@ -208,9 +199,10 @@ export class TwilioService {
     manager: ManagerEntity,
     userIds: string[],
     gymId: string,
+    activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
     for (const userId of userIds) {
-      await this.notifySingleMember(userId, gymId);
+      await this.notifySingleMember({ userId, gymId, activeSubscription });
     }
   }
 

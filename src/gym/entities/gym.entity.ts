@@ -160,9 +160,15 @@ export class GymEntity extends PgMainEntity {
   @ManyToOne(
     () => OwnerSubscriptionTypeEntity,
     (ownerSubscriptionType) => ownerSubscriptionType.gyms,
+    {
+      onDelete: 'SET NULL',
+    },
   )
   ownerSubscriptionType: OwnerSubscriptionTypeEntity;
 
   @RelationId((gym: GymEntity) => gym.ownerSubscriptionType)
   ownerSubscriptionTypeId: string | null;
+
+  @Column('boolean', { default: false })
+  isAutoRenew: boolean;
 }

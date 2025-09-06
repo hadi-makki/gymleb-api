@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { OwnerSubscriptionsService } from './owner-subscriptions.service';
@@ -44,8 +45,9 @@ export class OwnerSubscriptionsController {
 
   @Get('me')
   @Roles(Permissions.Any)
-  getMy(@User() user: ManagerEntity) {
-    return this.service.getOwnerSubscription(user.id);
+  getMy(@User() user: ManagerEntity, @Query('gymId') gymId: string) {
+    console.log('this is the gymId', gymId);
+    return this.service.getOwnerSubscription(gymId);
   }
 
   @Delete(':id')

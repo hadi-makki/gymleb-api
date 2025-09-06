@@ -31,6 +31,7 @@ import { GymService } from './gym.service';
 import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { SetSubscriptionDto } from './dto/set-subscription.dto';
+import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -576,6 +577,20 @@ export class GymController {
       gymId,
       body.startDate,
       body.endDate,
+    );
+  }
+
+  @Patch('update/auto-renew/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym auto-renewal status' })
+  @ApiOkResponse({ description: 'Auto-renewal status updated successfully' })
+  async updateAutoRenew(
+    @Param('gymId') gymId: string,
+    @Body() updateAutoRenewDto: UpdateAutoRenewDto,
+  ) {
+    return await this.gymService.updateAutoRenew(
+      gymId,
+      updateAutoRenewDto.isAutoRenew,
     );
   }
 }
