@@ -109,7 +109,10 @@ export class TransactionService {
 
     const endDate = params.endDate
       ? new Date(params.endDate)
-      : addDays(new Date(), type.durationDays);
+      : addDays(
+          params.startDate ? new Date(params.startDate) : new Date(),
+          type.durationDays,
+        );
     const trxModel = this.transactionModel.create({
       title: type.title,
       gym: params.gym,
