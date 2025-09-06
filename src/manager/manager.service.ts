@@ -323,6 +323,145 @@ export class ManagerService {
     };
   }
 
+  async getExtendedAdminAnalytics() {
+    // Get basic analytics
+    const basicAnalytics = await this.getAdminAnalytics();
+
+    // Get all gyms with their subscription status
+    const gyms = await this.gymModel.find({
+      relations: ['owner', 'ownerSubscriptionType'],
+    });
+
+    let gymsWithActiveSubscriptions = 0;
+    let totalMessagesSent = 0;
+
+    // Check each gym's subscription status and count messages
+    for (const gym of gyms) {
+      if (gym.owner) {
+        // Check if gym has active subscription
+        const activeSubscription =
+          await this.GymService.getGymActiveSubscription(gym);
+        if (activeSubscription.activeSubscription) {
+          gymsWithActiveSubscriptions++;
+        }
+
+        // Count messages sent by this gym (membersNotified + welcomeMessageNotified)
+        totalMessagesSent +=
+          (gym.membersNotified || 0) + (gym.welcomeMessageNotified || 0);
+      }
+    }
+
+    return {
+      ...basicAnalytics,
+      gymsWithActiveSubscriptions,
+      totalMessagesSent,
+      totalGyms: gyms.length,
+    };
+  }
+
+  async getRevenueChartData(months: number = 12) {
+    const now = new Date();
+    const chartData = [];
+
+    for (let i = months - 1; i >= 0; i--) {
+      const monthStart = startOfMonth(subMonths(now, i));
+      const monthEnd = endOfMonth(subMonths(now, i));
+
+      const transactions = await this.transactionModel.find({
+        where: {
+          isOwnerSubscriptionAssignment: true,
+          createdAt: Between(monthStart, monthEnd),
+        },
+      });
+
+      const revenue = transactions.reduce(
+        (sum, t) => sum + (t.paidAmount || 0),
+        0,
+      );
+
+      chartData.push({
+        month: monthStart.toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }),
+        revenue: revenue,
+        transactions: transactions.length,
+      });
+    }
+
+    return chartData;
+  }
+
+  async getMessagesChartData(months: number = 12) {
+    const now = new Date();
+    const chartData = [];
+
+    for (let i = months - 1; i >= 0; i--) {
+      const monthStart = startOfMonth(subMonths(now, i));
+      const monthEnd = endOfMonth(subMonths(now, i));
+
+      // Get gyms created in this month and sum their message counts
+      const gyms = await this.gymModel.find({
+        where: {
+          createdAt: Between(monthStart, monthEnd),
+        },
+      });
+
+      const messagesSent = gyms.reduce(
+        (sum, gym) =>
+          sum + (gym.membersNotified || 0) + (gym.welcomeMessageNotified || 0),
+        0,
+      );
+
+      chartData.push({
+        month: monthStart.toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }),
+        messages: messagesSent,
+        gyms: gyms.length,
+      });
+    }
+
+    return chartData;
+  }
+
+  async getSubscriptionStatusData() {
+    const gyms = await this.gymModel.find({
+      relations: ['owner', 'ownerSubscriptionType'],
+    });
+
+    let activeCount = 0;
+    let expiredCount = 0;
+    let noSubscriptionCount = 0;
+
+    for (const gym of gyms) {
+      if (gym.owner) {
+        const activeSubscription =
+          await this.GymService.getGymActiveSubscription(gym);
+        if (activeSubscription.activeSubscription) {
+          activeCount++;
+        } else if (activeSubscription.lastSubscription) {
+          expiredCount++;
+        } else {
+          noSubscriptionCount++;
+        }
+      } else {
+        noSubscriptionCount++;
+      }
+    }
+
+    return [
+      { status: 'Active', count: activeCount, color: '#10b981' },
+      { status: 'Expired', count: expiredCount, color: '#f59e0b' },
+      {
+        status: 'No Subscription',
+        count: noSubscriptionCount,
+        color: '#ef4444',
+      },
+    ];
+  }
+
   async getMe(manager: ManagerEntity): Promise<ManagerCreatedDto> {
     const checkManager = await this.managerEntity.findOne({
       where: { id: manager.id },

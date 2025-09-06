@@ -230,6 +230,45 @@ export class ManagerController {
     return await this.ManagerService.getAdminAnalytics(start, end);
   }
 
+  @Get('get/extended-analytics')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Extended admin analytics', type: Object })
+  async getExtendedAdminAnalytics() {
+    return await this.ManagerService.getExtendedAdminAnalytics();
+  }
+
+  @Get('get/revenue-chart')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Revenue chart data', type: Object })
+  async getRevenueChartData(@Query('months') months?: number) {
+    return await this.ManagerService.getRevenueChartData(months || 12);
+  }
+
+  @Get('get/messages-chart')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Messages chart data', type: Object })
+  async getMessagesChartData(@Query('months') months?: number) {
+    return await this.ManagerService.getMessagesChartData(months || 12);
+  }
+
+  @Get('get/subscription-status-chart')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOkResponse({
+    description: 'Subscription status chart data',
+    type: Object,
+  })
+  async getSubscriptionStatusData() {
+    return await this.ManagerService.getSubscriptionStatusData();
+  }
+
   @Get('get/gym-owners')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin)

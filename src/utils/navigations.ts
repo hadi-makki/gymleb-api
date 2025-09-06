@@ -31,7 +31,7 @@ export const navItems: NavItem[] = [
     isActive: false,
     shortcut: ['d', 'd'],
     items: [],
-    roles: [Permissions.SuperAdmin, Permissions.GymOwner],
+    roles: [Permissions.GymOwner],
   },
   {
     title: 'My Gym',
@@ -143,6 +143,14 @@ export const navItems: NavItem[] = [
   },
 
   // Admin Only (SuperAdmin)
+  {
+    title: 'Super Admin Dashboard',
+    url: '/super-admin/overview',
+    icon: 'building-2',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
   {
     title: 'Owners Management',
     url: '/super-admin/owners-management',
