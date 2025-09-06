@@ -20,6 +20,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../../main-classes/mainEntity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 export enum GymTypeEnum {
   FITNESS = 'fitness',
   CALISTHENICS = 'calisthenics',
@@ -155,4 +156,13 @@ export class GymEntity extends PgMainEntity {
     youtube: string;
     tiktok: string;
   };
+
+  @ManyToOne(
+    () => OwnerSubscriptionTypeEntity,
+    (ownerSubscriptionType) => ownerSubscriptionType.gyms,
+  )
+  ownerSubscriptionType: OwnerSubscriptionTypeEntity;
+
+  @RelationId((gym: GymEntity) => gym.ownerSubscriptionType)
+  ownerSubscriptionTypeId: string | null;
 }

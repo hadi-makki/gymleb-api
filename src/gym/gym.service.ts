@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
-import { subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import {
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  subDays,
+  isBefore,
+} from 'date-fns';
 import { AddOfferDto } from './dto/add-offer.dto';
 import { GymEntity } from './entities/gym.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -31,6 +37,7 @@ import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
 import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
 
 @Injectable()
 export class GymService {
@@ -45,6 +52,7 @@ export class GymService {
     private managerModel: Repository<ManagerEntity>,
     @InjectRepository(TransactionEntity)
     private transactionModel: Repository<TransactionEntity>,
+    private transactionService: TransactionService,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
@@ -77,11 +85,20 @@ export class GymService {
     }
     const gym = await this.gymModel.findOne({
       where: { id },
+      relations: {
+        transactions: {
+          ownerSubscriptionType: true,
+        },
+      },
     });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
-    return gym;
+    console.log('this is the gym', await this.getGymActiveSubscription(gym));
+    return {
+      ...gym,
+      activeSubscription: await this.getGymActiveSubscription(gym),
+    };
   }
 
   async remove(id: string) {
@@ -228,6 +245,10 @@ export class GymService {
         return total + gymShare;
       }, 0);
 
+    const currentMonthOwnerSubscrptionTransactions = currentMonthTransactions
+      .filter((t) => t.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT)
+      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+
     const additionalRevenue = allTransactions
       .filter((t) => t.type === TransactionType.REVENUE)
       .reduce(
@@ -239,7 +260,10 @@ export class GymService {
       .filter((t) => t.type === TransactionType.EXPENSE)
       .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
 
-    const totalRevenue = subscriptionRevenue + additionalRevenue;
+    const totalRevenue =
+      subscriptionRevenue +
+      additionalRevenue -
+      currentMonthOwnerSubscrptionTransactions;
     const netRevenue = totalRevenue - totalExpenses;
 
     const totalMembers = await this.memberModel.count({
@@ -564,6 +588,7 @@ export class GymService {
           'product',
           'revenue',
           'expense',
+          'relatedPtSession',
         ],
         sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
         searchableColumns: ['title', 'paidBy'],
@@ -780,6 +805,7 @@ export class GymService {
           'product',
           'revenue',
           'expense',
+          'relatedPtSession',
         ],
         sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
         searchableColumns: ['title', 'paidBy'],
@@ -864,9 +890,21 @@ export class GymService {
   async getGymsByOwner(ownerId: string) {
     const gyms = await this.gymModel.find({
       where: { owner: { id: ownerId } },
-      relations: ['owner'],
+      relations: {
+        owner: true,
+        transactions: {
+          ownerSubscriptionType: true,
+        },
+      },
     });
-    return gyms;
+    let returnData = [];
+    for (const gym of gyms) {
+      returnData.push({
+        ...gym,
+        activeSubscription: await this.getGymActiveSubscription(gym),
+      });
+    }
+    return returnData;
   }
 
   async getGymAnalyticsByOwnerIdAndGymId(
@@ -1498,5 +1536,85 @@ export class GymService {
 
     await this.gymModel.save(gym);
     return gym;
+  }
+
+  async getGymActiveSubscription(gymId: GymEntity | string) {
+    let gym: GymEntity;
+    if (gymId instanceof GymEntity) {
+      gym = gymId;
+    } else {
+      gym = await this.gymModel.findOne({
+        where: { id: gymId },
+        relations: {
+          transactions: {
+            ownerSubscriptionType: true,
+          },
+        },
+      });
+    }
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const activeSubscription = gym.transactions.find(
+      (transaction) =>
+        transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT &&
+        new Date(transaction.endDate) > new Date(),
+    );
+
+    return activeSubscription;
+  }
+
+  async setSubscriptionToGym(
+    subscriptionTypeId: string,
+    gymId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: {
+        ownerSubscriptionType: true,
+        transactions: true,
+        owner: true,
+      },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    console.log('this is the gym', gym.transactions);
+
+    // check if the subscription type is expired
+    const getLastestOwnerSubscriptionTypeTransaction = gym.transactions
+      .filter(
+        (transaction) =>
+          transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )[0];
+
+    console.log(
+      'this is the getLastestOwnerSubscriptionTypeTransaction',
+      getLastestOwnerSubscriptionTypeTransaction,
+    );
+    if (
+      getLastestOwnerSubscriptionTypeTransaction &&
+      isBefore(new Date(), getLastestOwnerSubscriptionTypeTransaction.endDate)
+    ) {
+      throw new BadRequestException('Subscription type is not expired');
+    }
+
+    await this.transactionService.createOwnerSubscriptionAssignmentInstance({
+      gym: gym,
+      ownerSubscriptionTypeId: subscriptionTypeId,
+      startDate,
+      endDate,
+    });
+
+    return {
+      message: 'Subscription set to gym successfully',
+    };
   }
 }

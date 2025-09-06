@@ -115,7 +115,19 @@ export class GymOwnerController {
     return this.gymOwnerService.createGymToGymOwner(createGymToGymOwnerDto);
   }
 
-  @Get('/owners/get-all')
+  // @Get('/owners/get-all')
+  // @UseGuards(ManagerAuthGuard)
+  // @ApiOperation({ summary: 'Get all gym owners' })
+  // @ApiOkResponse({
+  //   description: 'The gym owners have been successfully retrieved.',
+  //   type: [ManagerEntity],
+  // })
+  // @Roles(Permissions.SuperAdmin)
+  // async getAllOwners() {
+  //   return await this.gymOwnerService.findAll();
+  // }
+
+  @Get('owners/get-all')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Get all gym owners' })
   @ApiOkResponse({
@@ -123,7 +135,7 @@ export class GymOwnerController {
     type: [ManagerEntity],
   })
   @Roles(Permissions.SuperAdmin)
-  async getAllOwners() {
-    return await this.gymOwnerService.findAll();
+  async getAllGymOwners() {
+    return await this.gymOwnerService.getAllGymOwners();
   }
 }

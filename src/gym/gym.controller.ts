@@ -30,6 +30,7 @@ import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
 import { GymService } from './gym.service';
 import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
+import { SetSubscriptionDto } from './dto/set-subscription.dto';
 @Controller('gym')
 @Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
@@ -560,5 +561,21 @@ export class GymController {
     @Body() body: UpdateSocialMediaDto,
   ) {
     return await this.gymService.updateSocialMediaLinks(gymId, body);
+  }
+
+  @Patch('subscription/set-subscription/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Set subscription to gym' })
+  @ApiBody({ type: SetSubscriptionDto })
+  async setSubscriptionToGym(
+    @Param('gymId') gymId: string,
+    @Body() body: SetSubscriptionDto,
+  ) {
+    return await this.gymService.setSubscriptionToGym(
+      body.subscriptionTypeId,
+      gymId,
+      body.startDate,
+      body.endDate,
+    );
   }
 }

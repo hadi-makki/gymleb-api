@@ -144,8 +144,8 @@ export const navItems: NavItem[] = [
 
   // Admin Only (SuperAdmin)
   {
-    title: 'Gyms Management',
-    url: '/gyms-management',
+    title: 'Owners Management',
+    url: '/super-admin/owners-management',
     icon: 'building-2',
     isActive: false,
     items: [],
@@ -153,7 +153,7 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Owner Subscriptions',
-    url: '/subscriptions/owner',
+    url: '/super-admin/subscriptions/owner',
     icon: 'crown',
     isActive: false,
     items: [],
@@ -161,7 +161,7 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Inbound Messages',
-    url: '/inbound-messages',
+    url: '/super-admin/inbound-messages',
     icon: 'mail',
     isActive: false,
     items: [],

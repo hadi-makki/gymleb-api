@@ -15,6 +15,12 @@ import { ManagerService } from '../manager/manager.service';
 import { TokenService } from '../token/token.service';
 import { UserService } from '../user/user.service';
 import { UserEntity } from 'src/user/user.entity';
+import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { ProductEntity } from 'src/products/products.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
+import { RevenueEntity } from 'src/revenue/revenue.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -25,6 +31,11 @@ import { UserEntity } from 'src/user/user.entity';
       ManagerEntity,
       ExpenseEntity,
       UserEntity,
+      ProductEntity,
+      SubscriptionEntity,
+      OwnerSubscriptionTypeEntity,
+      RevenueEntity,
+      PTSessionEntity,
     ]),
   ],
   providers: [
@@ -35,6 +46,7 @@ import { UserEntity } from 'src/user/user.entity';
     AuthService,
     UserService,
     GymService,
+    TransactionService,
   ],
   exports: [
     ManagerService,
@@ -45,6 +57,7 @@ import { UserEntity } from 'src/user/user.entity';
     TokenService,
     GymService,
     TypeOrmModule,
+    TransactionService,
   ],
 })
 export class AuthenticationModule {}

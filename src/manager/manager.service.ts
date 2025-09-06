@@ -239,6 +239,7 @@ export class ManagerService {
     if (body.firstName) manager.firstName = body.firstName;
     if (body.lastName) manager.lastName = body.lastName;
     if (body.username) manager.username = body.username;
+    if (body.phoneNumber) manager.phoneNumber = body.phoneNumber;
     if (body.password) {
       const hashedPassword = await ManagerEntity.hashPassword(body.password);
       manager.password = hashedPassword;

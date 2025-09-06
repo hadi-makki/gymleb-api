@@ -10,7 +10,7 @@ import {
   SubscriptionEntity,
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
-import { Repository } from 'typeorm';
+import { Raw, Repository } from 'typeorm';
 import { Permissions } from '../decorators/roles/role.enum';
 import { GymService } from '../gym/gym.service';
 import { MemberService } from '../member/member.service';
@@ -392,5 +392,17 @@ export class GymOwnerService {
     const savedGym = await this.gymModel.save(gym);
 
     return savedGym;
+  }
+
+  async getAllGymOwners() {
+    console.log('getAllGymOwners');
+    const gymOwners = await this.gymOwnerModel.find({
+      where: {
+        permissions: Raw(
+          (alias) => `${alias} @> '["${Permissions.GymOwner}"]'::jsonb`,
+        ),
+      },
+    });
+    return gymOwners;
   }
 }

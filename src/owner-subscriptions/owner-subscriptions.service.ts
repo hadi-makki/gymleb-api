@@ -9,6 +9,7 @@ import {
   CreateOwnerSubscriptionTypeDto,
 } from './dto';
 import { OwnerSubscriptionTypeEntity } from './owner-subscription-type.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
 
 @Injectable()
 export class OwnerSubscriptionsService {
@@ -18,6 +19,8 @@ export class OwnerSubscriptionsService {
     @InjectRepository(ManagerEntity)
     private ownerModel: Repository<ManagerEntity>,
     private readonly transactionService: TransactionService,
+    @InjectRepository(GymEntity)
+    private gymModel: Repository<GymEntity>,
   ) {}
 
   async createType(dto: CreateOwnerSubscriptionTypeDto) {
@@ -50,5 +53,20 @@ export class OwnerSubscriptionsService {
     check.durationDays = dto.durationDays;
     check.description = dto.description;
     return await this.typeModel.save(check);
+  }
+
+  async setSubscriptionToGym(subscriptionTypeId: string, gymId: string) {
+    const subscriptionType = await this.typeModel.findOne({
+      where: { id: subscriptionTypeId },
+    });
+    if (!subscriptionType) {
+      throw new NotFoundException('Subscription type not found');
+    }
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.ownerSubscriptionType = subscriptionType;
+    return await this.gymModel.save(gym);
   }
 }

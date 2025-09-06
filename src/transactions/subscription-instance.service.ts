@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { addDays, addHours, endOfDay, isAfter } from 'date-fns';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
@@ -19,6 +19,7 @@ import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
 import { TransactionEntity, TransactionType } from './transaction.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
+import { Permissions } from 'src/decorators/roles/role.enum';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -87,45 +88,41 @@ export class TransactionService {
   async createAiPhoneNumberTransaction(paymentDetails: PaymentDetails) {}
 
   async createOwnerSubscriptionAssignmentInstance(params: {
-    ownerId: string;
+    gym: GymEntity;
     ownerSubscriptionTypeId: string;
-    paidAmount: number;
-    endDateIso?: string;
+    startDate?: string;
+    endDate?: string;
   }) {
-    const owner = await this.managerRepository.findOne({
-      where: { id: params.ownerId },
-    });
-    if (!owner) {
-      throw new NotFoundException('Owner not found');
-    }
     const type = await this.ownerSubscriptionTypeRepository.findOne({
       where: { id: params.ownerSubscriptionTypeId },
     });
     if (!type) {
       throw new NotFoundException('Owner subscription type not found');
     }
-    const endDate = params.endDateIso ?? undefined;
+    console.log('this is the gym', params.gym);
+    const endDate = params.endDate
+      ? new Date(params.endDate)
+      : addDays(new Date(), type.durationDays);
     const trxModel = this.transactionModel.create({
       title: type.title,
+      gym: params.gym,
       type: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
-      owner,
       ownerSubscriptionType: type,
-      paidAmount: params.paidAmount,
+      paidAmount: type.price,
       endDate,
       isOwnerSubscriptionAssignment: true,
-      startDate: new Date().toISOString(),
-      paidBy: owner.firstName + ' ' + owner.lastName,
+      startDate: params.startDate ? new Date(params.startDate) : new Date(),
+      paidBy:
+        params.gym.owner.firstName +
+        ' ' +
+        params.gym.owner.lastName +
+        ' ' +
+        `(${params.gym.name})`,
+      owner: params.gym.owner,
     });
     const trx = await this.transactionModel.save(trxModel);
-    const findTransaction = await this.transactionModel.findOne({
-      where: { id: trx.id },
-    });
 
-    findTransaction.ownerSubscriptionType = type;
-    findTransaction.owner = owner;
-    await this.transactionModel.save(findTransaction);
-
-    return findTransaction;
+    return trx;
   }
 
   async findAllSubscriptionInstances(memberId: string) {
@@ -202,10 +199,25 @@ export class TransactionService {
   ) {
     const subscriptionInstance = await this.transactionModel.findOne({
       where: { id: subscriptionId },
-      relations: { gym: true },
+      relations: {
+        gym: {
+          owner: true,
+        },
+      },
     });
     if (!subscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
+    }
+    if (
+      subscriptionInstance.type ===
+        TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT &&
+      !subscriptionInstance.gym.owner.permissions.includes(
+        Permissions.SuperAdmin,
+      )
+    ) {
+      throw new ForbiddenException(
+        'You are not allowed to delete this subscription instance',
+      );
     }
     const getManagerGym = await this.gymRepository.findOne({
       where: { id: gymId },

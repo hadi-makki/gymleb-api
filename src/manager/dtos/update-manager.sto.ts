@@ -22,4 +22,8 @@ export class UpdateManagerDto {
   @IsString()
   @MinLength(6)
   password?: string;
+
+  @IsOptional()
+  @IsString()
+  phoneNumber: string;
 }

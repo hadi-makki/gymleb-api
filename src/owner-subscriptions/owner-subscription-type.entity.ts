@@ -1,3 +1,4 @@
+import { GymEntity } from 'src/gym/entities/gym.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
@@ -24,4 +25,7 @@ export class OwnerSubscriptionTypeEntity extends PgMainEntity {
 
   @Column('int', { nullable: true })
   allowedNotificationsNumber: number;
+
+  @OneToMany(() => GymEntity, (gym) => gym.ownerSubscriptionType)
+  gyms: GymEntity[];
 }
