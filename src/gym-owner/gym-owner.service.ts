@@ -10,7 +10,8 @@ import {
   SubscriptionEntity,
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
-import { Raw, Repository } from 'typeorm';
+import { ILike, Raw, Repository } from 'typeorm';
+import { FilterOperator, paginate } from 'nestjs-paginate';
 import { Permissions } from '../decorators/roles/role.enum';
 import { GymService } from '../gym/gym.service';
 import { MemberService } from '../member/member.service';
@@ -394,41 +395,92 @@ export class GymOwnerService {
     return savedGym;
   }
 
-  async getAllGymOwners() {
-    console.log('getAllGymOwners');
-    const gymOwners = await this.gymOwnerModel.find({
-      where: {
-        permissions: Raw(
-          (alias) => `${alias} @> '["${Permissions.GymOwner}"]'::jsonb`,
-        ),
-      },
-      relations: {
-        ownedGyms: {
-          transactions: true,
-        },
-      },
-    });
+  async getAllGymOwners(limit: number, page: number, search?: string) {
+    console.log('getAllGymOwners with pagination', { limit, page, search });
 
-    let dataToReturn = [];
-    for (const gymOwner of gymOwners) {
-      for (const gym of gymOwner.ownedGyms) {
+    // Build custom where clause for gym name search
+    let whereClause: any = {
+      permissions: Raw(
+        (alias) => `${alias} @> '["${Permissions.GymOwner}"]'::jsonb`,
+      ),
+    };
+
+    // If search is provided, add gym name search condition
+    if (search && search.trim()) {
+      whereClause = [
+        {
+          ...whereClause,
+          ownedGyms: {
+            name: ILike(`%${search}%`),
+          },
+        },
+        {
+          ...whereClause,
+        },
+      ];
+    }
+
+    const res = await paginate(
+      {
+        limit,
+        page,
+        search,
+        path: 'firstName',
+      },
+      this.gymOwnerModel,
+      {
+        relations: {
+          ownedGyms: {
+            transactions: true,
+          },
+        },
+        sortableColumns: [
+          'createdAt',
+          'updatedAt',
+          'firstName',
+          'lastName',
+          'email',
+        ],
+        searchableColumns: ['firstName', 'lastName', 'email', 'phoneNumber'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: whereClause,
+        filterableColumns: {
+          firstName: [FilterOperator.ILIKE],
+          lastName: [FilterOperator.ILIKE],
+          email: [FilterOperator.ILIKE],
+          phoneNumber: [FilterOperator.ILIKE],
+        },
+        maxLimit: 100,
+      },
+    );
+
+    // Process each gym owner to add expired/active gym counts
+    const items = await Promise.all(
+      res.data.map(async (gymOwner: any) => {
         let expiredGymsCount = 0;
         let activeGymsCount = 0;
-        const activeSubscription =
-          await this.gymService.getGymActiveSubscription(gym);
-        if (!activeSubscription.activeSubscription) {
-          expiredGymsCount++;
-        } else {
-          activeGymsCount++;
+
+        for (const gym of gymOwner.ownedGyms) {
+          const activeSubscription =
+            await this.gymService.getGymActiveSubscription(gym);
+          if (!activeSubscription.activeSubscription) {
+            expiredGymsCount++;
+          } else {
+            activeGymsCount++;
+          }
         }
-        dataToReturn.push({
+
+        return {
           ...gymOwner,
           expiredGymsCount: expiredGymsCount,
           activeGymsCount: activeGymsCount,
-        });
-      }
-    }
+        };
+      }),
+    );
 
-    return dataToReturn;
+    return {
+      ...res,
+      data: items,
+    };
   }
 }

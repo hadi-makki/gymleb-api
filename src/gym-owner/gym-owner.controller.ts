@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -129,13 +130,17 @@ export class GymOwnerController {
 
   @Get('owners/get-all')
   @UseGuards(ManagerAuthGuard)
-  @ApiOperation({ summary: 'Get all gym owners' })
+  @ApiOperation({ summary: 'Get all gym owners with pagination' })
   @ApiOkResponse({
     description: 'The gym owners have been successfully retrieved.',
     type: [ManagerEntity],
   })
   @Roles(Permissions.SuperAdmin)
-  async getAllGymOwners() {
-    return await this.gymOwnerService.getAllGymOwners();
+  async getAllGymOwners(
+    @Query('limit') limit: number = 10,
+    @Query('page') page: number = 1,
+    @Query('search') search?: string,
+  ) {
+    return await this.gymOwnerService.getAllGymOwners(limit, page, search);
   }
 }
