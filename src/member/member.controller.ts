@@ -199,6 +199,8 @@ export class MemberController {
       gymId,
       renewSubscriptionDto.giveFullDay,
       renewSubscriptionDto.willPayLater,
+      renewSubscriptionDto.startDate,
+      renewSubscriptionDto.endDate,
     );
   }
 

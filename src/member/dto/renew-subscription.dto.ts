@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsDateString,
   IsOptional,
   IsString,
   IsUUID,
@@ -34,4 +35,12 @@ export class RenewSubscriptionDto {
   @IsOptional()
   @IsBoolean({ message: 'willPayLater must be a boolean value' })
   willPayLater?: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }
