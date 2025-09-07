@@ -33,6 +33,7 @@ import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { SetSubscriptionDto } from './dto/set-subscription.dto';
 import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
 import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
+import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
 import {
@@ -695,6 +696,21 @@ export class GymController {
     return await this.gymService.updateAiChatStatus(
       gymId,
       updateAiChatDto.isAiChatEnabled,
+    );
+  }
+
+  @Patch('update/message-language/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym message language' })
+  @ApiOkResponse({ description: 'Message language updated successfully' })
+  @ValidateGymRelatedToOwner()
+  async updateMessageLanguage(
+    @Param('gymId') gymId: string,
+    @Body() updateMessageLanguageDto: UpdateMessageLanguageDto,
+  ) {
+    return await this.gymService.updateMessageLanguage(
+      gymId,
+      updateMessageLanguageDto.messagesLanguage,
     );
   }
 

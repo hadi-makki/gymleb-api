@@ -15,7 +15,35 @@ export class TwilioController {
   @Post()
   async create(@Body() createTwilioDto: CreateTwilioDto) {
     const phoneNumber = '+96178886897';
-    return await this.twilioService.sendWhatsappMessage(phoneNumber);
+    const gymId = '01cfdc43-507b-4ce6-a39a-373cf89cccfd';
+    return await this.twilioService.testWhatsappMessage(
+      phoneNumber,
+      gymId,
+      'gymPaymentConfirmation',
+    );
+  }
+
+  @Post('test-message/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Test WhatsApp message with different types' })
+  @ApiBearerAuth()
+  @Roles(Permissions.GymOwner)
+  async testMessage(
+    @Param('gymId') gymId: string,
+    @Body()
+    body: {
+      phoneNumber: string;
+      messageType:
+        | 'expiaryReminder'
+        | 'welcomeMessage'
+        | 'welcomeMessageCalisthenics';
+    },
+  ) {
+    return await this.twilioService.testWhatsappMessage(
+      body.phoneNumber,
+      gymId,
+      body.messageType,
+    );
   }
 
   @Post('notify-expired-members/:gymId')

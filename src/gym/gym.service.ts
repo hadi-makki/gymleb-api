@@ -13,7 +13,7 @@ import {
   isBefore,
 } from 'date-fns';
 import { AddOfferDto } from './dto/add-offer.dto';
-import { GymEntity } from './entities/gym.entity';
+import { GymEntity, MessageLanguage } from './entities/gym.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
@@ -1772,6 +1772,24 @@ export class GymService {
     return {
       message: 'AI chat status updated successfully',
       isAiChatEnabled: gym.isAiChatEnabled,
+    };
+  }
+
+  async updateMessageLanguage(
+    gymId: string,
+    messagesLanguage: MessageLanguage,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.messagesLanguage = messagesLanguage;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'Message language updated successfully',
+      messagesLanguage: gym.messagesLanguage,
     };
   }
 

@@ -11,6 +11,9 @@ import { HttpExceptionFilter } from './error';
 import { BadRequestException } from './error/bad-request-error';
 import { loggerMiddleware } from './logger/logger.service';
 import cookieParser from 'cookie-parser';
+import { NextFunction } from 'express';
+import { Request } from 'express';
+import { Response } from 'express';
 
 dotenv.config({
   path: `.env`,
@@ -50,6 +53,27 @@ async function bootstrap() {
   app.use(loggerMiddleware);
 
   const configService = app.get<ConfigService>(ConfigService);
+
+  // Swagger password protection
+  app.use('/swagger*', (req: Request, res: Response, next: NextFunction) => {
+    const auth = req.headers.authorization;
+    const swaggerPassword = configService.get<string>('SWAGGER_PASSWORD');
+
+    if (!auth || !auth.startsWith('Basic ')) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Swagger"');
+      return res.status(401).send('Authentication required');
+    }
+
+    const credentials = Buffer.from(auth.slice(6), 'base64').toString();
+    const [username, password] = credentials.split(':');
+
+    if (username === 'admin' && password === swaggerPassword) {
+      return next();
+    }
+
+    res.setHeader('WWW-Authenticate', 'Basic realm="Swagger"');
+    return res.status(401).send('Invalid credentials');
+  });
   const options = new DocumentBuilder()
     .setTitle('Media API')
     .setDescription('The Media API description')
@@ -62,7 +86,14 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('swagger', app, document);
+  SwaggerModule.setup('swagger', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+    customSiteTitle: 'GymLeb API Documentation',
+    customfavIcon: '/favicon.ico',
+    customCss: '.swagger-ui .topbar { display: none }',
+  });
   await app.listen(process.env.PORT);
 }
 bootstrap();

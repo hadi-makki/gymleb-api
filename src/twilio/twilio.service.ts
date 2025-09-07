@@ -14,12 +14,29 @@ import { Repository } from 'typeorm';
 import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 
-export enum TwilioWhatsappTemplates {
-  EXPIARY_REMINDER = 'HXe8f26377490ff319bae6b9c1d9538486',
-  // SUBSCRIPTION_EXPIRED = 'HX9f136ce037cfb13b0d4daf887b331437',
-  WELCOME_MESSAGE = 'HX33a3ef241f8933d43327e397663b1347',
-  WELCOME_MESSAGE_CALISTHENICS = 'HX67b2797d8b8bae74e5dd066c4db608d0',
-}
+export const TwilioWhatsappTemplates = {
+  expiaryReminder: {
+    en: 'HXe8f26377490ff319bae6b9c1d9538486',
+    ar: 'HXbe8ca78f0e8de5440a77ca7610d27777',
+    numberOfVariables: 5,
+  },
+  // English templates
+  welcomeMessage: {
+    en: 'HX33a3ef241f8933d43327e397663b1347',
+    ar: 'HXedcdbb7d853851787db0eaa6297ce98e',
+    numberOfVariables: 4,
+  },
+  welcomeMessageCalisthenics: {
+    en: 'HX67b2797d8b8bae74e5dd066c4db608d0',
+    ar: 'HX5cb01d1d696087de6aef652cfd10ff15',
+    numberOfVariables: 4,
+  },
+  gymPaymentConfirmation: {
+    en: 'HXf72f4d4997fc3a2d1f579e3406520f1b',
+    ar: 'HXb1c5bb824a6cd79d86257128a746511f',
+    numberOfVariables: 5,
+  },
+};
 
 @Injectable()
 export class TwilioService {
@@ -95,8 +112,10 @@ export class TwilioService {
           to: `whatsapp:${memberPhone}`,
           contentSid:
             gym.gymType === GymTypeEnum.CALISTHENICS
-              ? TwilioWhatsappTemplates.WELCOME_MESSAGE_CALISTHENICS
-              : TwilioWhatsappTemplates.WELCOME_MESSAGE,
+              ? TwilioWhatsappTemplates.welcomeMessageCalisthenics[
+                  gym.messagesLanguage
+                ]
+              : TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
           contentVariables: JSON.stringify({
             1: memberName,
             2: gym.name,
@@ -154,7 +173,8 @@ export class TwilioService {
         .create({
           from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
           to: `whatsapp:${member.phone}`,
-          contentSid: TwilioWhatsappTemplates.EXPIARY_REMINDER,
+          contentSid:
+            TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
           contentVariables: JSON.stringify({
             1: member.name,
             2: gym.name,
@@ -206,18 +226,74 @@ export class TwilioService {
     }
   }
 
-  async sendWhatsappMessage(phoneNumber: string) {
+  async sendWhatsappMessage(phoneNumber: string, gym: GymEntity) {
     const verify = await this.client.messages.create({
       from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
       to: `whatsapp:${phoneNumber}`,
-      contentSid: TwilioWhatsappTemplates.EXPIARY_REMINDER,
+      contentSid: TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
       contentVariables: JSON.stringify({
-        1: 'Hadi',
-        2: '123456',
+        1: 'Test Member', // Member name
+        2: gym.name, // Gym name
+        3: 'Subscription', // Subscription title
+        4: '01/01/2024', // End date
+        5: gym.phone, // Gym phone
       }),
     });
     return {
-      message: 'OTP sent successfully',
+      message: 'WhatsApp message sent successfully',
+    };
+  }
+
+  async testWhatsappMessage(
+    phoneNumber: string,
+    gymId: string,
+    messageType:
+      | 'expiaryReminder'
+      | 'welcomeMessage'
+      | 'welcomeMessageCalisthenics'
+      | 'gymPaymentConfirmation',
+  ) {
+    const gym = await this.gymService.getGymById(gymId);
+
+    // Prepare content variables based on message type
+    let contentVariables: Record<string, string> = {};
+
+    if (messageType === 'expiaryReminder') {
+      contentVariables = {
+        1: 'Hadi', // Member name
+        2: gym.name, // Gym name
+        3: 'Subscription', // Subscription title
+        4: '01/01/2024', // End date
+        5: gym.phone, // Gym phone
+      };
+    } else if (
+      messageType === 'welcomeMessage' ||
+      messageType === 'welcomeMessageCalisthenics'
+    ) {
+      contentVariables = {
+        1: 'Hadi', // Member name
+        2: gym.name, // Gym name
+        3: `https://gym-leb.com/${gym.gymDashedName}/overview`, // Gym URL
+        4: gym.phone, // Gym phone
+      };
+    } else if (messageType === 'gymPaymentConfirmation') {
+      contentVariables = {
+        1: 'Hadi', // Member name
+        2: gym.name, // Gym name
+        3: '$50.00', // Amount paid
+        4: 'Monthly Membership', // Payment for
+        5: '15/01/2024', // Payment date
+      };
+    }
+
+    const verify = await this.client.messages.create({
+      from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+      to: `whatsapp:${phoneNumber}`,
+      contentSid: TwilioWhatsappTemplates[messageType][gym.messagesLanguage],
+      contentVariables: JSON.stringify(contentVariables),
+    });
+    return {
+      message: 'Test WhatsApp message sent successfully',
     };
   }
 

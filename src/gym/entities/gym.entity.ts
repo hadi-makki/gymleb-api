@@ -25,6 +25,12 @@ export enum GymTypeEnum {
   FITNESS = 'fitness',
   CALISTHENICS = 'calisthenics',
 }
+
+export enum MessageLanguage {
+  ENGLISH = 'en',
+  ARABIC = 'ar',
+}
+
 @Entity('gyms')
 export class GymEntity extends PgMainEntity {
   @Column('text')
@@ -177,4 +183,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isAiChatEnabled: boolean;
+
+  @Column('text', { nullable: true, default: MessageLanguage.ENGLISH })
+  messagesLanguage: MessageLanguage;
 }
