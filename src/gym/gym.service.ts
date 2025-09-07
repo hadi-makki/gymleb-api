@@ -1774,4 +1774,19 @@ export class GymService {
       isAiChatEnabled: gym.isAiChatEnabled,
     };
   }
+
+  async updateGymDescription(gymId: string, description: string) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.description = description;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'Gym description updated successfully',
+      description: gym.description,
+    };
+  }
 }

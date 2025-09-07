@@ -697,4 +697,16 @@ export class GymController {
       updateAiChatDto.isAiChatEnabled,
     );
   }
+
+  @Patch('update/description/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym description' })
+  @ApiOkResponse({ description: 'Gym description updated successfully' })
+  @ValidateGymRelatedToOwner()
+  async updateGymDescription(
+    @Param('gymId') gymId: string,
+    @Body() body: { description: string },
+  ) {
+    return await this.gymService.updateGymDescription(gymId, body.description);
+  }
 }

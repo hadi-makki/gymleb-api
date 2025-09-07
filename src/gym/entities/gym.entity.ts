@@ -88,6 +88,9 @@ export class GymEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   note: string;
 
+  @Column('text', { nullable: true })
+  description: string;
+
   @Column('jsonb', { default: [] })
   offers: { description: string }[];
 
