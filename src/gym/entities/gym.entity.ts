@@ -186,4 +186,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('text', { nullable: true, default: MessageLanguage.ENGLISH })
   messagesLanguage: MessageLanguage;
+
+  @Column('boolean', { default: true })
+  sendWelcomeMessageAutomatically: boolean;
 }

@@ -318,14 +318,15 @@ export class MemberService {
     const getLatestGymSubscription =
       await this.gymService.getGymActiveSubscription(gym.id);
 
-    await this.twilioService.sendWelcomeMessage(
-      newMember.name,
-      newMember.phone,
-      gym,
-      getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
-    );
-
-    await this.gymService.addGymMembersNotified(gym.id, 1);
+    if (gym.sendWelcomeMessageAutomatically) {
+      console.log('notifying member', newMember.name);
+      await this.twilioService.sendWelcomeMessage(
+        newMember.name,
+        newMember.phone,
+        gym,
+        getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+      );
+    }
 
     return await this.returnMember(newMember);
   }
@@ -532,7 +533,7 @@ export class MemberService {
 
   async sendWelcomeMessageToAllMembers(gymId: string) {
     const members = await this.memberModel.find({
-      where: { gym: { id: gymId } },
+      where: { gym: { id: gymId }, isWelcomeMessageSent: false },
       relations: ['gym'],
     });
 

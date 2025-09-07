@@ -725,4 +725,21 @@ export class GymController {
   ) {
     return await this.gymService.updateGymDescription(gymId, body.description);
   }
+
+  @Patch('update/welcome-message-automation/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Toggle automatic welcome message sending' })
+  @ApiOkResponse({
+    description: 'Welcome message automation status updated successfully',
+  })
+  @ValidateGymRelatedToOwner()
+  async updateWelcomeMessageAutomation(
+    @Param('gymId') gymId: string,
+    @Body() body: { sendWelcomeMessageAutomatically: boolean },
+  ) {
+    return await this.gymService.updateWelcomeMessageAutomation(
+      gymId,
+      body.sendWelcomeMessageAutomatically,
+    );
+  }
 }

@@ -1807,4 +1807,22 @@ export class GymService {
       description: gym.description,
     };
   }
+
+  async updateWelcomeMessageAutomation(
+    gymId: string,
+    sendWelcomeMessageAutomatically: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.sendWelcomeMessageAutomatically = sendWelcomeMessageAutomatically;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'Welcome message automation status updated successfully',
+      sendWelcomeMessageAutomatically: gym.sendWelcomeMessageAutomatically,
+    };
+  }
 }
