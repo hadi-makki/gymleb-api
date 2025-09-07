@@ -25,6 +25,22 @@ export class ReturnUserDto {
   trainingPreferences: string;
   trainingPrograms?: MemberTrainingProgramEntity[];
   reservations?: MemberReservationEntity[];
+  weight?: number;
+  height?: number;
+  waistWidth?: number;
+  chestWidth?: number;
+  armWidth?: number;
+  thighWidth?: number;
+  bodyFatPercentage?: number;
+  muscleMass?: number;
+  bmi?: number;
+  bloodType?: string;
+  allergies?: string;
+  medicalConditions?: string;
+  medications?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  lastHealthCheck?: string;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

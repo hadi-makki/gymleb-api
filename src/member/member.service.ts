@@ -41,6 +41,7 @@ import {
   UpdateAttendingDaysDto,
 } from './dto/attending-day.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
+import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 
 @Injectable()
 export class MemberService {
@@ -201,6 +202,22 @@ export class MemberService {
       trainingGoals: member.trainingGoals,
       trainingPreferences: member.trainingPreferences,
       trainingPrograms: member.trainingPrograms,
+      weight: member.weight,
+      height: member.height,
+      waistWidth: member.waistWidth,
+      chestWidth: member.chestWidth,
+      armWidth: member.armWidth,
+      thighWidth: member.thighWidth,
+      bodyFatPercentage: member.bodyFatPercentage,
+      muscleMass: member.muscleMass,
+      bmi: member.bmi,
+      bloodType: member.bloodType,
+      allergies: member.allergies,
+      medicalConditions: member.medicalConditions,
+      medications: member.medications,
+      emergencyContact: member.emergencyContact,
+      emergencyPhone: member.emergencyPhone,
+      lastHealthCheck: member.lastHealthCheck?.toISOString(),
     };
   }
 
@@ -1374,5 +1391,42 @@ export class MemberService {
     }
 
     return attendances;
+  }
+
+  async updateMemberHealthInformation(
+    memberId: string,
+    gymId: string,
+    updateHealthInformationDto: UpdateHealthInformationDto,
+  ) {
+    // Validate member exists and belongs to the gym
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: gymId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        'Member not found or does not belong to this gym',
+      );
+    }
+
+    // Calculate BMI if both weight and height are provided
+    let bmi = updateHealthInformationDto.bmi;
+    if (
+      updateHealthInformationDto.weight &&
+      updateHealthInformationDto.height
+    ) {
+      const heightInMeters = updateHealthInformationDto.height / 100;
+      bmi =
+        updateHealthInformationDto.weight / (heightInMeters * heightInMeters);
+    }
+
+    // Update the member with health information
+    await this.memberModel.update(memberId, {
+      ...updateHealthInformationDto,
+      bmi,
+      lastHealthCheck: new Date(),
+    });
+
+    return { message: 'Health information updated successfully' };
   }
 }

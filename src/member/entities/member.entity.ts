@@ -129,6 +129,55 @@ export class MemberEntity extends PgMainEntity {
   )
   trainingPrograms: MemberTrainingProgramEntity[];
 
+  // Health Information Fields
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  weight: number | null; // in kg
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  height: number | null; // in cm
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  waistWidth: number | null; // in cm
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  chestWidth: number | null; // in cm
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  armWidth: number | null; // in cm
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  thighWidth: number | null; // in cm
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  bodyFatPercentage: number | null; // in percentage
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  muscleMass: number | null; // in kg
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  bmi: number | null; // Body Mass Index
+
+  @Column('text', { nullable: true })
+  bloodType: string | null;
+
+  @Column('text', { nullable: true })
+  allergies: string | null;
+
+  @Column('text', { nullable: true })
+  medicalConditions: string | null;
+
+  @Column('text', { nullable: true })
+  medications: string | null;
+
+  @Column('text', { nullable: true })
+  emergencyContact: string | null;
+
+  @Column('text', { nullable: true })
+  emergencyPhone: string | null;
+
+  @Column('timestamp', { nullable: true })
+  lastHealthCheck: Date | null;
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,

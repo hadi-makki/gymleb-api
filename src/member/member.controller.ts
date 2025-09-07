@@ -41,6 +41,7 @@ import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 import { SignupMemberDto } from './dto/signup-member.dto';
+import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
@@ -461,5 +462,27 @@ export class MemberController {
   })
   async getGymAttendances(@Param('gymId') gymId: string) {
     return await this.memberService.getGymAttendances(gymId);
+  }
+
+  @Patch(':gymId/:memberId/health-information')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({
+    summary: 'Update member health information',
+    description:
+      'Update the health information and measurements for a specific member',
+  })
+  async updateMemberHealthInformation(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+    @Body() updateHealthInformationDto: UpdateHealthInformationDto,
+  ) {
+    return await this.memberService.updateMemberHealthInformation(
+      memberId,
+      gymId,
+      updateHealthInformationDto,
+    );
   }
 }
