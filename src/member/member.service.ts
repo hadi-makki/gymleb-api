@@ -1464,14 +1464,7 @@ export class MemberService {
     }
 
     // Find the active subscription (transaction) for this member
-    const activeSubscription = await this.transactionModel.findOne({
-      where: {
-        member: { id: memberId },
-        endDate: MoreThan(new Date()),
-        isPaid: true,
-      },
-      order: { createdAt: 'DESC' },
-    });
+    const activeSubscription = await this.getActiveSubscription(memberId);
 
     if (!activeSubscription) {
       throw new BadRequestException(

@@ -4,6 +4,22 @@ import { Permissions } from 'src/decorators/roles/role.enum';
 
 export class CreateStaffDto {
   @ApiProperty({
+    description: 'The first name of the staff',
+    example: 'John',
+  })
+  @IsNotEmpty()
+  @IsString()
+  firstName: string;
+
+  @ApiProperty({
+    description: 'The last name of the staff',
+    example: 'Doe',
+  })
+  @IsNotEmpty()
+  @IsString()
+  lastName: string;
+
+  @ApiProperty({
     description: 'The name of the staff',
     example: 'John Doe',
   })

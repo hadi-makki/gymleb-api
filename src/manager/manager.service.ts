@@ -235,6 +235,9 @@ export class ManagerService {
       throw new NotFoundException('Manager not found');
     }
 
+    if (!body.email && manager.email) {
+      manager.email = null;
+    }
     if (body.email) manager.email = body.email;
     if (body.firstName) manager.firstName = body.firstName;
     if (body.lastName) manager.lastName = body.lastName;
