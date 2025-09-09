@@ -13,6 +13,8 @@ import { Twilio } from 'twilio';
 import { Repository } from 'typeorm';
 import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
+import { isValidPhoneUsingISO } from 'src/utils/validations';
+import { CountryCode } from 'libphonenumber-js';
 
 export const TwilioWhatsappTemplates = {
   expiaryReminder: {
@@ -78,6 +80,7 @@ export class TwilioService {
   async sendWelcomeMessage(
     memberName: string,
     memberPhone: string,
+    memberPhoneISOCode: string,
     gym: GymEntity,
     activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
@@ -104,8 +107,11 @@ export class TwilioService {
     member.isWelcomeMessageSent = true;
     await this.memberModel.save(member);
 
-    if (!checkNodeEnv('local') && isPhoneNumber(memberPhone)) {
-      console.log('sending notification to', memberPhone);
+    if (
+      !checkNodeEnv('local') &&
+      isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
+    ) {
+      console.log('sending notification to', memberPhone, memberPhoneISOCode);
       await this.client.messages
         .create({
           from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
@@ -144,11 +150,13 @@ export class TwilioService {
     gymId,
     dontCheckExpired = false,
     activeSubscription,
+    memberPhoneISOCode,
   }: {
     userId: string;
     gymId: string;
     dontCheckExpired?: boolean;
     activeSubscription: OwnerSubscriptionTypeEntity;
+    memberPhoneISOCode: string;
   }) {
     const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
     const gym = await this.gymService.getGymById(gymId);
@@ -168,7 +176,10 @@ export class TwilioService {
     const welcomeAndExpirationMessages =
       gym.welcomeMessageNotified + gym.membersNotified;
 
-    if (!checkNodeEnv('local') && isPhoneNumber(member.phone)) {
+    if (
+      !checkNodeEnv('local') &&
+      isValidPhoneUsingISO(member.phone, memberPhoneISOCode as CountryCode)
+    ) {
       await this.client.messages
         .create({
           from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
@@ -222,7 +233,12 @@ export class TwilioService {
     activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
     for (const userId of userIds) {
-      await this.notifySingleMember({ userId, gymId, activeSubscription });
+      await this.notifySingleMember({
+        userId,
+        gymId,
+        activeSubscription,
+        memberPhoneISOCode: 'LB',
+      });
     }
   }
 

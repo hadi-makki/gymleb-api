@@ -323,6 +323,7 @@ export class MemberService {
       await this.twilioService.sendWelcomeMessage(
         newMember.name,
         newMember.phone,
+        newMember.phoneNumberISOCode,
         gym,
         getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
       );
@@ -395,6 +396,7 @@ export class MemberService {
     await this.twilioService.sendWelcomeMessage(
       savedMember.name,
       savedMember.phone,
+      savedMember.phoneNumberISOCode,
       gym,
       getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
     );
@@ -550,6 +552,7 @@ export class MemberService {
       await this.twilioService.sendWelcomeMessage(
         member.name,
         member.phone,
+        member.phoneNumberISOCode,
         member.gym,
         getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
       );
@@ -1169,6 +1172,7 @@ export class MemberService {
         dontCheckExpired: true,
         activeSubscription:
           getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        memberPhoneISOCode: member.phoneNumberISOCode,
       });
     }
 
@@ -1191,6 +1195,7 @@ export class MemberService {
       await this.twilioService.notifySingleMember({
         userId: member.member.id,
         gymId: member.gym.id,
+        memberPhoneISOCode: member.member.phoneNumberISOCode,
         activeSubscription:
           getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
       });
