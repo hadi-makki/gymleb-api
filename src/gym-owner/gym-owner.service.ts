@@ -163,7 +163,8 @@ export class GymOwnerService {
           {
             name: memberData.name,
             email: memberData.email,
-            phone: memberData.phone,
+            phoneNumber: memberData.phone,
+            phoneNumberISOCode: 'LB',
             subscriptionId: randomSubscription.id,
           },
           gymOwner,

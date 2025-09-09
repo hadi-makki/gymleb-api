@@ -17,7 +17,11 @@ export class CreateMemberDto {
 
   @IsNotEmpty()
   @IsString()
-  phone: string;
+  phoneNumber: string;
+
+  @IsNotEmpty()
+  @IsString()
+  phoneNumberISOCode: string;
 
   @IsNotEmpty()
   @IsString()

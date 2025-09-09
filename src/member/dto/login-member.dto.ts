@@ -5,6 +5,10 @@ export class LoginMemberDto {
   @IsString()
   phoneNumber: string;
 
+  @IsNotEmpty()
+  @IsString()
+  phoneNumberISOCode: string;
+
   @IsOptional()
   @IsString()
   password: string;

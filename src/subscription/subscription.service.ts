@@ -36,7 +36,9 @@ export class SubscriptionService {
         ? createSubscriptionDto.duration * 365
         : createSubscriptionDto.type === SubscriptionType.MONTHLY_GYM
           ? createSubscriptionDto.duration * 30
-          : createSubscriptionDto.duration;
+          : createSubscriptionDto.type === SubscriptionType.WEEKLY_GYM
+            ? createSubscriptionDto.duration * 7
+            : createSubscriptionDto.duration;
 
     const createSubscriptionModel = this.subscriptionModel.create({
       title: createSubscriptionDto.title,

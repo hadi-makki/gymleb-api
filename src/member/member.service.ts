@@ -250,7 +250,7 @@ export class MemberService {
     });
     const checkIfPhoneExists = await this.memberModel.exists({
       where: {
-        phone: createMemberDto.phone,
+        phone: createMemberDto.phoneNumber,
         gym: { id: gym.id },
       },
     });
@@ -279,7 +279,8 @@ export class MemberService {
     const createMemberModel = this.memberModel.create({
       name: createMemberDto.name,
       ...(createMemberDto.email && { email: createMemberDto.email }),
-      phone: createMemberDto.phone,
+      phone: createMemberDto.phoneNumber,
+      phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
       gym: gym,
       subscription: subscription,
     });
@@ -319,7 +320,6 @@ export class MemberService {
       await this.gymService.getGymActiveSubscription(gym.id);
 
     if (gym.sendWelcomeMessageAutomatically) {
-      console.log('notifying member', newMember.name);
       await this.twilioService.sendWelcomeMessage(
         newMember.name,
         newMember.phone,
@@ -352,7 +352,7 @@ export class MemberService {
     // Check if member already exists with this phone number in this gym
     const existingMember = await this.memberModel.findOne({
       where: {
-        phone: signupMemberDto.phone,
+        phone: signupMemberDto.phoneNumber,
         gym: { id: signupMemberDto.gymId },
       },
     });
@@ -367,7 +367,8 @@ export class MemberService {
     const member = this.memberModel.create({
       name: signupMemberDto.name,
       email: signupMemberDto.email,
-      phone: signupMemberDto.phone,
+      phone: signupMemberDto.phoneNumber,
+      phoneNumberISOCode: signupMemberDto.phoneNumberISOCode,
       gym: { id: signupMemberDto.gymId },
       password: signupMemberDto.password
         ? await MemberEntity.hashPassword(signupMemberDto.password)
@@ -417,6 +418,7 @@ export class MemberService {
     const member = await this.memberModel.findOne({
       where: {
         phone: loginMemberDto.phoneNumber,
+        phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
         gym: {
           ...(isUUID(loginMemberDto.gymId)
             ? { id: loginMemberDto.gymId }
@@ -741,7 +743,8 @@ export class MemberService {
 
     member.name = updateMemberDto.name;
     member.email = updateMemberDto.email;
-    member.phone = updateMemberDto.phone;
+    member.phone = updateMemberDto.phoneNumber;
+    member.phoneNumberISOCode = updateMemberDto.phoneNumberISOCode;
     await this.memberModel.save(member);
     return await this.returnMember(member);
   }

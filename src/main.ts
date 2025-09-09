@@ -2,7 +2,7 @@ import { ForbiddenException, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationError } from 'class-validator';
+import { isPhoneNumber, ValidationError } from 'class-validator';
 import * as dotenv from 'dotenv';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -14,6 +14,7 @@ import cookieParser from 'cookie-parser';
 import { NextFunction } from 'express';
 import { Request } from 'express';
 import { Response } from 'express';
+import { isValidPhoneUsingISO } from './utils/validations';
 
 dotenv.config({
   path: `.env`,
@@ -22,6 +23,8 @@ dotenv.config({
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
+
+  console.log('check phone number', isValidPhoneUsingISO('+96179341209', 'LB'));
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());

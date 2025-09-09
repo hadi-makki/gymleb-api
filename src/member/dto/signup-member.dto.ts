@@ -11,7 +11,11 @@ export class SignupMemberDto {
 
   @IsNotEmpty()
   @IsString()
-  phone: string;
+  phoneNumber: string;
+
+  @IsNotEmpty()
+  @IsString()
+  phoneNumberISOCode: string;
 
   @IsNotEmpty()
   @IsString()

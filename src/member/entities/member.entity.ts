@@ -49,6 +49,9 @@ export class MemberEntity extends PgMainEntity {
   @Column('text')
   phone: string;
 
+  @Column('text', { default: 'LB' })
+  phoneNumberISOCode: string;
+
   @ManyToOne(() => GymEntity, (gym) => gym.members)
   gym: GymEntity;
 
