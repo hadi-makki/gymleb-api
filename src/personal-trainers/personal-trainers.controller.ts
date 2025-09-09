@@ -339,7 +339,7 @@ export class PersonalTrainersController {
     );
   }
 
-  @Delete('sessions/:sessionId')
+  @Delete('sessions/:sessionId/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(
     Permissions.GymOwner,
