@@ -34,6 +34,7 @@ import { SetSubscriptionDto } from './dto/set-subscription.dto';
 import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
 import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
 import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
+import { UpdateGymPhoneDto } from './dto/update-gym-phone.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
 import {
@@ -740,6 +741,22 @@ export class GymController {
     return await this.gymService.updateWelcomeMessageAutomation(
       gymId,
       body.sendWelcomeMessageAutomatically,
+    );
+  }
+
+  @Patch('update/phone/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym phone number' })
+  @ApiOkResponse({ description: 'Gym phone number updated successfully' })
+  @ValidateGymRelatedToOwner()
+  async updateGymPhone(
+    @Param('gymId') gymId: string,
+    @Body() updateGymPhoneDto: UpdateGymPhoneDto,
+  ) {
+    return await this.gymService.updateGymPhone(
+      gymId,
+      updateGymPhoneDto.phoneNumber,
+      updateGymPhoneDto.phoneNumberISOCode,
     );
   }
 }

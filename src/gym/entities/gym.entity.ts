@@ -52,6 +52,9 @@ export class GymEntity extends PgMainEntity {
   @Column('text')
   phone: string;
 
+  @Column('text', { nullable: true, default: 'LB' })
+  phoneNumberISOCode: string;
+
   @ManyToMany(() => ManagerEntity, (manager) => manager.gyms)
   personalTrainers: ManagerEntity[];
 

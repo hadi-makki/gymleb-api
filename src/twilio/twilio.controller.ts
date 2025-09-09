@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
@@ -78,5 +86,43 @@ export class TwilioController {
   @Roles(Permissions.SuperAdmin)
   async getInboundMessages() {
     return await this.twilioService.getInboundMessages();
+  }
+
+  @Get('messages')
+  @ApiOperation({ summary: 'Get all Twilio messages with pagination' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  async getAllMessages(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+    @Query('gymId') gymId?: string,
+  ) {
+    return await this.twilioService.getAllMessages(
+      Number(limit),
+      Number(page),
+      search || '',
+      gymId,
+    );
+  }
+
+  @Get('messages/gym/:gymId')
+  @ApiOperation({ summary: 'Get Twilio messages for a specific gym' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  async getGymMessages(
+    @Param('gymId') gymId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+  ) {
+    return await this.twilioService.getGymMessages(
+      gymId,
+      Number(limit),
+      Number(page),
+      search || '',
+    );
   }
 }

@@ -46,6 +46,7 @@ import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
+import { ValidateGymRelatedToManagerOrManagerInGym } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
@@ -123,7 +124,7 @@ export class MemberController {
   @Get('gym/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
-  @ValidateGymRelatedToOwner()
+  @ValidateGymRelatedToManagerOrManagerInGym()
   async findAll(
     @User() manager: ManagerEntity,
     @Query('search') search: string,

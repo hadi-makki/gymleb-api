@@ -174,6 +174,14 @@ export const navItems: NavItem[] = [
     roles: [Permissions.SuperAdmin],
   },
   {
+    title: 'All Twilio Messages',
+    url: '/super-admin/twilio-messages',
+    icon: 'mail',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
+  {
     title: 'Inbound Messages',
     url: '/super-admin/inbound-messages',
     icon: 'mail',

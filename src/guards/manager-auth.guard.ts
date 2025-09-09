@@ -20,6 +20,7 @@ import { VALIDATE_PERSONAL_TRAINER_RELATED_TO_GYM_KEY } from 'src/decorators/val
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { isUUID } from 'class-validator';
+import { VALIDATE_GYM_RELATED_TO_MANAGER_OR_MANAGER_IN_GYM_KEY } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
 @Injectable()
 export class ManagerAuthGuard implements CanActivate {
   constructor(
@@ -56,6 +57,12 @@ export class ManagerAuthGuard implements CanActivate {
     const validatePersonalTrainerRelatedToGym =
       this.reflector.getAllAndOverride<boolean>(
         VALIDATE_PERSONAL_TRAINER_RELATED_TO_GYM_KEY,
+        [context.getHandler(), context.getClass()],
+      );
+
+    const validateGymRelatedToManagerOrManagerInGym =
+      this.reflector.getAllAndOverride<boolean>(
+        VALIDATE_GYM_RELATED_TO_MANAGER_OR_MANAGER_IN_GYM_KEY,
         [context.getHandler(), context.getClass()],
       );
 
@@ -97,7 +104,9 @@ export class ManagerAuthGuard implements CanActivate {
     if (validatePersonalTrainerRelatedToGym) {
       await this.validatePersonalTrainerRelatedToGym(manager, request);
     }
-
+    if (validateGymRelatedToManagerOrManagerInGym) {
+      await this.validateGymRelatedToManagerOrManagerInGym(manager, request);
+    }
     request.user = manager;
 
     return true;
@@ -126,6 +135,43 @@ export class ManagerAuthGuard implements CanActivate {
 
     if (gym.owner.id !== manager.id) {
       throw new ForbiddenException('Gym not found');
+    }
+
+    return true;
+  }
+
+  async validateGymRelatedToManagerOrManagerInGym(
+    manager: ManagerEntity,
+    request: Request,
+  ) {
+    const gymId =
+      request.params?.gymId || request.body?.gymId || request.query?.gymId;
+
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const gym = await this.gymRepository.findOne({
+      where: { id: gymId },
+      relations: {
+        owner: true,
+      },
+    });
+
+    if (!gym) {
+      throw new ForbiddenException('Gym not found');
+    }
+
+    if (gym.owner.id === manager.id) {
+      return true;
+    }
+
+    const managerInGym = await this.managerRepository.findOne({
+      where: { id: manager.id, gyms: { id: gymId } },
+    });
+
+    if (!managerInGym) {
+      throw new ForbiddenException('Member not found');
     }
 
     return true;

@@ -10,7 +10,7 @@ import { checkNodeEnv } from 'src/config/helper/helper-functions';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { Twilio } from 'twilio';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { isValidPhoneUsingISO } from 'src/utils/validations';
@@ -437,5 +437,79 @@ export class TwilioService {
   async getInboundMessages() {
     const messages = await this.client.messages.list();
     return messages.filter((message) => message.direction === 'inbound');
+  }
+
+  async getAllMessages(
+    limit: number,
+    page: number,
+    search: string,
+    gymId?: string,
+  ) {
+    const queryBuilder = this.twilioMessageModel
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.gym', 'gym')
+      .orderBy('message.createdAt', 'DESC');
+
+    // Apply search filter
+    if (search) {
+      queryBuilder.andWhere(
+        '(gym.name ILIKE :search OR message.message ILIKE :search OR message.phoneNumber ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Apply gym filter
+    if (gymId) {
+      queryBuilder.andWhere('message.gym.id = :gymId', { gymId });
+    }
+
+    // Apply pagination
+    const offset = (page - 1) * limit;
+    queryBuilder.skip(offset).take(limit);
+
+    const [messages, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data: messages,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getGymMessages(
+    gymId: string,
+    limit: number,
+    page: number,
+    search: string,
+  ) {
+    const queryBuilder = this.twilioMessageModel
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.gym', 'gym')
+      .where('message.gym.id = :gymId', { gymId })
+      .orderBy('message.createdAt', 'DESC');
+
+    // Apply search filter
+    if (search) {
+      queryBuilder.andWhere(
+        '(message.message ILIKE :search OR message.phoneNumber ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Apply pagination
+    const offset = (page - 1) * limit;
+    queryBuilder.skip(offset).take(limit);
+
+    const [messages, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data: messages,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
