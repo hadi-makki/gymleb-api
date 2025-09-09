@@ -21,6 +21,7 @@ import {
 } from 'typeorm';
 import { PgMainEntity } from '../../main-classes/mainEntity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
+import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 export enum GymTypeEnum {
   FITNESS = 'fitness',
   CALISTHENICS = 'calisthenics',
@@ -189,4 +190,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('boolean', { default: true })
   sendWelcomeMessageAutomatically: boolean;
+
+  @OneToMany(() => TwilioMessageEntity, (twilioMessage) => twilioMessage.gym)
+  twilioMessages: TwilioMessageEntity[];
 }

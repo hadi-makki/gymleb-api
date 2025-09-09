@@ -19,6 +19,7 @@ import { MemberAttendingDaysEntity } from './entities/member-attending-days.enti
 import { MemberReservationEntity } from './entities/member-reservation.entity';
 import { MemberTrainingProgramEntity } from './entities/member-training-program.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 @Module({
   imports: [
     AuthenticationModule,
@@ -30,6 +31,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       GymEntity,
       SubscriptionEntity,
       PTSessionEntity,
+      TwilioMessageEntity,
     ]),
     TransactionModule,
     MediaModule,

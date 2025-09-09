@@ -1,0 +1,31 @@
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { PgMainEntity } from 'src/main-classes/mainEntity';
+import { Entity, Column, ManyToOne } from 'typeorm';
+
+export enum TwilioMessageType {
+  expiaryReminder = 'expiaryReminder',
+  welcomeMessage = 'welcomeMessage',
+  welcomeMessageCalisthenics = 'welcomeMessageCalisthenics',
+  gymPaymentConfirmation = 'gymPaymentConfirmation',
+}
+
+@Entity('twilio_messages')
+export class TwilioMessageEntity extends PgMainEntity {
+  @Column('text', { nullable: true })
+  message: string;
+
+  @Column('text', { nullable: true })
+  phoneNumber: string;
+
+  @Column('text', { nullable: true })
+  phoneNumberISOCode: string;
+
+  @ManyToOne(() => GymEntity, (gym) => gym.twilioMessages)
+  gym: GymEntity;
+
+  @Column('text', { nullable: false })
+  messageType: TwilioMessageType;
+
+  @Column('text', { nullable: true })
+  messageSid: string;
+}

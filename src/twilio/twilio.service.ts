@@ -15,6 +15,10 @@ import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { isValidPhoneUsingISO } from 'src/utils/validations';
 import { CountryCode } from 'libphonenumber-js';
+import {
+  TwilioMessageEntity,
+  TwilioMessageType,
+} from './entities/twilio-message.entity';
 
 export const TwilioWhatsappTemplates = {
   expiaryReminder: {
@@ -49,7 +53,35 @@ export class TwilioService {
     private readonly memberService: MemberService,
     @InjectRepository(MemberEntity)
     private readonly memberModel: Repository<MemberEntity>,
+    @InjectRepository(TwilioMessageEntity)
+    private readonly twilioMessageModel: Repository<TwilioMessageEntity>,
   ) {}
+
+  async saveTwilioMessage({
+    message,
+    phoneNumber,
+    phoneNumberISOCode,
+    gym,
+    messageType,
+    messageSid,
+  }: {
+    message: string;
+    phoneNumber: string;
+    phoneNumberISOCode: string;
+    gym: GymEntity;
+    messageType: TwilioMessageType;
+    messageSid: string;
+  }) {
+    const twilioMessage = this.twilioMessageModel.create({
+      message,
+      phoneNumber,
+      phoneNumberISOCode,
+      gym,
+      messageType,
+      messageSid,
+    });
+    await this.twilioMessageModel.save(twilioMessage);
+  }
 
   private readonly allowedMessagesNumber = 500;
 
@@ -129,7 +161,15 @@ export class TwilioService {
             4: gym.phone,
           }),
         })
-        .then(async () => {
+        .then(async (res) => {
+          await this.saveTwilioMessage({
+            message: res.body,
+            phoneNumber: memberPhone,
+            phoneNumberISOCode: memberPhoneISOCode,
+            gym,
+            messageType: TwilioMessageType.welcomeMessage,
+            messageSid: res.sid,
+          });
           await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
         })
         .catch((error) => {
@@ -204,8 +244,15 @@ export class TwilioService {
             5: gym.phone,
           }),
         })
-        .then(async () => {
-          console.log('member notified successfully');
+        .then(async (res) => {
+          await this.saveTwilioMessage({
+            message: res.body,
+            phoneNumber: member.phone,
+            phoneNumberISOCode: memberPhoneISOCode,
+            gym,
+            messageType: TwilioMessageType.expiaryReminder,
+            messageSid: res.sid,
+          });
           await this.memberService.toggleNotified(member.id, true);
           await this.gymService.addGymMembersNotified(gym.id, 1);
         })
@@ -302,12 +349,28 @@ export class TwilioService {
       };
     }
 
-    const verify = await this.client.messages.create({
-      from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-      to: `whatsapp:${phoneNumber}`,
-      contentSid: TwilioWhatsappTemplates[messageType][gym.messagesLanguage],
-      contentVariables: JSON.stringify(contentVariables),
-    });
+    const verify = await this.client.messages
+      .create({
+        from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+        to: `whatsapp:${phoneNumber}`,
+        contentSid: TwilioWhatsappTemplates[messageType][gym.messagesLanguage],
+        contentVariables: JSON.stringify(contentVariables),
+      })
+      .then(async (res) => {
+        console.log('this is twilio response', res);
+        await this.saveTwilioMessage({
+          message: res.body,
+          phoneNumber: phoneNumber,
+          phoneNumberISOCode: 'LB',
+          gym,
+          messageType: messageType as TwilioMessageType,
+          messageSid: res.sid,
+        });
+      })
+      .catch((error) => {
+        console.log('this is twilio error', error);
+        throw new BadRequestException(error);
+      });
     return {
       message: 'Test WhatsApp message sent successfully',
     };

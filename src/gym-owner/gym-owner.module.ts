@@ -21,6 +21,7 @@ import { GymOwnerService } from './gym-owner.service';
 import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-days.entity';
 import { MemberReservationEntity } from 'src/member/entities/member-reservation.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
+import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -34,6 +35,7 @@ import { ProductsOffersEntity } from 'src/products/products-offers.entity';
       MemberAttendingDaysEntity,
       MemberReservationEntity,
       ProductsOffersEntity,
+      TwilioMessageEntity,
     ]),
     AuthenticationModule,
     TransactionModule,
