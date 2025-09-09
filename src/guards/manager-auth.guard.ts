@@ -129,12 +129,21 @@ export class ManagerAuthGuard implements CanActivate {
         owner: true,
       },
     });
+
     if (!gym) {
       throw new ForbiddenException('Gym not found');
     }
 
-    if (gym.owner.id !== manager.id) {
-      throw new ForbiddenException('Gym not found');
+    if (gym.owner.id === manager.id) {
+      return true;
+    }
+
+    const managerInGym = await this.managerRepository.findOne({
+      where: { id: manager.id, gyms: { id: gymId } },
+    });
+
+    if (!managerInGym) {
+      throw new ForbiddenException('Member not found');
     }
 
     return true;

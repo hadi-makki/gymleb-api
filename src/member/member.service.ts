@@ -42,6 +42,7 @@ import {
 } from './dto/attending-day.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
+import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
 
 @Injectable()
 export class MemberService {
@@ -1444,5 +1445,54 @@ export class MemberService {
     });
 
     return { message: 'Health information updated successfully' };
+  }
+
+  async extendMembershipDuration(
+    memberId: string,
+    gymId: string,
+    extendMembershipDurationDto: ExtendMembershipDurationDto,
+  ) {
+    // Validate member exists and belongs to the gym
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: gymId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        'Member not found or does not belong to this gym',
+      );
+    }
+
+    // Find the active subscription (transaction) for this member
+    const activeSubscription = await this.transactionModel.findOne({
+      where: {
+        member: { id: memberId },
+        endDate: MoreThan(new Date()),
+        isPaid: true,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!activeSubscription) {
+      throw new BadRequestException(
+        'Member does not have an active subscription',
+      );
+    }
+
+    // Calculate new end date by adding the specified days
+    const currentEndDate = new Date(activeSubscription.endDate);
+    const newEndDate = new Date(currentEndDate);
+    newEndDate.setDate(newEndDate.getDate() + extendMembershipDurationDto.days);
+
+    // Update the subscription end date
+    await this.transactionModel.update(activeSubscription.id, {
+      endDate: newEndDate,
+    });
+
+    return {
+      message: `Membership extended by ${extendMembershipDurationDto.days} days successfully`,
+      newEndDate: newEndDate.toISOString(),
+      daysExtended: extendMembershipDurationDto.days,
+    };
   }
 }
