@@ -144,6 +144,7 @@ export class ManagerController {
 
   @Patch('update/me')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.Any)
   @ApiBearerAuth()
   @ApiOkResponse({ type: ManagerEntity })
   updateMe(@User() user: ManagerEntity, @Body() body: UpdateManagerDto) {
