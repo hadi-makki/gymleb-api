@@ -778,4 +778,19 @@ export class GymController {
   async hasMultipleGyms(@User() user: ManagerEntity) {
     return await this.gymService.hasMultipleGyms(user);
   }
+
+  @Get('get-owner-gyms/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Get all gyms belonging to the owner of the specified gym',
+  })
+  @ApiOkResponse({
+    description: 'Returns all gyms for the owner of the specified gym',
+    type: [GymEntity],
+  })
+  @Roles(Permissions.GymOwner, Permissions.products)
+  @ValidateGymRelatedToOwner()
+  async getOwnerGyms(@Param('gymId') gymId: string) {
+    return await this.gymService.getOwnerGyms(gymId);
+  }
 }

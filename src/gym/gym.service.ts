@@ -1868,4 +1868,23 @@ export class GymService {
       phone: gym.phone,
     };
   }
+
+  async getOwnerGyms(gymId: string) {
+    // First, get the current gym to find its owner
+    const currentGym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: ['owner'],
+    });
+
+    if (!currentGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    if (!currentGym.owner) {
+      throw new NotFoundException('Gym owner not found');
+    }
+
+    // Get all gyms for this owner using the existing method
+    return await this.getGymsByOwner(currentGym.owner.id);
+  }
 }
