@@ -178,6 +178,12 @@ export class TwilioService {
         });
     } else {
       console.log('member notified successfully');
+      console.log('member phone', memberPhone);
+      console.log('member phone ISO code', memberPhoneISOCode);
+      console.log(
+        'check phone number',
+        isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode),
+      );
       if (checkNodeEnv('local')) {
         await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
       }
@@ -262,6 +268,12 @@ export class TwilioService {
         });
     } else {
       console.log('member notified successfully');
+      console.log('member phone', member.phone);
+      console.log('member phone ISO code', memberPhoneISOCode);
+      console.log(
+        'check phone number',
+        isValidPhoneUsingISO(member.phone, memberPhoneISOCode as CountryCode),
+      );
       if (checkNodeEnv('local')) {
         await this.memberService.toggleNotified(member.id, true);
         await this.gymService.addGymMembersNotified(gym.id, 1);

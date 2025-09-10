@@ -24,7 +24,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
 
-  console.log('check phone number', isValidPhoneUsingISO('+96179341209', 'LB'));
+  console.log(
+    'check phone number',
+    isValidPhoneUsingISO('+5511984402771', 'BR'),
+  );
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(helmet());
