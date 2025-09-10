@@ -759,4 +759,23 @@ export class GymController {
       updateGymPhoneDto.phoneNumberISOCode,
     );
   }
+
+  @Get('has-multiple-gyms')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Check if current manager has multiple gyms (owned or assigned)',
+  })
+  @ApiOkResponse({
+    description: 'Returns whether the manager has multiple gyms',
+    schema: {
+      type: 'object',
+      properties: {
+        hasMultipleGyms: { type: 'boolean' },
+      },
+    },
+  })
+  @Roles(Permissions.Any)
+  async hasMultipleGyms(@User() user: ManagerEntity) {
+    return await this.gymService.hasMultipleGyms(user);
+  }
 }

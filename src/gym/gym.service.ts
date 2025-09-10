@@ -548,6 +548,29 @@ export class GymService {
     return gym;
   }
 
+  async hasMultipleGyms(
+    manager: ManagerEntity,
+  ): Promise<{ hasMultipleGyms: boolean }> {
+    if (manager.permissions.includes(Permissions.GymOwner)) {
+      const gyms = await this.gymModel.find({
+        where: { owner: { id: manager.id } },
+      });
+      return { hasMultipleGyms: gyms.length > 1 };
+    }
+    if (!manager.permissions.includes(Permissions.GymOwner)) {
+      const getManager = await this.managerModel.findOne({
+        where: { id: manager.id },
+        relations: ['gyms'],
+      });
+      const getGymOwner = await this.managerModel.findOne({
+        where: { id: getManager?.gyms[0].ownerId },
+        relations: ['ownedGyms'],
+      });
+
+      return { hasMultipleGyms: getGymOwner?.ownedGyms.length > 1 };
+    }
+  }
+
   async getTransactionHistory(
     manager: ManagerEntity,
     limit: number,
