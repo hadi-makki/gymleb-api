@@ -612,6 +612,8 @@ export class GymService {
           'revenue',
           'expense',
           'relatedPtSession',
+          'transferedFrom',
+          'transferedTo',
         ],
         sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
         searchableColumns: ['title', 'paidBy'],

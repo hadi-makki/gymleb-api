@@ -192,6 +192,29 @@ export class UpdateHealthInformationDto {
   emergencyPhone?: string;
 
   @ApiProperty({
+    description: 'Member birthday',
+    example: '1990-01-01',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  birthday?: string;
+
+  @ApiProperty({
+    description: 'Visceral fat percentage',
+    example: 12.5,
+    required: false,
+    minimum: 1,
+    maximum: 50,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  @Max(50)
+  @Type(() => Number)
+  visceralFat?: number;
+
+  @ApiProperty({
     description: 'Last health check date',
     example: '2024-01-15T10:30:00Z',
     required: false,

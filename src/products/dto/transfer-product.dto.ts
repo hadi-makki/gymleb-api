@@ -5,6 +5,7 @@ import {
   IsUUID,
   Min,
   Max,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -22,10 +23,10 @@ export class TransferProductDto {
     description: 'ID of the gym to transfer the product to',
     example: '123e4567-e89b-12d3-a456-426614174001',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @IsUUID()
-  transferedToId: string;
+  transferedToId?: string;
 
   @ApiProperty({
     description: 'Quantity of the product to transfer',
@@ -38,4 +39,12 @@ export class TransferProductDto {
   @Min(1, { message: 'Transfer quantity must be at least 1' })
   @Max(1000, { message: 'Transfer quantity cannot exceed 1000' })
   transferQuantity: number;
+
+  @ApiProperty({
+    description: 'Name of the gym to transfer the product to',
+    example: 'Custom Gym Name',
+  })
+  @IsOptional()
+  @IsString()
+  transferedToName?: string;
 }

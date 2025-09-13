@@ -168,8 +168,9 @@ export class ProductsService {
   async transferProduct(
     productId: string,
     gymId: string,
-    transferedToId: string,
     transferQuantity: number,
+    transferedToId?: string,
+    transferedToName?: string,
   ) {
     if (gymId === transferedToId) {
       throw new BadRequestException(
@@ -183,9 +184,11 @@ export class ProductsService {
       throw new NotFoundException('Transfered from gym not found');
     }
 
-    const transferedTo = await this.gymModel.findOne({
-      where: { id: transferedToId },
-    });
+    const transferedTo = transferedToId
+      ? await this.gymModel.findOne({
+          where: { id: transferedToId },
+        })
+      : transferedToName;
     if (!transferedTo) {
       throw new NotFoundException('Transfered to gym not found');
     }
@@ -218,33 +221,35 @@ export class ProductsService {
         where: { originalProductId: product.id, gym: { id: transferedToId } },
       });
 
-    if (checkIfRecieverAlreadyHasProduct) {
-      checkIfRecieverAlreadyHasProduct.stock += transferQuantity;
-      await this.productRepository.save(checkIfRecieverAlreadyHasProduct);
-      return {
-        createdTransactions,
-        checkIfRecieverAlreadyHasProduct,
-      };
-    } else {
-      const createProductInReceiveGym = this.productRepository.create({
-        name: product.name,
-        price: product.price,
-        description: product.description,
-        images: product.images,
-        maxDurationSeconds: product.maxDurationSeconds,
-        stripeProductId: product.stripeProductId,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-        stock: transferQuantity,
-        gym: transferedTo,
-        originalProductId: product.id,
-        transferedFromId: gymId,
-      });
-      await this.productRepository.save(createProductInReceiveGym);
-      return {
-        createdTransactions,
-        createProductInReceiveGym,
-      };
+    if (typeof transferedTo !== 'string') {
+      if (checkIfRecieverAlreadyHasProduct) {
+        checkIfRecieverAlreadyHasProduct.stock += transferQuantity;
+        await this.productRepository.save(checkIfRecieverAlreadyHasProduct);
+        return {
+          createdTransactions,
+          checkIfRecieverAlreadyHasProduct,
+        };
+      } else {
+        const createProductInReceiveGym = this.productRepository.create({
+          name: product.name,
+          price: product.price,
+          description: product.description,
+          images: product.images,
+          maxDurationSeconds: product.maxDurationSeconds,
+          stripeProductId: product.stripeProductId,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          stock: transferQuantity,
+          gym: transferedTo,
+          originalProductId: product.id,
+          transferedFromId: gymId,
+        });
+        await this.productRepository.save(createProductInReceiveGym);
+        return {
+          createdTransactions,
+          createProductInReceiveGym,
+        };
+      }
     }
   }
 

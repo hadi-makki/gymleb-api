@@ -508,7 +508,7 @@ export class TransactionService {
 
   async createProductsTransferTransaction(dto: {
     transferedFrom: GymEntity;
-    transferedTo: GymEntity;
+    transferedTo: GymEntity | string;
     product: ProductEntity;
     transferQuantity: number;
     receiveQuantity: number;
@@ -518,10 +518,13 @@ export class TransactionService {
         `Transferred ${dto.transferQuantity} ${dto.product.name} From ` +
         dto.transferedFrom.name +
         ' To ' +
-        dto.transferedTo.name,
+        (typeof dto.transferedTo === 'string'
+          ? dto.transferedTo
+          : dto.transferedTo.name),
       type: TransactionType.PRODUCTS_TRANSFER,
       transferedFrom: dto.transferedFrom,
-      transferedTo: dto.transferedTo,
+      transferedTo:
+        typeof dto.transferedTo === 'string' ? null : dto.transferedTo,
       product: dto.product,
       transferQuantity: dto.transferQuantity,
       receiveQuantity: dto.receiveQuantity,
@@ -536,14 +539,20 @@ export class TransactionService {
         `Received ${dto.receiveQuantity} ${dto.product.name} From ` +
         dto.transferedFrom.name +
         ' To ' +
-        dto.transferedTo.name,
+        (typeof dto.transferedTo === 'string'
+          ? dto.transferedTo
+          : dto.transferedTo.name),
       type: TransactionType.PRODUCTS_RECEIVE,
-      transferedFrom: dto.transferedTo,
-      transferedTo: dto.transferedFrom,
+      transferedFrom: dto.transferedFrom,
+      transferedTo:
+        typeof dto.transferedTo === 'string' ? null : dto.transferedTo,
       product: dto.product,
       receiveQuantity: dto.receiveQuantity,
       paidAmount: 0,
-      gym: dto.transferedTo,
+      gym:
+        typeof dto.transferedTo === 'string'
+          ? dto.transferedFrom
+          : dto.transferedTo,
     });
     const createdReceiveTransaction = await this.transactionModel.save(
       newReceiveTransactionModel,

@@ -224,8 +224,9 @@ export class ProductsController {
     return await this.productsService.transferProduct(
       productId,
       transferProductDto.gymId,
-      transferProductDto.transferedToId,
       transferProductDto.transferQuantity,
+      transferProductDto.transferedToId,
+      transferProductDto.transferedToName,
     );
   }
 

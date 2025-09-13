@@ -178,6 +178,12 @@ export class MemberEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   emergencyPhone: string | null;
 
+  @Column('date', { nullable: true })
+  birthday: Date | null;
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  visceralFat: number | null; // in percentage
+
   @Column('timestamp', { nullable: true })
   lastHealthCheck: Date | null;
 
