@@ -2,17 +2,17 @@ import {
   Body,
   Controller,
   Delete,
-  FileTypeValidator,
   Get,
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
   Post,
   Put,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
-  UseInterceptors,
+  UseInterceptors
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -24,10 +24,18 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { isUUID } from 'class-validator';
 import { Request } from 'express';
-import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { UserEntity } from 'src/user/user.entity';
+import { Roles } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
+import { BadRequestException } from '../error/bad-request-error';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
+import { WebpPipe } from '../pipes/webp.pipe';
+import { validateImage } from '../utils/helprt-functions';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -37,18 +45,9 @@ import {
   CreateProductsOfferDto,
   UpdateProductsOfferDto,
 } from './dto/create-products-offer.dto';
-import { TransferProductDto } from './dto/transfer-product.dto';
 import { ReturnProductDto } from './dto/return-product.dto';
+import { TransferProductDto } from './dto/transfer-product.dto';
 import { ProductsService } from './products.service';
-import { Permissions } from '../decorators/roles/role.enum';
-import { Roles } from '../decorators/roles/Role';
-import { WebpPipe } from '../pipes/webp.pipe';
-import { imageTypes } from '../utils/constants';
-import { validateImage } from '../utils/helprt-functions';
-import { BadRequestException } from '../error/bad-request-error';
-import { ManagerEntity } from 'src/manager/manager.entity';
-import { UserEntity } from 'src/user/user.entity';
-import { isUUID } from 'class-validator';
 
 @ApiTags('Products')
 @Controller('products')
@@ -58,13 +57,24 @@ export class ProductsController {
   @Get('/gym/:gymId')
   @ApiOperation({
     summary: 'Get all products',
-    description: 'Retrieve all products with their details',
+    description:
+      'Retrieve all products with their details with pagination support',
   })
   @ApiOkResponse({
     description: 'Products retrieved successfully',
   })
-  async getProducts(@Param('gymId') gymId: string) {
-    return await this.productsService.getProducts(gymId);
+  async getProducts(
+    @Param('gymId') gymId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+  ) {
+    return await this.productsService.getProducts(
+      gymId,
+      parseInt(page),
+      parseInt(limit),
+      search,
+    );
   }
 
   @Get(':id')

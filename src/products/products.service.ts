@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
+import { FilterOperator, paginate } from 'nestjs-paginate';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';
@@ -35,19 +36,41 @@ export class ProductsService {
     private readonly productsOfferRepository: Repository<ProductsOffersEntity>,
   ) {}
 
-  async getProducts(gymId: string) {
+  async getProducts(
+    gymId: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ) {
     const gym = !isUUID(gymId)
       ? await this.gymService.getGymByGymName(gymId)
       : null;
 
-    const products = await this.productRepository.find({
-      where: { gym: gym ? { id: gym.id } : { id: gymId } },
-      relations: {
-        images: true,
+    const res = await paginate(
+      {
+        limit,
+        page,
+        search,
+        path: 'name',
       },
-    });
+      this.productRepository,
+      {
+        relations: {
+          images: true,
+        },
+        sortableColumns: ['createdAt', 'updatedAt', 'name', 'price'],
+        searchableColumns: ['name', 'description'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        where: { gym: gym ? { id: gym.id } : { id: gymId } },
+        filterableColumns: {
+          name: [FilterOperator.ILIKE],
+          description: [FilterOperator.ILIKE],
+        },
+        maxLimit: 100,
+      },
+    );
 
-    return products;
+    return res;
   }
 
   async getProductById(id: string) {
