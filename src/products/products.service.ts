@@ -435,4 +435,18 @@ export class ProductsService {
       message: 'Product offer deleted successfully',
     };
   }
+
+  async showProductInPublicPage(gymId: string, productId: string) {
+    const product = await this.productRepository.findOne({
+      where: { id: productId, gym: { id: gymId } },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    product.showInPublicPage = !product.showInPublicPage;
+    await this.productRepository.save(product);
+    return {
+      message: 'Product shown in public page successfully',
+    };
+  }
 }

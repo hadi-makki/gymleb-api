@@ -54,4 +54,7 @@ export class ProductEntity extends PgMainEntity {
 
   @Column('uuid', { nullable: true })
   transferedFromId: string | null;
+
+  @Column('boolean', { default: true })
+  showInPublicPage: boolean;
 }

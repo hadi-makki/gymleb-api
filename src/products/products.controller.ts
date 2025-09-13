@@ -12,7 +12,7 @@ import {
   Req,
   UploadedFile,
   UseGuards,
-  UseInterceptors
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -48,6 +48,7 @@ import {
 import { ReturnProductDto } from './dto/return-product.dto';
 import { TransferProductDto } from './dto/transfer-product.dto';
 import { ProductsService } from './products.service';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 
 @ApiTags('Products')
 @Controller('products')
@@ -359,5 +360,24 @@ export class ProductsController {
   @Roles(Permissions.GymOwner, Permissions.products)
   async deleteProductsOffer(@Param('offerId') id: string) {
     return await this.productsService.deleteProductsOffer(id);
+  }
+
+  @Put('show-in-public-page/:gymId/:productId')
+  @ApiOperation({
+    summary: 'Show product in public page',
+    description: 'Show a product in public page',
+  })
+  @ApiOkResponse({
+    type: SuccessMessageReturn,
+    description: 'Product shown in public page successfully',
+  })
+  @ValidateGymRelatedToOwner()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async showProductInPublicPage(
+    @Param('gymId') gymId: string,
+    @Param('productId') productId: string,
+  ) {
+    return await this.productsService.showProductInPublicPage(gymId, productId);
   }
 }
