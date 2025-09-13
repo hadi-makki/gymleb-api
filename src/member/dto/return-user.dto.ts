@@ -41,6 +41,7 @@ export class ReturnUserDto {
   emergencyContact?: string;
   emergencyPhone?: string;
   lastHealthCheck?: string;
+  programLink?: string;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

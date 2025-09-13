@@ -43,6 +43,7 @@ import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.
 import { SignupMemberDto } from './dto/signup-member.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
+import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { MemberEntity } from './entities/member.entity';
 import { MemberService } from './member.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
@@ -504,6 +505,27 @@ export class MemberController {
       memberId,
       gymId,
       extendMembershipDurationDto,
+    );
+  }
+
+  @Patch(':gymId/:memberId/program-link')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({
+    summary: 'Update member program link',
+    description: 'Update the program link for a specific member',
+  })
+  async updateMemberProgramLink(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+    @Body() updateProgramLinkDto: UpdateProgramLinkDto,
+  ) {
+    return await this.memberService.updateMemberProgramLink(
+      memberId,
+      gymId,
+      updateProgramLinkDto,
     );
   }
 }

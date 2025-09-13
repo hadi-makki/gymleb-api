@@ -43,6 +43,7 @@ import {
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
+import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 
 @Injectable()
 export class MemberService {
@@ -219,6 +220,7 @@ export class MemberService {
       emergencyContact: member.emergencyContact,
       emergencyPhone: member.emergencyPhone,
       lastHealthCheck: member.lastHealthCheck?.toISOString(),
+      programLink: member.programLink,
     };
   }
 
@@ -1487,5 +1489,29 @@ export class MemberService {
       newEndDate: newEndDate.toISOString(),
       daysExtended: extendMembershipDurationDto.days,
     };
+  }
+
+  async updateMemberProgramLink(
+    memberId: string,
+    gymId: string,
+    updateProgramLinkDto: UpdateProgramLinkDto,
+  ) {
+    // Validate member exists and belongs to the gym
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: gymId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        'Member not found or does not belong to this gym',
+      );
+    }
+
+    // Update the member with program link
+    await this.memberModel.update(memberId, {
+      programLink: updateProgramLinkDto.programLink || null,
+    });
+
+    return { message: 'Program link updated successfully' };
   }
 }

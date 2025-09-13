@@ -187,6 +187,9 @@ export class MemberEntity extends PgMainEntity {
   @Column('timestamp', { nullable: true })
   lastHealthCheck: Date | null;
 
+  @Column('text', { nullable: true })
+  programLink: string | null;
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,
