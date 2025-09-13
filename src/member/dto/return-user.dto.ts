@@ -3,6 +3,7 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { MemberAttendingDaysEntity } from '../entities/member-attending-days.entity';
 import { MemberReservationEntity } from '../entities/member-reservation.entity';
 import { MemberTrainingProgramEntity } from '../entities/member-training-program.entity';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 
 export class ReturnUserDto {
   id: string;
@@ -42,6 +43,8 @@ export class ReturnUserDto {
   emergencyPhone?: string;
   lastHealthCheck?: string;
   programLink?: string;
+  isWelcomeMessageSent?: boolean;
+  notificationSetting?: NotificationSettingEntity;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

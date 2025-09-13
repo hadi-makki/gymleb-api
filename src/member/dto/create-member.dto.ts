@@ -45,4 +45,8 @@ export class CreateMemberDto {
   @IsOptional()
   @IsBoolean()
   willPayLater?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  sendWelcomeMessage?: boolean;
 }

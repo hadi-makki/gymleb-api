@@ -22,6 +22,7 @@ import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-
 import { MemberReservationEntity } from 'src/member/entities/member-reservation.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -36,6 +37,7 @@ import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
       MemberReservationEntity,
       ProductsOffersEntity,
       TwilioMessageEntity,
+      NotificationSettingEntity,
     ]),
     AuthenticationModule,
     TransactionModule,

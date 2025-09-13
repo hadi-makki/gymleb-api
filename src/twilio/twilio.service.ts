@@ -19,6 +19,7 @@ import {
   TwilioMessageEntity,
   TwilioMessageType,
 } from './entities/twilio-message.entity';
+import { NotFoundException } from 'src/error/not-found-error';
 
 export const TwilioWhatsappTemplates = {
   expiaryReminder: {
@@ -118,7 +119,17 @@ export class TwilioService {
   ) {
     const member = await this.memberModel.findOne({
       where: { phone: memberPhone },
+      relations: {
+        notificationSetting: true,
+      },
     });
+    if (
+      member.notificationSetting &&
+      !member.notificationSetting.welcomeMessage
+    ) {
+      console.log('member has no notification setting or welcome message');
+      return;
+    }
 
     const welcomeAndExpirationMessages =
       gym.welcomeMessageNotified + gym.membersNotified;
@@ -138,6 +149,8 @@ export class TwilioService {
 
     member.isWelcomeMessageSent = true;
     await this.memberModel.save(member);
+
+    console.log('sending welcome message to', memberPhone, memberPhoneISOCode);
 
     if (
       !checkNodeEnv('local') &&
@@ -177,13 +190,6 @@ export class TwilioService {
           throw new BadRequestException(error);
         });
     } else {
-      console.log('member notified successfully');
-      console.log('member phone', memberPhone);
-      console.log('member phone ISO code', memberPhoneISOCode);
-      console.log(
-        'check phone number',
-        isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode),
-      );
       if (checkNodeEnv('local')) {
         await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
       }
@@ -205,6 +211,14 @@ export class TwilioService {
     memberPhoneISOCode: string;
   }) {
     const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
+    if (
+      member.notificationSetting &&
+      !member.notificationSetting.monthlyReminder
+    ) {
+      console.log('member', member.notificationSetting);
+      console.log('member has no notification setting or monthly reminder');
+      return;
+    }
     const gym = await this.gymService.getGymById(gymId);
     const isExpired =
       !dontCheckExpired &&

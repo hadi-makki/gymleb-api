@@ -44,6 +44,8 @@ import { TwilioModule } from './twilio/twilio.module';
 import { AiChatEntity } from './ai-chat/entities/ai-chat.entity';
 import { UserModule } from './user/user.module';
 import { AiChatModule } from './ai-chat/ai-chat.module';
+import { NotificationSettingsModule } from './notification-settings/notification-settings.module';
+import { ManagerNotificationSettingsModule } from './manager-notification-settings/manager-notification-settings.module';
 
 @Module({
   imports: [
@@ -93,6 +95,8 @@ import { AiChatModule } from './ai-chat/ai-chat.module';
     StaffModule,
     CronModule,
     AiChatModule,
+    NotificationSettingsModule,
+    ManagerNotificationSettingsModule,
   ],
   controllers: [AppController],
   providers: [

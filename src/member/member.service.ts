@@ -44,6 +44,7 @@ import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 
 @Injectable()
 export class MemberService {
@@ -68,6 +69,8 @@ export class MemberService {
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
     @InjectRepository(MemberReservationEntity)
     private readonly reservationModel: Repository<MemberReservationEntity>,
+    @InjectRepository(NotificationSettingEntity)
+    private readonly notificationSettingModel: Repository<NotificationSettingEntity>,
   ) {}
 
   async checkIfUserHasActiveSubscription(memberId: string) {
@@ -161,27 +164,35 @@ export class MemberService {
     }
 
     // Use SQL queries to get subscription data efficiently
-    const [activeSubscription, lastSubscription, attendingDays, reservations] =
-      await Promise.all([
-        // Get active subscription using SQL
-        this.checkIfUserHasActiveSubscription(member.id),
+    const [
+      activeSubscription,
+      lastSubscription,
+      attendingDays,
+      reservations,
+      notificationSetting,
+    ] = await Promise.all([
+      // Get active subscription using SQL
+      this.checkIfUserHasActiveSubscription(member.id),
 
-        // Get last subscription using SQL
-        this.getLatestSubscription(member.id),
+      // Get last subscription using SQL
+      this.getLatestSubscription(member.id),
 
-        // Get attending days using SQL (only if not already loaded)
-        member.attendingDays ||
-          this.attendingDaysModel.find({
-            where: { member: { id: member.id } },
-            order: { dayOfWeek: 'ASC' },
-          }),
-        // Get active reservations for this member in their gym
-        this.reservationModel.find({
-          where: { member: { id: member.id }, isActive: true },
-          relations: ['gym'],
-          order: { reservationDate: 'ASC', startTime: 'ASC' },
+      // Get attending days using SQL (only if not already loaded)
+      member.attendingDays ||
+        this.attendingDaysModel.find({
+          where: { member: { id: member.id } },
+          order: { dayOfWeek: 'ASC' },
         }),
-      ]);
+      // Get active reservations for this member in their gym
+      this.reservationModel.find({
+        where: { member: { id: member.id }, isActive: true },
+        relations: ['gym'],
+        order: { reservationDate: 'ASC', startTime: 'ASC' },
+      }),
+      this.notificationSettingModel.findOne({
+        where: { id: member.notificationSettingId },
+      }),
+    ]);
 
     return {
       id: member.id,
@@ -221,6 +232,8 @@ export class MemberService {
       emergencyPhone: member.emergencyPhone,
       lastHealthCheck: member.lastHealthCheck?.toISOString(),
       programLink: member.programLink,
+      isWelcomeMessageSent: member.isWelcomeMessageSent,
+      notificationSetting: notificationSetting,
     };
   }
 
@@ -309,6 +322,15 @@ export class MemberService {
 
     member.transactions = [subscriptionInstance];
 
+    const createdNotificationSetting = this.notificationSettingModel.create({
+      welcomeMessage: true,
+      monthlyReminder: true,
+    });
+    const savedNotificationSetting = await this.notificationSettingModel.save(
+      createdNotificationSetting,
+    );
+    member.notificationSetting = savedNotificationSetting;
+
     await this.memberModel.save(member);
 
     // Initialize attending days for the new member
@@ -323,6 +345,9 @@ export class MemberService {
       await this.gymService.getGymActiveSubscription(gym.id);
 
     if (gym.sendWelcomeMessageAutomatically) {
+      if (!createMemberDto.sendWelcomeMessage) {
+        return await this.returnMember(newMember);
+      }
       await this.twilioService.sendWelcomeMessage(
         newMember.name,
         newMember.phone,
@@ -939,6 +964,7 @@ export class MemberService {
         subscription: true,
         transactions: true,
         attendingDays: true,
+        notificationSetting: true,
       },
     });
     if (!member) {
@@ -1191,7 +1217,12 @@ export class MemberService {
       days: 3,
       isNotified: false,
     });
-    console.log('expiringMembers', expiringMembers);
+    console.log(
+      'expiringMembers',
+      expiringMembers.map((m) => {
+        return { id: m.member.id, name: m.member.name };
+      }),
+    );
     for (const member of expiringMembers) {
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(member.gym.id);
@@ -1201,6 +1232,7 @@ export class MemberService {
         memberPhoneISOCode: member.member.phoneNumberISOCode,
         activeSubscription:
           getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        dontCheckExpired: true,
       });
     }
 

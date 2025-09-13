@@ -19,6 +19,7 @@ import { MemberAttendingDaysEntity } from './member-attending-days.entity';
 import { MemberReservationEntity } from './member-reservation.entity';
 import * as bcrypt from 'bcrypt';
 import { MemberTrainingProgramEntity } from './member-training-program.entity';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 
 export enum TrainingLevel {
   BEGINNER = 'beginner',
@@ -200,4 +201,13 @@ export class MemberEntity extends PgMainEntity {
   static async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
   }
+
+  @ManyToOne(
+    () => NotificationSettingEntity,
+    (notificationSetting) => notificationSetting.members,
+  )
+  notificationSetting: NotificationSettingEntity;
+
+  @RelationId((member: MemberEntity) => member.notificationSetting)
+  notificationSettingId: string | null;
 }

@@ -20,6 +20,8 @@ import { MemberReservationEntity } from './entities/member-reservation.entity';
 import { MemberTrainingProgramEntity } from './entities/member-training-program.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
+import { MemberNotSettingsSeed } from './seed/member-not-settings.seed';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 @Module({
   imports: [
     AuthenticationModule,
@@ -32,6 +34,7 @@ import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
       SubscriptionEntity,
       PTSessionEntity,
       TwilioMessageEntity,
+      NotificationSettingEntity,
     ]),
     TransactionModule,
     MediaModule,
@@ -47,6 +50,7 @@ import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
     MemberTrainingProgramService,
     TwilioService,
     PersonalTrainersService,
+    MemberNotSettingsSeed,
   ],
   exports: [MemberService, TwilioService, TypeOrmModule],
 })
