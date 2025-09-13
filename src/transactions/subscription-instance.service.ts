@@ -534,29 +534,32 @@ export class TransactionService {
     const createdSendTransaction = await this.transactionModel.save(
       newSendTransactionModel,
     );
-    const newReceiveTransactionModel = this.transactionModel.create({
-      title:
-        `Received ${dto.receiveQuantity} ${dto.product.name} From ` +
-        dto.transferedFrom.name +
-        ' To ' +
-        (typeof dto.transferedTo === 'string'
-          ? dto.transferedTo
-          : dto.transferedTo.name),
-      type: TransactionType.PRODUCTS_RECEIVE,
-      transferedFrom: dto.transferedFrom,
-      transferedTo:
-        typeof dto.transferedTo === 'string' ? null : dto.transferedTo,
-      product: dto.product,
-      receiveQuantity: dto.receiveQuantity,
-      paidAmount: 0,
-      gym:
-        typeof dto.transferedTo === 'string'
-          ? dto.transferedFrom
-          : dto.transferedTo,
-    });
-    const createdReceiveTransaction = await this.transactionModel.save(
-      newReceiveTransactionModel,
-    );
+    let createdReceiveTransaction = null;
+    if (typeof dto.transferedTo !== 'string') {
+      const newReceiveTransactionModel = this.transactionModel.create({
+        title:
+          `Received ${dto.receiveQuantity} ${dto.product.name} From ` +
+          dto.transferedFrom.name +
+          ' To ' +
+          (typeof dto.transferedTo === 'string'
+            ? dto.transferedTo
+            : dto.transferedTo.name),
+        type: TransactionType.PRODUCTS_RECEIVE,
+        transferedFrom: dto.transferedFrom,
+        transferedTo:
+          typeof dto.transferedTo === 'string' ? null : dto.transferedTo,
+        product: dto.product,
+        receiveQuantity: dto.receiveQuantity,
+        paidAmount: 0,
+        gym:
+          typeof dto.transferedTo === 'string'
+            ? dto.transferedFrom
+            : dto.transferedTo,
+      });
+      createdReceiveTransaction = await this.transactionModel.save(
+        newReceiveTransactionModel,
+      );
+    }
     return {
       newSendTransaction: createdSendTransaction,
       newReceiveTransaction: createdReceiveTransaction,
