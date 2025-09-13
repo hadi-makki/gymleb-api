@@ -28,9 +28,6 @@ export class AuthGuard implements CanActivate {
       true,
     );
 
-    console.log('this is the validated data', validatedData);
-    console.log('this is the path', request.path);
-
     const userId = validatedData?.sub;
 
     if (!userId) {

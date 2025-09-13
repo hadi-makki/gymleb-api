@@ -130,6 +130,7 @@ export class GymController {
 
   @Get('analytics/:gymId')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   @ApiOperation({ summary: 'Get gym analytics' })
   @ValidateGymRelatedToOwner()
   getGymAnalytics(

@@ -78,7 +78,7 @@ export class ManagerAuthGuard implements CanActivate {
     const userId = validatedData?.sub;
 
     if (!userId) {
-      console.log('Unauthorized');
+      console.log('UserId is not found');
       throw new UnauthorizedException('Unauthorized');
     }
 
@@ -86,12 +86,13 @@ export class ManagerAuthGuard implements CanActivate {
       where: { id: userId },
     });
 
+
     if (
       (!manager ||
         !requiredRoles.some((role) => manager.permissions.includes(role))) &&
       !requiredRoles.includes(Permissions.Any)
     ) {
-      console.log('Unauthorized');
+      console.log('permissions are not found');
       throw new ForbiddenException('Unauthorized');
     }
 
@@ -230,8 +231,6 @@ export class ManagerAuthGuard implements CanActivate {
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
 
-    console.log('personalTrainerId', personalTrainerId);
-    console.log('gymId', gymId);
 
     if (!isUUID(personalTrainerId)) {
       throw new BadRequestException('Invalid personal trainer id');
