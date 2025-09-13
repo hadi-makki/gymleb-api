@@ -476,17 +476,17 @@ export class TwilioService {
       .leftJoinAndSelect('message.gym', 'gym')
       .orderBy('message.createdAt', 'DESC');
 
+    // Apply gym filter
+    if (gymId) {
+      queryBuilder.andWhere('gym.id = :gymId', { gymId });
+    }
+
     // Apply search filter
     if (search) {
       queryBuilder.andWhere(
         '(gym.name ILIKE :search OR message.message ILIKE :search OR message.phoneNumber ILIKE :search)',
         { search: `%${search}%` },
       );
-    }
-
-    // Apply gym filter
-    if (gymId) {
-      queryBuilder.andWhere('message.gym.id = :gymId', { gymId });
     }
 
     // Apply pagination
@@ -497,10 +497,13 @@ export class TwilioService {
 
     return {
       data: messages,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      meta: {
+        itemsPerPage: limit,
+        totalItems: total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        sortBy: [['createdAt', 'DESC']],
+      },
     };
   }
 
@@ -513,7 +516,7 @@ export class TwilioService {
     const queryBuilder = this.twilioMessageModel
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.gym', 'gym')
-      .where('message.gym.id = :gymId', { gymId })
+      .where('gym.id = :gymId', { gymId })
       .orderBy('message.createdAt', 'DESC');
 
     // Apply search filter
@@ -532,10 +535,13 @@ export class TwilioService {
 
     return {
       data: messages,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      meta: {
+        itemsPerPage: limit,
+        totalItems: total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        sortBy: [['createdAt', 'DESC']],
+      },
     };
   }
 }
