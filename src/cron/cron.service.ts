@@ -23,7 +23,7 @@ export class CronService {
     private readonly memberService: MemberService,
   ) {}
 
-  @Cron(CronExpression.EVERY_5_SECONDS, {
+  @Cron(CronExpression.EVERY_DAY_AT_11AM, {
     name: 'notify-expired-members',
     timeZone: 'Asia/Beirut', // Lebanon timezone
   })

@@ -24,8 +24,9 @@ export class MemberTrainingProgramEntity extends PgMainEntity {
   @Column('jsonb')
   exercises: {
     name: string;
-    sets: number;
-    reps: number;
-    weight?: number;
+    sets: {
+      reps: number;
+      weight?: number;
+    }[];
   }[];
 }

@@ -18,7 +18,6 @@ export class AuthGuard implements CanActivate {
     private tokenService: TokenService,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log('in auth guard');
     const request = context
       .switchToHttp()
       .getRequest<Request & { user: MemberEntity }>();
@@ -28,6 +27,9 @@ export class AuthGuard implements CanActivate {
       context.switchToHttp().getResponse(),
       true,
     );
+
+    console.log('this is the validated data', validatedData);
+    console.log('this is the path', request.path);
 
     const userId = validatedData?.sub;
 

@@ -528,4 +528,23 @@ export class MemberController {
       updateProgramLinkDto,
     );
   }
+
+  // Member endpoints (for members to access their own data)
+  @Patch('me/:gymId/program-link')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Update my program link',
+    description: 'Update the program link for the authenticated member',
+  })
+  async updateMyProgramLink(
+    @User() member: MemberEntity,
+    @Param('gymId') gymId: string,
+    @Body() updateProgramLinkDto: UpdateProgramLinkDto,
+  ) {
+    return await this.memberService.updateMemberProgramLink(
+      member.id,
+      gymId,
+      updateProgramLinkDto,
+    );
+  }
 }

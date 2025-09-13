@@ -226,12 +226,17 @@ export class TokenService {
 
     const tokenToUse = isMember ? memberToken : token;
 
+    console.log('this is the token to use', tokenToUse);
+    console.log('this is the isMember', isMember);
+
     if (!tokenToUse) {
       throw new UnauthorizedException('Missing Authorization Header');
     }
 
     let decodedJwt;
     let isTokenExpired = false;
+
+    console.log('this is the token to use', tokenToUse);
 
     try {
       decodedJwt = (await this.jwtService.verifyAsync(tokenToUse, {
@@ -245,12 +250,15 @@ export class TokenService {
       // Token is invalid or expired
       isTokenExpired = true;
     }
+    console.log('this is the decoded jwt', decodedJwt);
 
     // Check if token exists in database and is not expired
     const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
       req.cookies.deviceId,
       tokenToUse,
     );
+
+    console.log('this is the check token', checkToken);
 
     if (!checkToken) {
       // Token not found in database
@@ -261,6 +269,8 @@ export class TokenService {
       // Check if token is expired by date
       isTokenExpired = true;
     }
+
+    console.log('this is the isTokenExpired', isTokenExpired);
 
     // If token is expired, try to refresh it
     if (isTokenExpired) {

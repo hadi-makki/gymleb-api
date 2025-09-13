@@ -11,6 +11,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { CreateTrainingProgramDto } from './dto/create-training-program.dto';
 import { UpdateTrainingProgramDto } from './dto/update-training-program.dto';
 import { DayOfWeek } from './entities/member-attending-days.entity';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class MemberTrainingProgramService {
@@ -29,7 +30,12 @@ export class MemberTrainingProgramService {
   ) {
     // Verify member exists and belongs to the gym
     const member = await this.memberRepository.findOne({
-      where: { id: memberId, gym: { id: gymId } },
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
       relations: ['gym'],
     });
 
@@ -48,7 +54,15 @@ export class MemberTrainingProgramService {
     if (existingProgram) {
       // Update existing program
       existingProgram.name = createTrainingProgramDto.name;
-      existingProgram.exercises = createTrainingProgramDto.exercises;
+      existingProgram.exercises = createTrainingProgramDto.exercises.map(
+        (exercise) => ({
+          name: exercise.name,
+          sets: exercise.sets.map((set) => ({
+            reps: set.reps,
+            weight: set.weight,
+          })),
+        }),
+      );
       return await this.trainingProgramRepository.save(existingProgram);
     } else {
       // Create new program
@@ -56,7 +70,13 @@ export class MemberTrainingProgramService {
         member: { id: memberId },
         dayOfWeek: createTrainingProgramDto.dayOfWeek,
         name: createTrainingProgramDto.name,
-        exercises: createTrainingProgramDto.exercises,
+        exercises: createTrainingProgramDto.exercises.map((exercise) => ({
+          name: exercise.name,
+          sets: exercise.sets.map((set) => ({
+            reps: set.reps,
+            weight: set.weight,
+          })),
+        })),
       });
       return await this.trainingProgramRepository.save(newProgram);
     }
@@ -69,7 +89,12 @@ export class MemberTrainingProgramService {
   ) {
     // Verify member exists and belongs to the gym
     const member = await this.memberRepository.findOne({
-      where: { id: memberId, gym: { id: gymId } },
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
     });
 
     if (!member) {
@@ -108,7 +133,12 @@ export class MemberTrainingProgramService {
   ) {
     // Verify member exists and belongs to the gym
     const member = await this.memberRepository.findOne({
-      where: { id: memberId, gym: { id: gymId } },
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
     });
 
     if (!member) {
@@ -139,7 +169,12 @@ export class MemberTrainingProgramService {
   ) {
     // Verify member exists and belongs to the gym
     const member = await this.memberRepository.findOne({
-      where: { id: memberId, gym: { id: gymId } },
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
     });
 
     if (!member) {
@@ -163,7 +198,15 @@ export class MemberTrainingProgramService {
     }
 
     trainingProgram.name = updateTrainingProgramDto.name;
-    trainingProgram.exercises = updateTrainingProgramDto.exercises;
+    trainingProgram.exercises = updateTrainingProgramDto.exercises.map(
+      (exercise) => ({
+        name: exercise.name,
+        sets: exercise.sets.map((set) => ({
+          reps: set.reps,
+          weight: set.weight,
+        })),
+      }),
+    );
 
     return await this.trainingProgramRepository.save(trainingProgram);
   }
@@ -176,7 +219,12 @@ export class MemberTrainingProgramService {
   ) {
     // Verify member exists and belongs to the gym
     const member = await this.memberRepository.findOne({
-      where: { id: memberId, gym: { id: gymId } },
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
     });
 
     if (!member) {
