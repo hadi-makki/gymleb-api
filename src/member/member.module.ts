@@ -22,6 +22,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 import { MemberNotSettingsSeed } from './seed/member-not-settings.seed';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
+import { MemberTrainingProgramSeed } from './seed/member-training-program.seed';
 @Module({
   imports: [
     AuthenticationModule,
@@ -51,6 +52,7 @@ import { NotificationSettingEntity } from 'src/notification-settings/entities/no
     TwilioService,
     PersonalTrainersService,
     MemberNotSettingsSeed,
+    MemberTrainingProgramSeed,
   ],
   exports: [MemberService, TwilioService, TypeOrmModule],
 })

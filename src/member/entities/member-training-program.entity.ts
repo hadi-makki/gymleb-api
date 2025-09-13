@@ -28,5 +28,7 @@ export class MemberTrainingProgramEntity extends PgMainEntity {
       reps: number;
       weight?: number;
     }[];
+    reps?: number;
+    weight?: number;
   }[];
 }
