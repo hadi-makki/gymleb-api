@@ -35,6 +35,7 @@ import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
 import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
 import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
 import { UpdateGymPhoneDto } from './dto/update-gym-phone.dto';
+import { PublicGymDto } from './dto/public-gym.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
 import {
@@ -42,9 +43,43 @@ import {
   ApiUnauthorizedResponse,
 } from 'src/error/api-responses.decorator';
 @Controller('gym')
-@Roles(Permissions.GymOwner, Permissions.gyms)
 export class GymController {
   constructor(private readonly gymService: GymService) {}
+
+  // Public endpoints (no authentication required)
+  @Get('public')
+  @ApiOperation({ summary: 'Get all public gyms (no authentication required)' })
+  @ApiOkResponse({
+    description: 'The public gyms have been successfully retrieved.',
+    type: [PublicGymDto],
+  })
+  getPublicGyms() {
+    return this.gymService.getPublicGyms();
+  }
+
+  @Get('public/by-name/:gymDashedName')
+  @ApiOperation({
+    summary: 'Get public gym by dashed name (no authentication required)',
+  })
+  @ApiOkResponse({
+    description: 'The public gym has been successfully retrieved.',
+    type: PublicGymDto,
+  })
+  getPublicGymByName(@Param('gymDashedName') gymDashedName: string) {
+    return this.gymService.getPublicGymByName(gymDashedName);
+  }
+
+  @Get('public/:id')
+  @ApiOperation({
+    summary: 'Get public gym by id (no authentication required)',
+  })
+  @ApiOkResponse({
+    description: 'The public gym has been successfully retrieved.',
+    type: PublicGymDto,
+  })
+  getPublicGymById(@Param('id') id: string) {
+    return this.gymService.getPublicGymById(id);
+  }
 
   @Post()
   @UseGuards(ManagerAuthGuard)

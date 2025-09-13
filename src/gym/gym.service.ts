@@ -37,6 +37,7 @@ import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
 import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
+import { PublicGymDto } from './dto/public-gym.dto';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
 
 @Injectable()
@@ -1888,5 +1889,145 @@ export class GymService {
 
     // Get all gyms for this owner using the existing method
     return await this.getGymsByOwner(currentGym.owner.id);
+  }
+
+  // Public gym methods (no authentication required)
+  async getPublicGyms(): Promise<PublicGymDto[]> {
+    const gyms = await this.gymModel.find({
+      where: { isDeactivated: false },
+      select: [
+        'id',
+        'name',
+        'gymDashedName',
+        'address',
+        'googleMapsLink',
+        'email',
+        'phone',
+        'phoneNumberISOCode',
+        'description',
+        'gymType',
+        'allowUserSignUp',
+        'allowUserResevations',
+        'allowedUserResevationsPerSession',
+        'sessionTimeInHours',
+        'socialMediaLinks',
+        'openingDays',
+        'womensTimes',
+        'offers',
+        'showPersonalTrainers',
+        'messagesLanguage',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    return gyms.map(this.mapToPublicGymDto);
+  }
+
+  async getPublicGymByName(
+    gymDashedName: string,
+  ): Promise<PublicGymDto | null> {
+    const gym = await this.gymModel.findOne({
+      where: {
+        gymDashedName,
+        isDeactivated: false,
+      },
+      select: [
+        'id',
+        'name',
+        'gymDashedName',
+        'address',
+        'googleMapsLink',
+        'email',
+        'phone',
+        'phoneNumberISOCode',
+        'description',
+        'gymType',
+        'allowUserSignUp',
+        'allowUserResevations',
+        'allowedUserResevationsPerSession',
+        'sessionTimeInHours',
+        'socialMediaLinks',
+        'openingDays',
+        'womensTimes',
+        'offers',
+        'showPersonalTrainers',
+        'messagesLanguage',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    if (!gym) {
+      return null;
+    }
+
+    return this.mapToPublicGymDto(gym);
+  }
+
+  async getPublicGymById(id: string): Promise<PublicGymDto | null> {
+    const gym = await this.gymModel.findOne({
+      where: {
+        id,
+        isDeactivated: false,
+      },
+      select: [
+        'id',
+        'name',
+        'gymDashedName',
+        'address',
+        'googleMapsLink',
+        'email',
+        'phone',
+        'phoneNumberISOCode',
+        'description',
+        'gymType',
+        'allowUserSignUp',
+        'allowUserResevations',
+        'allowedUserResevationsPerSession',
+        'sessionTimeInHours',
+        'socialMediaLinks',
+        'openingDays',
+        'womensTimes',
+        'offers',
+        'showPersonalTrainers',
+        'messagesLanguage',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    if (!gym) {
+      return null;
+    }
+
+    return this.mapToPublicGymDto(gym);
+  }
+
+  private mapToPublicGymDto(gym: Partial<GymEntity>): PublicGymDto {
+    return {
+      id: gym.id,
+      name: gym.name,
+      gymDashedName: gym.gymDashedName,
+      address: gym.address,
+      googleMapsLink: gym.googleMapsLink,
+      email: gym.email,
+      phone: gym.phone,
+      phoneNumberISOCode: gym.phoneNumberISOCode,
+      description: gym.description,
+      gymType: gym.gymType,
+      allowUserSignUp: gym.allowUserSignUp,
+      allowUserResevations: gym.allowUserResevations,
+      allowedUserResevationsPerSession: gym.allowedUserResevationsPerSession,
+      sessionTimeInHours: gym.sessionTimeInHours,
+      socialMediaLinks: gym.socialMediaLinks,
+      openingDays: gym.openingDays,
+      womensTimes: gym.womensTimes,
+      offers: gym.offers,
+      showPersonalTrainers: gym.showPersonalTrainers,
+      messagesLanguage: gym.messagesLanguage,
+      createdAt: gym.createdAt.toISOString(),
+      updatedAt: gym.updatedAt.toISOString(),
+    };
   }
 }
