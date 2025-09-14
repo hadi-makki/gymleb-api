@@ -130,19 +130,19 @@ export class TwilioService {
       console.log('member has no notification setting or welcome message');
       return;
     }
-
-    const welcomeAndExpirationMessages =
-      gym.welcomeMessageNotified + gym.membersNotified;
+    console.log('member', member);
 
     if (member.isWelcomeMessageSent) {
       console.log('member is already notified');
       return;
     }
 
-    if (
-      welcomeAndExpirationMessages >=
-      activeSubscription.allowedNotificationsNumber
-    ) {
+    const totalMessages =
+      gym.welcomeMessageNotified +
+      gym.membersNotified +
+      gym.invoiceMessageNotified;
+
+    if (totalMessages >= activeSubscription.allowedNotificationsNumber) {
       console.log('welcome and expiration messages limit reached');
       return;
     }
@@ -153,7 +153,7 @@ export class TwilioService {
     console.log('sending welcome message to', memberPhone, memberPhoneISOCode);
 
     if (
-      !checkNodeEnv('local') &&
+      checkNodeEnv('local') &&
       isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
     ) {
       console.log('sending notification to', memberPhone, memberPhoneISOCode);
@@ -197,6 +197,106 @@ export class TwilioService {
     }
   }
 
+  async sendPaymentConfirmationMessage({
+    memberName,
+    memberPhone,
+    memberPhoneISOCode,
+    gym,
+    amountPaid,
+    paymentFor,
+    paymentDate,
+    activeSubscription,
+  }: {
+    memberName: string;
+    memberPhone: string;
+    memberPhoneISOCode: string;
+    gym: GymEntity;
+    amountPaid: string;
+    paymentFor: string;
+    paymentDate: string;
+    activeSubscription: OwnerSubscriptionTypeEntity;
+  }) {
+    console.log(
+      'this is the gym send invoice messages',
+      gym.sendInvoiceMessages,
+    );
+    if (!gym.sendInvoiceMessages) {
+      console.log('gym has invoice messages disabled');
+      return;
+    }
+
+    const totalMessages =
+      gym.welcomeMessageNotified +
+      gym.membersNotified +
+      gym.invoiceMessageNotified;
+
+    if (totalMessages >= activeSubscription.allowedNotificationsNumber) {
+      console.log('invoice message limit reached');
+      return;
+    }
+
+    console.log(
+      'sending payment confirmation message to',
+      memberPhone,
+      memberPhoneISOCode,
+    );
+
+    console.log('this is the data', {
+      1: memberName,
+      2: gym.name,
+      3: amountPaid,
+      4: paymentFor,
+      5: paymentDate,
+    });
+
+    if (
+      checkNodeEnv('local') &&
+      isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
+    ) {
+      console.log(
+        'sending payment confirmation notification to',
+        memberPhone,
+        memberPhoneISOCode,
+      );
+      await this.client.messages
+        .create({
+          from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+          to: `whatsapp:${memberPhone}`,
+          contentSid:
+            TwilioWhatsappTemplates.gymPaymentConfirmation[
+              gym.messagesLanguage
+            ],
+          contentVariables: JSON.stringify({
+            1: memberName,
+            2: gym.name,
+            3: `$${amountPaid}`,
+            4: paymentFor,
+            5: paymentDate,
+          }),
+        })
+        .then(async (res) => {
+          await this.saveTwilioMessage({
+            message: res.body,
+            phoneNumber: memberPhone,
+            phoneNumberISOCode: memberPhoneISOCode,
+            gym,
+            messageType: TwilioMessageType.gymPaymentConfirmation,
+            messageSid: res.sid,
+          });
+          await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
+        })
+        .catch((error) => {
+          console.log('this is twilio error', error);
+          throw new BadRequestException(error);
+        });
+    } else {
+      if (checkNodeEnv('local')) {
+        await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
+      }
+      return;
+    }
+  }
+
   async notifySingleMember({
     userId,
     gymId,
@@ -219,11 +319,33 @@ export class TwilioService {
       console.log('member has no notification setting or monthly reminder');
       return;
     }
+
     const gym = await this.gymService.getGymById(gymId);
     const isExpired =
       !dontCheckExpired &&
       (await this.memberService.checkUserSubscriptionExpired(member.id));
-    if (gym.membersNotified > activeSubscription.allowedNotificationsNumber) {
+
+    // if gym has invoice messages disabled, send payment confirmation message
+    if (!gym.sendInvoiceMessages) {
+      await this.sendPaymentConfirmationMessage({
+        memberName: member.name,
+        memberPhone: member.phone,
+        memberPhoneISOCode: member.phoneNumberISOCode,
+        gym,
+        amountPaid: member.lastSubscription.paidAmount.toString(),
+        paymentFor: member.lastSubscription.subscriptionType,
+        paymentDate: member.lastSubscription.startDate.toISOString(),
+        activeSubscription,
+      });
+      return;
+    }
+
+    const totalMessages =
+      gym.welcomeMessageNotified +
+      gym.membersNotified +
+      gym.invoiceMessageNotified;
+
+    if (totalMessages > activeSubscription.allowedNotificationsNumber) {
       throw new BadRequestException('Gym members notified limit reached');
     }
     if (!isExpired && !dontCheckExpired) {

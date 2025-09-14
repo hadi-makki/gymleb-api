@@ -1,27 +1,25 @@
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
-import { GymPresetEntity } from './gym-preset.entity';
-import { MemberReservationEntity } from '../../member/entities/member-reservation.entity';
+import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
-  OneToOne,
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../../main-classes/mainEntity';
-import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
-import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
+import { MemberReservationEntity } from '../../member/entities/member-reservation.entity';
+import { GymPresetEntity } from './gym-preset.entity';
 export enum GymTypeEnum {
   FITNESS = 'fitness',
   CALISTHENICS = 'calisthenics',
@@ -196,4 +194,10 @@ export class GymEntity extends PgMainEntity {
 
   @OneToMany(() => TwilioMessageEntity, (twilioMessage) => twilioMessage.gym)
   twilioMessages: TwilioMessageEntity[];
+
+  @Column('boolean', { default: false })
+  sendInvoiceMessages: boolean;
+
+  @Column('int', { default: 0 })
+  invoiceMessageNotified: number;
 }

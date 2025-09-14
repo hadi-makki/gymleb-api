@@ -45,6 +45,7 @@ import { UpdateHealthInformationDto } from './dto/update-health-information.dto'
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
+import { format } from 'date-fns';
 
 @Injectable()
 export class MemberService {
@@ -234,6 +235,7 @@ export class MemberService {
       programLink: member.programLink,
       isWelcomeMessageSent: member.isWelcomeMessageSent,
       notificationSetting: notificationSetting,
+      phoneNumberISOCode: member.phoneNumberISOCode,
     };
   }
 
@@ -355,6 +357,29 @@ export class MemberService {
         gym,
         getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
       );
+    }
+
+    console.log(
+      'this is the create member dto',
+      createMemberDto.sendInvoiceMessage,
+    );
+
+    if (createMemberDto.sendInvoiceMessage) {
+      await this.twilioService.sendPaymentConfirmationMessage({
+        memberName: member.name,
+        activeSubscription:
+          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        memberPhone: member.phone,
+        memberPhoneISOCode: member.phoneNumberISOCode,
+        gym,
+        amountPaid:
+          getLatestGymSubscription.activeSubscription.paidAmount.toString(),
+        paymentFor: subscription.title,
+        paymentDate: format(
+          getLatestGymSubscription.activeSubscription.startDate,
+          'dd/MM/yyyy',
+        ),
+      });
     }
 
     return await this.returnMember(newMember);
@@ -739,6 +764,17 @@ export class MemberService {
     member.isNotified = false;
 
     await this.memberModel.save(member);
+
+    await this.twilioService.sendPaymentConfirmationMessage({
+      memberName: member.name,
+      memberPhone: member.phone,
+      memberPhoneISOCode: member.phoneNumberISOCode,
+      gym: member.gym,
+      amountPaid: createSubscriptionInstance.paidAmount.toString(),
+      paymentFor: checkSubscription.title,
+      paymentDate: format(createSubscriptionInstance.startDate, 'dd/MM/yyyy'),
+      activeSubscription: checkSubscription,
+    });
 
     return {
       message: 'Subscription renewed successfully',

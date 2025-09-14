@@ -542,6 +542,18 @@ export class GymService {
     return gym;
   }
 
+  async addGymInvoiceMessageNotified(gymId: string, number: number) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.invoiceMessageNotified += number;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async getGymByManager(manager: ManagerEntity) {
     const gym = await this.gymModel.findOne({
       where: { owner: { id: manager.id } },
@@ -921,12 +933,14 @@ export class GymService {
         transactions: {
           ownerSubscriptionType: true,
         },
+        members: true,
       },
     });
     let returnData = [];
     for (const gym of gyms) {
       returnData.push({
         ...gym,
+        totalMembers: gym.members ? gym.members.length : 0,
         activeSubscription: (await this.getGymActiveSubscription(gym))
           .activeSubscription,
       });
@@ -1798,6 +1812,24 @@ export class GymService {
     return {
       message: 'AI chat status updated successfully',
       isAiChatEnabled: gym.isAiChatEnabled,
+    };
+  }
+
+  async updateInvoiceMessagesStatus(
+    gymId: string,
+    sendInvoiceMessages: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.sendInvoiceMessages = sendInvoiceMessages;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'Invoice messages status updated successfully',
+      sendInvoiceMessages: gym.sendInvoiceMessages,
     };
   }
 

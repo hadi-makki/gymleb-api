@@ -49,4 +49,8 @@ export class CreateMemberDto {
   @IsOptional()
   @IsBoolean()
   sendWelcomeMessage?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  sendInvoiceMessage?: boolean;
 }

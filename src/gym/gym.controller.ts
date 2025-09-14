@@ -34,6 +34,7 @@ import { SetSubscriptionDto } from './dto/set-subscription.dto';
 import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
 import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
 import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
+import { UpdateInvoiceMessagesDto } from './dto/update-invoice-messages.dto';
 import { UpdateGymPhoneDto } from './dto/update-gym-phone.dto';
 import { PublicGymDto } from './dto/public-gym.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
@@ -736,8 +737,26 @@ export class GymController {
     );
   }
 
+  @Patch('update/invoice-messages/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym invoice messages status' })
+  @ApiOkResponse({
+    description: 'Invoice messages status updated successfully',
+  })
+  @Roles(Permissions.SuperAdmin)
+  async updateInvoiceMessagesStatus(
+    @Param('gymId') gymId: string,
+    @Body() updateInvoiceMessagesDto: UpdateInvoiceMessagesDto,
+  ) {
+    return await this.gymService.updateInvoiceMessagesStatus(
+      gymId,
+      updateInvoiceMessagesDto.sendInvoiceMessages,
+    );
+  }
+
   @Patch('update/message-language/:gymId')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: 'Update gym message language' })
   @ApiOkResponse({ description: 'Message language updated successfully' })
   @ValidateGymRelatedToOwner()

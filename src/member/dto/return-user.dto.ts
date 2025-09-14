@@ -45,6 +45,7 @@ export class ReturnUserDto {
   programLink?: string;
   isWelcomeMessageSent?: boolean;
   notificationSetting?: NotificationSettingEntity;
+  phoneNumberISOCode?: string;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {
