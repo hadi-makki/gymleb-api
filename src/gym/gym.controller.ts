@@ -790,6 +790,7 @@ export class GymController {
     description: 'Welcome message automation status updated successfully',
   })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
   async updateWelcomeMessageAutomation(
     @Param('gymId') gymId: string,
     @Body() body: { sendWelcomeMessageAutomatically: boolean },
