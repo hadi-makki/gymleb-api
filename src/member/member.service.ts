@@ -1168,7 +1168,7 @@ export class MemberService {
 
     // Check if all members belong to this gym
     const members = await this.memberModel.find({
-      where: { id: In(memberIds), gym: checkGym },
+      where: { id: In(memberIds), gym: { id: checkGym.id } },
       relations: ['transactions'],
     });
 
@@ -1211,7 +1211,7 @@ export class MemberService {
 
     // Check if all members belong to this gym
     const members = await this.memberModel.find({
-      where: { id: In(memberIds), gym: checkGym },
+      where: { id: In(memberIds), gym: { id: checkGym.id } },
       relations: ['gym'],
     });
 
