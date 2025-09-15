@@ -40,7 +40,9 @@ export class ProductEntity extends PgMainEntity {
   @Column('int', { default: 600 })
   maxDurationSeconds: number;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.products)
+  @ManyToOne(() => GymEntity, (gym) => gym.products, {
+    onDelete: 'CASCADE',
+  })
   gym: GymEntity;
 
   @RelationId((product: ProductEntity) => product.gym)
