@@ -46,7 +46,9 @@ export class PTSessionEntity extends PgMainEntity {
   @Column('timestamp with time zone', { nullable: true })
   cancelledAt: Date;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.ptSessions)
+  @ManyToOne(() => GymEntity, (gym) => gym.ptSessions, {
+    onDelete: 'CASCADE',
+  })
   gym: GymEntity;
 
   @RelationId((ptSession: PTSessionEntity) => ptSession.gym)

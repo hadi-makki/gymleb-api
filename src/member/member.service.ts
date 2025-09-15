@@ -757,6 +757,9 @@ export class MemberService {
 
     await this.memberModel.save(member);
 
+    const getLatestGymSubscription =
+      await this.gymService.getGymActiveSubscription(checkGym.id);
+
     await this.twilioService.sendPaymentConfirmationMessage({
       memberName: member.name,
       memberPhone: member.phone,
@@ -765,7 +768,8 @@ export class MemberService {
       amountPaid: createSubscriptionInstance.paidAmount.toString(),
       paymentFor: checkSubscription.title,
       paymentDate: format(createSubscriptionInstance.startDate, 'dd/MM/yyyy'),
-      activeSubscription: checkSubscription,
+      activeSubscription:
+        getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
     });
 
     return {
@@ -1052,6 +1056,7 @@ export class MemberService {
     }
     await this.transactionService.invalidateSubscriptionInstance(member.id);
     await this.memberModel.save(member);
+    return { message: 'Member subscription invalidated successfully' };
   }
 
   async fixMemberUsernamesAndPasscodes() {

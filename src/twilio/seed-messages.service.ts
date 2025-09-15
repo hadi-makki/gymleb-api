@@ -20,6 +20,24 @@ export class SeedMessagesService implements OnModuleInit {
     // Implementation for the onModuleInit method
     // console.log('Module has been initialized.');
     // await this.seedWelcomeMessages();
+    // await this.seedTwilioMessagesSentBy();
+  }
+
+  async seedTwilioMessagesSentBy() {
+    const gyms = await this.gymRepository.find();
+    let counter = 0;
+    for (const gym of gyms) {
+      const twilioMessages = await this.twilioMessageRepository.find({
+        where: { gym: { id: gym.id }, sentBy: null },
+      });
+      console.log(`seeded messages for ${gym.name}`, twilioMessages.length);
+      for (const twilioMessage of twilioMessages) {
+        if (twilioMessage.sentBy) continue;
+        twilioMessage.sentBy = gym.name;
+        await this.twilioMessageRepository.save(twilioMessage);
+      }
+      counter += twilioMessages.length;
+    }
   }
 
   async seedWelcomeMessages() {

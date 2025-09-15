@@ -196,6 +196,7 @@ export class MemberController {
     @Body() renewSubscriptionDto: RenewSubscriptionDto,
     @Param('gymId') gymId: string,
   ) {
+    console.log('renewSubscriptionDto', renewSubscriptionDto);
     return await this.memberService.renewSubscription(
       memberId,
       renewSubscriptionDto.subscriptionId,

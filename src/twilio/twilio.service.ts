@@ -58,6 +58,75 @@ export class TwilioService {
     private readonly twilioMessageModel: Repository<TwilioMessageEntity>,
   ) {}
 
+  checkIfMessageShouldBeSent(phoneNumber: string, phoneNumberISOCode: string) {
+    if (
+      !checkNodeEnv('local') &&
+      isValidPhoneUsingISO(phoneNumber, phoneNumberISOCode as CountryCode)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  checkIfGymCanSendMessages(
+    gym: GymEntity,
+    activeSubscription: OwnerSubscriptionTypeEntity,
+  ) {
+    const totalMessages =
+      gym.welcomeMessageNotified +
+      gym.membersNotified +
+      gym.invoiceMessageNotified;
+    console.log('this is the totalMessages', totalMessages);
+    console.log(
+      'this is the activeSubscription.allowedNotificationsNumber',
+      activeSubscription.allowedNotificationsNumber,
+    );
+    return totalMessages < activeSubscription.allowedNotificationsNumber;
+  }
+
+  async sendWhatsappMessage({
+    phoneNumber,
+    twilioTemplate,
+    contentVariables,
+    phoneNumberISOCode,
+    gym,
+    activeSubscription,
+  }: {
+    phoneNumber: string;
+    twilioTemplate: string;
+    contentVariables: Record<string, string>;
+    phoneNumberISOCode: string;
+    gym: GymEntity;
+    activeSubscription: OwnerSubscriptionTypeEntity;
+  }) {
+    // add logs if we are working on local
+    if (checkNodeEnv('local')) {
+      // log the data one by one
+      console.log('phoneNumber', phoneNumber);
+      console.log('twilioTemplate', twilioTemplate);
+      console.log('contentVariables', contentVariables);
+      console.log('phoneNumberISOCode', phoneNumberISOCode);
+      console.log('gym', gym.id, gym.name);
+      console.log('activeSubscription', activeSubscription);
+    }
+    if (!this.checkIfGymCanSendMessages(gym, activeSubscription)) {
+      console.log('Gym can send messages limit reached');
+      return;
+    }
+
+    if (this.checkIfMessageShouldBeSent(phoneNumber, phoneNumberISOCode)) {
+      console.log('sending whatsapp message');
+      const res = await this.client.messages.create({
+        from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
+        to: `whatsapp:${phoneNumber}`,
+        contentSid: twilioTemplate,
+        contentVariables: JSON.stringify(contentVariables),
+      });
+      console.log('this is twilio response', res);
+      return res;
+    }
+  }
+
   async saveTwilioMessage({
     message,
     phoneNumber,
@@ -65,6 +134,7 @@ export class TwilioService {
     gym,
     messageType,
     messageSid,
+    twilioTemplate,
   }: {
     message: string;
     phoneNumber: string;
@@ -72,6 +142,7 @@ export class TwilioService {
     gym: GymEntity;
     messageType: TwilioMessageType;
     messageSid: string;
+    twilioTemplate: string;
   }) {
     const twilioMessage = this.twilioMessageModel.create({
       message,
@@ -80,11 +151,11 @@ export class TwilioService {
       gym,
       messageType,
       messageSid,
+      twilioTemplate,
+      sentBy: gym.name,
     });
     await this.twilioMessageModel.save(twilioMessage);
   }
-
-  private readonly allowedMessagesNumber = 500;
 
   private readonly client = new Twilio(
     process.env.TWILIO_ACCOUNT_SID,
@@ -130,71 +201,61 @@ export class TwilioService {
       console.log('member has no notification setting or welcome message');
       return;
     }
-    console.log('member', member);
 
     if (member.isWelcomeMessageSent) {
       console.log('member is already notified');
       return;
     }
 
-    const totalMessages =
-      gym.welcomeMessageNotified +
-      gym.membersNotified +
-      gym.invoiceMessageNotified;
+    const data = {
+      1: memberName,
+      2: gym.name,
+      3: `https://gym-leb.com/${gym.gymDashedName}/overview`,
+      4: gym.phone,
+    };
 
-    if (totalMessages >= activeSubscription.allowedNotificationsNumber) {
-      console.log('welcome and expiration messages limit reached');
-      return;
+    const res = await this.sendWhatsappMessage({
+      phoneNumber: memberPhone,
+      twilioTemplate:
+        gym.gymType === GymTypeEnum.CALISTHENICS
+          ? TwilioWhatsappTemplates.welcomeMessageCalisthenics[
+              gym.messagesLanguage
+            ]
+          : TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
+      contentVariables: data,
+      phoneNumberISOCode: memberPhoneISOCode,
+      gym,
+      activeSubscription,
+    });
+    if (res) {
+      await this.saveTwilioMessage({
+        message: res.body,
+        phoneNumber: memberPhone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.welcomeMessage,
+        messageSid: res.sid,
+        twilioTemplate:
+          gym.gymType === GymTypeEnum.CALISTHENICS
+            ? TwilioWhatsappTemplates.welcomeMessageCalisthenics[
+                gym.messagesLanguage
+              ]
+            : TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
+      });
+      await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
+
+      member.isWelcomeMessageSent = true;
+      await this.memberModel.save(member);
     }
 
-    member.isWelcomeMessageSent = true;
-    await this.memberModel.save(member);
-
-    console.log('sending welcome message to', memberPhone, memberPhoneISOCode);
-
-    if (
-      !checkNodeEnv('local') &&
-      isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
-    ) {
-      console.log('sending notification to', memberPhone, memberPhoneISOCode);
-      await this.client.messages
-        .create({
-          from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-          to: `whatsapp:${memberPhone}`,
-          contentSid:
-            gym.gymType === GymTypeEnum.CALISTHENICS
-              ? TwilioWhatsappTemplates.welcomeMessageCalisthenics[
-                  gym.messagesLanguage
-                ]
-              : TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
-          contentVariables: JSON.stringify({
-            1: memberName,
-            2: gym.name,
-            3: `https://gym-leb.com/${gym.gymDashedName}/overview`,
-            4: gym.phone,
-          }),
-        })
-        .then(async (res) => {
-          await this.saveTwilioMessage({
-            message: res.body,
-            phoneNumber: memberPhone,
-            phoneNumberISOCode: memberPhoneISOCode,
-            gym,
-            messageType: TwilioMessageType.welcomeMessage,
-            messageSid: res.sid,
-          });
-          await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
-        })
-        .catch((error) => {
-          console.log('this is twilio error', error);
-          throw new BadRequestException(error);
-        });
-    } else {
-      if (!checkNodeEnv('local')) {
-        await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
-      }
-      return;
+    if (!checkNodeEnv('local')) {
+      await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
+      member.isWelcomeMessageSent = true;
+      await this.memberModel.save(member);
     }
+    return {
+      message: 'Welcome message sent successfully',
+    };
   }
 
   async sendPaymentConfirmationMessage({
@@ -216,85 +277,47 @@ export class TwilioService {
     paymentDate: string;
     activeSubscription: OwnerSubscriptionTypeEntity;
   }) {
-    console.log(
-      'this is the gym send invoice messages',
-      gym.sendInvoiceMessages,
-    );
     if (!gym.sendInvoiceMessages) {
       console.log('gym has invoice messages disabled');
       return;
     }
 
-    const totalMessages =
-      gym.welcomeMessageNotified +
-      gym.membersNotified +
-      gym.invoiceMessageNotified;
-
-    if (totalMessages >= activeSubscription.allowedNotificationsNumber) {
-      console.log('invoice message limit reached');
-      return;
-    }
-
-    console.log(
-      'sending payment confirmation message to',
-      memberPhone,
-      memberPhoneISOCode,
-    );
-
-    console.log('this is the data', {
+    const data = {
       1: memberName,
       2: gym.name,
-      3: amountPaid,
+      3: `$${amountPaid}`,
       4: paymentFor,
       5: paymentDate,
-    });
+    };
 
-    if (
-      !checkNodeEnv('local') &&
-      isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
-    ) {
-      console.log(
-        'sending payment confirmation notification to',
-        memberPhone,
-        memberPhoneISOCode,
-      );
-      await this.client.messages
-        .create({
-          from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-          to: `whatsapp:${memberPhone}`,
-          contentSid:
-            TwilioWhatsappTemplates.gymPaymentConfirmation[
-              gym.messagesLanguage
-            ],
-          contentVariables: JSON.stringify({
-            1: memberName,
-            2: gym.name,
-            3: `$${amountPaid}`,
-            4: paymentFor,
-            5: paymentDate,
-          }),
-        })
-        .then(async (res) => {
-          await this.saveTwilioMessage({
-            message: res.body,
-            phoneNumber: memberPhone,
-            phoneNumberISOCode: memberPhoneISOCode,
-            gym,
-            messageType: TwilioMessageType.gymPaymentConfirmation,
-            messageSid: res.sid,
-          });
-          await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
-        })
-        .catch((error) => {
-          console.log('this is twilio error', error);
-          throw new BadRequestException(error);
-        });
-    } else {
-      if (!checkNodeEnv('local')) {
-        await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
-      }
-      return;
+    const res = await this.sendWhatsappMessage({
+      phoneNumber: memberPhone,
+      twilioTemplate:
+        TwilioWhatsappTemplates.gymPaymentConfirmation[gym.messagesLanguage],
+      contentVariables: data,
+      phoneNumberISOCode: memberPhoneISOCode,
+      gym,
+      activeSubscription,
+    });
+    console.log('this is twilio response', res);
+    if (res) {
+      await this.saveTwilioMessage({
+        message: res.body,
+        phoneNumber: memberPhone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.gymPaymentConfirmation,
+        messageSid: res.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.gymPaymentConfirmation[gym.messagesLanguage],
+      });
+      await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
     }
+
+    if (!checkNodeEnv('local')) {
+      await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
+    }
+    return { message: 'Payment confirmation message sent successfully' };
   }
 
   async notifySingleMember({
@@ -340,14 +363,6 @@ export class TwilioService {
       return;
     }
 
-    const totalMessages =
-      gym.welcomeMessageNotified +
-      gym.membersNotified +
-      gym.invoiceMessageNotified;
-
-    if (totalMessages > activeSubscription.allowedNotificationsNumber) {
-      throw new BadRequestException('Gym members notified limit reached');
-    }
     if (!isExpired && !dontCheckExpired) {
       throw new BadRequestException('Member subscription is not expired');
     }
@@ -355,65 +370,45 @@ export class TwilioService {
       throw new BadRequestException('Member is already notified');
     }
 
-    const welcomeAndExpirationMessages =
-      gym.welcomeMessageNotified + gym.membersNotified;
+    const data = {
+      1: member.name,
+      2: gym.name,
+      3: member.lastSubscription?.title || 'Subscription',
+      4: member.lastSubscription.isInvalidated
+        ? format(new Date(member.lastSubscription.invalidatedAt), 'dd/MM/yyyy')
+        : member.lastSubscription.endDate
+          ? format(new Date(member.lastSubscription.endDate), 'dd/MM/yyyy')
+          : 'N/A',
+      5: gym.phone,
+    };
 
-    if (
-      !checkNodeEnv('local') &&
-      isValidPhoneUsingISO(member.phone, memberPhoneISOCode as CountryCode)
-    ) {
-      await this.client.messages
-        .create({
-          from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-          to: `whatsapp:${member.phone}`,
-          contentSid:
-            TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
-          contentVariables: JSON.stringify({
-            1: member.name,
-            2: gym.name,
-            3: member.lastSubscription?.title || 'Subscription',
-            4: member.lastSubscription.isInvalidated
-              ? format(
-                  new Date(member.lastSubscription.invalidatedAt),
-                  'dd/MM/yyyy',
-                )
-              : member.lastSubscription.endDate
-                ? format(
-                    new Date(member.lastSubscription.endDate),
-                    'dd/MM/yyyy',
-                  )
-                : 'N/A',
-            5: gym.phone,
-          }),
-        })
-        .then(async (res) => {
-          await this.saveTwilioMessage({
-            message: res.body,
-            phoneNumber: member.phone,
-            phoneNumberISOCode: memberPhoneISOCode,
-            gym,
-            messageType: TwilioMessageType.expiaryReminder,
-            messageSid: res.sid,
-          });
-          await this.memberService.toggleNotified(member.id, true);
-          await this.gymService.addGymMembersNotified(gym.id, 1);
-        })
-        .catch((error) => {
-          console.log('this is twilio error', error);
-          throw new BadRequestException(error);
-        });
-    } else {
-      console.log('member notified successfully');
-      console.log('member phone', member.phone);
-      console.log('member phone ISO code', memberPhoneISOCode);
-      console.log(
-        'check phone number',
-        isValidPhoneUsingISO(member.phone, memberPhoneISOCode as CountryCode),
-      );
-      if (checkNodeEnv('local')) {
-        await this.memberService.toggleNotified(member.id, true);
-        await this.gymService.addGymMembersNotified(gym.id, 1);
-      }
+    const res = await this.sendWhatsappMessage({
+      phoneNumber: member.phone,
+      twilioTemplate:
+        TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
+      contentVariables: data,
+      phoneNumberISOCode: memberPhoneISOCode,
+      gym,
+      activeSubscription,
+    });
+    if (res) {
+      await this.saveTwilioMessage({
+        message: res.body,
+        phoneNumber: member.phone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.expiaryReminder,
+        messageSid: res.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
+      });
+      await this.memberService.toggleNotified(member.id, true);
+      await this.gymService.addGymMembersNotified(gym.id, 1);
+    }
+
+    if (checkNodeEnv('local')) {
+      await this.memberService.toggleNotified(member.id, true);
+      await this.gymService.addGymMembersNotified(gym.id, 1);
     }
 
     return {
@@ -435,24 +430,6 @@ export class TwilioService {
         memberPhoneISOCode: 'LB',
       });
     }
-  }
-
-  async sendWhatsappMessage(phoneNumber: string, gym: GymEntity) {
-    const verify = await this.client.messages.create({
-      from: `whatsapp:${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`,
-      to: `whatsapp:${phoneNumber}`,
-      contentSid: TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
-      contentVariables: JSON.stringify({
-        1: 'Test Member', // Member name
-        2: gym.name, // Gym name
-        3: 'Subscription', // Subscription title
-        4: '01/01/2024', // End date
-        5: gym.phone, // Gym phone
-      }),
-    });
-    return {
-      message: 'WhatsApp message sent successfully',
-    };
   }
 
   async testWhatsappMessage(
@@ -513,6 +490,8 @@ export class TwilioService {
           gym,
           messageType: messageType as TwilioMessageType,
           messageSid: res.sid,
+          twilioTemplate:
+            TwilioWhatsappTemplates[messageType][gym.messagesLanguage],
         });
       })
       .catch((error) => {

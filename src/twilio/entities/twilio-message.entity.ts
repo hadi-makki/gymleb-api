@@ -20,7 +20,9 @@ export class TwilioMessageEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   phoneNumberISOCode: string;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.twilioMessages)
+  @ManyToOne(() => GymEntity, (gym) => gym.twilioMessages, {
+    onDelete: 'SET NULL',
+  })
   gym: GymEntity;
 
   @Column('text', { nullable: false })
@@ -28,4 +30,10 @@ export class TwilioMessageEntity extends PgMainEntity {
 
   @Column('text', { nullable: true })
   messageSid: string;
+
+  @Column('text', { nullable: true })
+  twilioTemplate?: string;
+
+  @Column('text', { nullable: true })
+  sentBy?: string;
 }

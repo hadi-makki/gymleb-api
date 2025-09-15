@@ -191,6 +191,7 @@ export class TransactionService {
         isAfter(new Date(transaction.endDate), new Date()) &&
         !transaction.isInvalidated,
     );
+
     if (!activeSubscriptionInstance) {
       throw new NotFoundException('Subscription instance not found');
     }
