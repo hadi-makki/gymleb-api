@@ -359,11 +359,6 @@ export class MemberService {
       );
     }
 
-    console.log(
-      'this is the create member dto',
-      createMemberDto.sendInvoiceMessage,
-    );
-
     if (createMemberDto.sendInvoiceMessage) {
       await this.twilioService.sendPaymentConfirmationMessage({
         memberName: member.name,

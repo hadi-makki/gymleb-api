@@ -9,6 +9,7 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { Between, Raw, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
+import { UserEntity } from 'src/user/user.entity';
 import { returnManager } from '../functions/returnUser';
 import { GymService } from '../gym/gym.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
@@ -332,11 +333,19 @@ export class ManagerService {
 
     // Get all gyms with their subscription status
     const gyms = await this.gymModel.find({
-      relations: ['owner', 'ownerSubscriptionType'],
+      relations: {
+        owner: true,
+        transactions: {
+          ownerSubscriptionType: true,
+        },
+        ownerSubscriptionType: true,
+      },
     });
 
     let gymsWithActiveSubscriptions = 0;
     let totalMessagesSent = 0;
+    const totalUsers = await this.memberModel.count();
+    console.log('this is the total users', totalUsers);
 
     // Check each gym's subscription status and count messages
     for (const gym of gyms) {
@@ -359,6 +368,7 @@ export class ManagerService {
       gymsWithActiveSubscriptions,
       totalMessagesSent,
       totalGyms: gyms.length,
+      totalUsers,
     };
   }
 
@@ -431,7 +441,11 @@ export class ManagerService {
 
   async getSubscriptionStatusData() {
     const gyms = await this.gymModel.find({
-      relations: ['owner', 'ownerSubscriptionType'],
+      relations: {
+        owner: true,
+        transactions: { ownerSubscriptionType: true },
+        ownerSubscriptionType: true,
+      },
     });
 
     let activeCount = 0;

@@ -8,6 +8,7 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import { TokenService } from '../token/token.service';
 import { TransactionModule } from '../transactions/subscription-instance.module';
 import { UserService } from '../user/user.service';
+import { UserModule } from '../user/user.module';
 import { ManagerController } from './manager.controller';
 import { ManagerEntity } from './manager.entity';
 import { ManagerService } from './manager.service';
@@ -18,6 +19,7 @@ import { ManagerScript } from './managers.script';
     TypeOrmModule.forFeature([ManagerEntity]),
     TransactionModule,
     AuthenticationModule,
+    UserModule,
   ],
   providers: [
     ManagerService,

@@ -671,6 +671,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym location' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   async updateGymAddress(
     @Param('gymId') gymId: string,
     @Body() body: UpdateGymLocationDto,
