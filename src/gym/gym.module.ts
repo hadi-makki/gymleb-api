@@ -7,6 +7,7 @@ import { GymPresetController } from './gym-preset.controller';
 import { GymPresetService } from './gym-preset.service';
 import { GymEntity } from './entities/gym.entity';
 import { GymPresetEntity } from './entities/gym-preset.entity';
+import { MediaModule } from 'src/media/media.module';
 
 @Module({
   imports: [

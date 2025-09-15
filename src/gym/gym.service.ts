@@ -39,6 +39,8 @@ import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { PublicGymDto } from './dto/public-gym.dto';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { ProductEntity } from 'src/products/products.entity';
+import { MediaService } from 'src/media/media.service';
 
 @Injectable()
 export class GymService {
@@ -54,6 +56,9 @@ export class GymService {
     @InjectRepository(TransactionEntity)
     private transactionModel: Repository<TransactionEntity>,
     private transactionService: TransactionService,
+    @InjectRepository(ProductEntity)
+    private productModel: Repository<ProductEntity>,
+    private mediaService: MediaService,
   ) {}
 
   async create(createGymDto: CreateGymDto) {
@@ -1634,20 +1639,30 @@ export class GymService {
         type: Not(TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT),
       },
     });
-    console.log(
-      'these are the transactions',
-      getTransactions.map((t) => t.id),
-    );
+
     for (const transaction of getTransactions) {
       await this.transactionModel.remove(transaction);
     }
 
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
+      relations: {
+        products: {
+          images: true,
+        },
+      },
     });
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
+
+    for (const product of gym.products) {
+      for (const image of product.images) {
+        await this.mediaService.delete(image.id);
+      }
+      await this.productModel.remove(product);
+    }
+
     await this.gymModel.remove(gym);
 
     return { message: 'Gym deleted successfully' };

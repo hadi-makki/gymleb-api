@@ -21,6 +21,9 @@ import { SubscriptionEntity } from 'src/subscription/entities/subscription.entit
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { MediaService } from 'src/media/media.service';
+import { MediaEntity } from 'src/media/media.entity';
+import { S3Service } from 'src/s3/s3.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -36,6 +39,7 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
       OwnerSubscriptionTypeEntity,
       RevenueEntity,
       PTSessionEntity,
+      MediaEntity,
     ]),
   ],
   providers: [
@@ -47,6 +51,8 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
     UserService,
     GymService,
     TransactionService,
+    MediaService,
+    S3Service,
   ],
   exports: [
     ManagerService,
@@ -58,6 +64,7 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
     GymService,
     TypeOrmModule,
     TransactionService,
+    MediaService,
   ],
 })
 export class AuthenticationModule {}

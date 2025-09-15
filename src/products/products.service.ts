@@ -165,6 +165,32 @@ export class ProductsService {
     };
   }
 
+  async removeProduct(id: string) {
+    const product = await this.productRepository.findOne({
+      where: { id: id },
+      relations: {
+        images: true,
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    if (product?.images && product.images.length > 0) {
+      for (const image of product.images) {
+        try {
+          await this.mediaService.delete(image.id);
+        } catch (error) {
+          console.warn('Failed to delete image:', error);
+        }
+      }
+    }
+
+    await this.productRepository.delete(id);
+
+    return { message: 'Product deleted successfully' };
+  }
+
   async deleteProduct(id: string, user: UserEntity, gymId: string) {
     const product = await this.productRepository.findOne({
       where: { id: id, gym: { id: gymId } },
