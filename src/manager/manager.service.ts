@@ -214,6 +214,7 @@ export class ManagerService {
     if (!manager) {
       throw new NotFoundException('Manager not found');
     }
+    console.log('these are the owned gyms', manager.ownedGyms);
     for (const gym of manager.ownedGyms) {
       await this.GymService.deleteGym(gym.id);
     }

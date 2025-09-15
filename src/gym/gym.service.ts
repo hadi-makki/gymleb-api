@@ -1628,6 +1628,20 @@ export class GymService {
   }
 
   async deleteGym(gymId: string) {
+    const getTransactions = await this.transactionModel.find({
+      where: {
+        gym: { id: gymId },
+        type: Not(TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT),
+      },
+    });
+    console.log(
+      'these are the transactions',
+      getTransactions.map((t) => t.id),
+    );
+    for (const transaction of getTransactions) {
+      await this.transactionModel.remove(transaction);
+    }
+
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
     });
@@ -1635,6 +1649,7 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
     await this.gymModel.remove(gym);
+
     return { message: 'Gym deleted successfully' };
   }
 

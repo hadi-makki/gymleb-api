@@ -61,7 +61,9 @@ export class TransactionEntity extends PgMainEntity {
   @Column('text', { default: Currency.USD })
   currency: Currency;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.transactions)
+  @ManyToOne(() => GymEntity, (gym) => gym.transactions, {
+    onDelete: 'SET NULL',
+  })
   gym: GymEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.gym)
