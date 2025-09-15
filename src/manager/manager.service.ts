@@ -207,18 +207,17 @@ export class ManagerService {
   ): Promise<SuccessMessageReturn> {
     const manager = await this.managerEntity.findOne({
       where: { id },
+      relations: {
+        ownedGyms: true,
+      },
     });
     if (!manager) {
       throw new NotFoundException('Manager not found');
     }
+    for (const gym of manager.ownedGyms) {
+      await this.GymService.deleteGym(gym.id);
+    }
     await this.managerEntity.delete(id);
-
-    await this.gymModel.delete(id);
-    // await this.ownerSubscriptionModel.update(id, { owner: null });
-    await this.transactionModel.delete(id);
-    await this.memberModel.delete(id);
-    await this.expenseModel.delete(id);
-    await this.tokenService.deleteTokensByUserId(id, deviceId);
 
     return {
       message: 'Manager deleted successfully',

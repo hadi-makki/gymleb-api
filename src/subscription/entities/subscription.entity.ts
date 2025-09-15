@@ -29,7 +29,10 @@ export class SubscriptionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   user: string;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.subscriptions, { nullable: true })
+  @ManyToOne(() => GymEntity, (gym) => gym.subscriptions, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   gym: GymEntity;
 
   @RelationId((subscription: SubscriptionEntity) => subscription.gym)

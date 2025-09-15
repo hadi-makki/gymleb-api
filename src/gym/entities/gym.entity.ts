@@ -56,7 +56,9 @@ export class GymEntity extends PgMainEntity {
   @ManyToMany(() => ManagerEntity, (manager) => manager.gyms)
   personalTrainers: ManagerEntity[];
 
-  @OneToMany(() => SubscriptionEntity, (subscription) => subscription.gym)
+  @OneToMany(() => SubscriptionEntity, (subscription) => subscription.gym, {
+    onDelete: 'SET NULL',
+  })
   subscriptions: SubscriptionEntity[];
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.ownedGyms)
@@ -120,7 +122,9 @@ export class GymEntity extends PgMainEntity {
   @OneToMany(() => TransactionEntity, (product) => product.transferedTo)
   productReceiveTransactions: TransactionEntity[];
 
-  @OneToMany(() => MemberEntity, (member) => member.gym)
+  @OneToMany(() => MemberEntity, (member) => member.gym, {
+    onDelete: 'SET NULL',
+  })
   members: MemberEntity[];
 
   @OneToMany(() => RevenueEntity, (revenue) => revenue.gym)

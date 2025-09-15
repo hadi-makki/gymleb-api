@@ -53,7 +53,9 @@ export class MemberEntity extends PgMainEntity {
   @Column('text', { default: 'LB' })
   phoneNumberISOCode: string;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.members)
+  @ManyToOne(() => GymEntity, (gym) => gym.members, {
+    onDelete: 'CASCADE',
+  })
   gym: GymEntity;
 
   @RelationId((member: MemberEntity) => member.gym)

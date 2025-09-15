@@ -27,7 +27,9 @@ export class ExpenseEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   notes?: string;
 
-  @ManyToOne(() => GymEntity, (gym) => gym.expenses)
+  @ManyToOne(() => GymEntity, (gym) => gym.expenses, {
+    onDelete: 'CASCADE',
+  })
   gym: GymEntity;
 
   @RelationId((expense: ExpenseEntity) => expense.gym)
