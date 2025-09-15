@@ -153,7 +153,7 @@ export class TwilioService {
     console.log('sending welcome message to', memberPhone, memberPhoneISOCode);
 
     if (
-      checkNodeEnv('local') &&
+      !checkNodeEnv('local') &&
       isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
     ) {
       console.log('sending notification to', memberPhone, memberPhoneISOCode);
@@ -190,7 +190,7 @@ export class TwilioService {
           throw new BadRequestException(error);
         });
     } else {
-      if (checkNodeEnv('local')) {
+      if (!checkNodeEnv('local')) {
         await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
       }
       return;
@@ -250,7 +250,7 @@ export class TwilioService {
     });
 
     if (
-      checkNodeEnv('local') &&
+      !checkNodeEnv('local') &&
       isValidPhoneUsingISO(memberPhone, memberPhoneISOCode as CountryCode)
     ) {
       console.log(
@@ -290,7 +290,7 @@ export class TwilioService {
           throw new BadRequestException(error);
         });
     } else {
-      if (checkNodeEnv('local')) {
+      if (!checkNodeEnv('local')) {
         await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
       }
       return;

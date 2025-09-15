@@ -346,10 +346,7 @@ export class MemberService {
     const getLatestGymSubscription =
       await this.gymService.getGymActiveSubscription(gym.id);
 
-    if (gym.sendWelcomeMessageAutomatically) {
-      if (!createMemberDto.sendWelcomeMessage) {
-        return await this.returnMember(newMember);
-      }
+    if (createMemberDto.sendWelcomeMessage) {
       await this.twilioService.sendWelcomeMessage(
         newMember.name,
         newMember.phone,
