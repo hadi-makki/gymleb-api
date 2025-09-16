@@ -371,8 +371,18 @@ export class MemberController {
 
   @Get('/get/members-with-expiring-subscriptions')
   async getMembersWithExpiringSubscriptions() {
-    return await this.memberService.getMembersWithExpiringSubscriptions({
-      days: 3,
+    return (
+      await this.memberService.getMembersWithExpiringSubscriptions({
+        days: 3,
+        isNotified: false,
+      })
+    ).map((m) => {
+      return {
+        id: m.member.id,
+        name: m.member.name,
+        endDate: m.expiringSubscription.endDate,
+        gymName: m.gym.name,
+      };
     });
   }
 
