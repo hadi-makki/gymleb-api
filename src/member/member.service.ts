@@ -864,6 +864,7 @@ export class MemberService {
     page: number,
     search: string,
     gymId: string,
+    onlyNotNotified: boolean = false,
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -880,6 +881,7 @@ export class MemberService {
         transactions: {
           type: TransactionType.SUBSCRIPTION,
         },
+        isNotified: onlyNotNotified ? false : undefined,
       },
       relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
@@ -897,8 +899,6 @@ export class MemberService {
         );
       })
       .map((member) => member.id);
-
-    console.log('expiredMemberIds', expiredMemberIds);
 
     // Use pagination utility with the filtered IDs
     const res = await paginate(
@@ -920,7 +920,7 @@ export class MemberService {
           phone: [FilterOperator.ILIKE],
           email: [FilterOperator.ILIKE],
         },
-        select: ['id', 'name', 'email', 'phone', 'createdAt', 'updatedAt'],
+
         maxLimit: 100,
       },
     );
@@ -1273,7 +1273,36 @@ export class MemberService {
       message: `Successfully notified ${expiringMembers.length} members`,
     };
   }
-
+  async notifyMembersWithExpiringSubscriptionsReminder() {
+    const getAllGyms = await this.gymModel.find();
+    for (const gym of getAllGyms) {
+      const getLatestGymSubscription =
+        await this.gymService.getGymActiveSubscription(gym.id);
+      const getExpiredMembers = await this.getExpiredMembers(
+        null,
+        1000,
+        1,
+        '',
+        gym.id,
+        true,
+      );
+      console.log(
+        'getExpiredMembers',
+        getExpiredMembers.data.map((m) => {
+          return { id: m.id, name: m.name, gymName: m.gym.name };
+        }),
+      );
+      for (const member of getExpiredMembers.data) {
+        await this.twilioService.notifyMemberExpiredReminder({
+          userId: member.id,
+          gymId: member.gym.id,
+          memberPhoneISOCode: member.phoneNumberISOCode,
+          activeSubscription:
+            getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        });
+      }
+    }
+  }
   // Attending Days Methods
   async getMemberAttendingDays(memberId: string, gymId: string) {
     if (!isUUID(memberId)) {

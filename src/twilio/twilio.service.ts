@@ -43,6 +43,11 @@ export const TwilioWhatsappTemplates = {
     ar: 'HXb1c5bb824a6cd79d86257128a746511f',
     numberOfVariables: 5,
   },
+  memberExpiredReminder: {
+    en: 'HX4b8dbc53b74686f97214505b0fd85434',
+    ar: 'HX3cf3613e737af059b07ca59cd95c6e61',
+    numberOfVariables: 5,
+  },
 };
 
 @Injectable()
@@ -348,21 +353,6 @@ export class TwilioService {
       !dontCheckExpired &&
       (await this.memberService.checkUserSubscriptionExpired(member.id));
 
-    // if gym has invoice messages disabled, send payment confirmation message
-    if (!gym.sendInvoiceMessages) {
-      await this.sendPaymentConfirmationMessage({
-        memberName: member.name,
-        memberPhone: member.phone,
-        memberPhoneISOCode: member.phoneNumberISOCode,
-        gym,
-        amountPaid: member.lastSubscription.paidAmount.toString(),
-        paymentFor: member.lastSubscription.subscriptionType,
-        paymentDate: member.lastSubscription.startDate.toISOString(),
-        activeSubscription,
-      });
-      return;
-    }
-
     if (!isExpired && !dontCheckExpired) {
       throw new BadRequestException('Member subscription is not expired');
     }
@@ -414,6 +404,69 @@ export class TwilioService {
     return {
       message: 'Member notified successfully',
     };
+  }
+
+  async notifyMemberExpiredReminder({
+    userId,
+    gymId,
+    memberPhoneISOCode,
+    activeSubscription,
+  }: {
+    userId: string;
+    gymId: string;
+    memberPhoneISOCode: string;
+    activeSubscription: OwnerSubscriptionTypeEntity;
+  }) {
+    const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
+    if (member.isNotified) {
+      throw new BadRequestException('Member is already notified');
+    }
+
+    const gym = await this.gymService.getGymById(gymId);
+
+    const data = {
+      1: member.name,
+      2: gym.name,
+      3: member.lastSubscription?.title || 'Subscription',
+      4: member.lastSubscription.isInvalidated
+        ? format(new Date(member.lastSubscription.invalidatedAt), 'dd/MM/yyyy')
+        : member.lastSubscription.endDate
+          ? format(new Date(member.lastSubscription.endDate), 'dd/MM/yyyy')
+          : 'N/A',
+      5: gym.phone,
+    } as Record<string, string>;
+
+    const res = await this.sendWhatsappMessage({
+      phoneNumber: member.phone,
+      twilioTemplate:
+        TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
+      contentVariables: data,
+      phoneNumberISOCode: memberPhoneISOCode,
+      gym,
+      activeSubscription,
+    });
+
+    if (res) {
+      await this.saveTwilioMessage({
+        message: res.body,
+        phoneNumber: member.phone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.expiaryReminder,
+        messageSid: res.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
+      });
+      await this.memberService.toggleNotified(member.id, true);
+      await this.gymService.addGymMembersNotified(gym.id, 1);
+    }
+
+    if (checkNodeEnv('local')) {
+      await this.memberService.toggleNotified(member.id, true);
+      await this.gymService.addGymMembersNotified(gym.id, 1);
+    }
+
+    return { message: 'Member expired reminder sent successfully' };
   }
 
   async notifyManyUsers(

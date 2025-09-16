@@ -23,11 +23,19 @@ export class CronService {
     private readonly memberService: MemberService,
   ) {}
 
-  @Cron('0 7-23/1 * * *', {
+  @Cron(CronExpression.EVERY_10_SECONDS, {
     name: 'notify-expired-members',
     timeZone: 'Asia/Beirut', // Lebanon timezone
   })
   async notifyExpiredMembers() {
     await this.memberService.notifyMembersWithExpiringSubscriptions();
+  }
+
+  @Cron(CronExpression.EVERY_10_SECONDS, {
+    name: 'notify-expired-members-reminder',
+    timeZone: 'Asia/Beirut', // Lebanon timezone
+  })
+  async notifyExpiredMembersReminder() {
+    await this.memberService.notifyMembersWithExpiringSubscriptionsReminder();
   }
 }

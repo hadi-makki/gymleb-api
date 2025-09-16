@@ -7,6 +7,7 @@ export enum TwilioMessageType {
   welcomeMessage = 'welcomeMessage',
   welcomeMessageCalisthenics = 'welcomeMessageCalisthenics',
   gymPaymentConfirmation = 'gymPaymentConfirmation',
+  memberExpiredReminder = 'memberExpiredReminder',
 }
 
 @Entity('twilio_messages')
