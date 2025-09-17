@@ -57,16 +57,33 @@ export class WhishTransactionsService {
       throw new BadRequestException('WHISH headers not configured.');
     }
 
+    // Get backend and frontend URLs
+    const backendUrl =
+      this.config.get('WHISH_BACKEND_WEBSITEURL') || this.headers.websiteurl;
+    const frontendUrl = this.headers.websiteurl;
+
+    // Determine redirect URLs based on whether this is a manager payment or public payment
+    // For manager payments (gym subscriptions), redirect to dashboard
+    // For public payments, redirect to public pages
+    const isManagerPayment = dto.ownerId && dto.subscriptionTypeId;
+    const successRedirectUrl = isManagerPayment 
+      ? `${frontendUrl}/dashboard/${dto.orderId}/payment/success?externalId=${dto.externalId}`
+      : `${frontendUrl}/payment/whish/success?externalId=${dto.externalId}`;
+    const failureRedirectUrl = isManagerPayment
+      ? `${frontendUrl}/dashboard/${dto.orderId}/payment/failure?externalId=${dto.externalId}`
+      : `${frontendUrl}/payment/whish/failure?externalId=${dto.externalId}`;
+
     const payload = {
       amount: dto.amount,
       currency: dto.currency || 'USD',
       invoice: dto.invoice || `Order #${dto.externalId}`,
       externalId: dto.externalId,
-      // callbacks/redirects - adapt to your front-end routes
-      successCallbackUrl: `${this.headers.websiteurl}/api/payment/whish/webhook/success`,
-      failureCallbackUrl: `${this.headers.websiteurl}/api/payment/whish/webhook/failure`,
-      successRedirectUrl: `${this.headers.websiteurl}/payment/whish/success?externalId=${dto.externalId}`,
-      failureRedirectUrl: `${this.headers.websiteurl}/payment/whish/failure?externalId=${dto.externalId}`,
+      // callbacks go to backend API
+      successCallbackUrl: `${backendUrl}/api/payment/whish/webhook/success`,
+      failureCallbackUrl: `${backendUrl}/api/payment/whish/webhook/failure`,
+      // redirects go to appropriate pages
+      successRedirectUrl,
+      failureRedirectUrl,
     };
 
     const url = `/payment/whish`;
