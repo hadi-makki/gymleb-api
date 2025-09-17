@@ -59,7 +59,10 @@ export class TransactionService {
       endDate = new Date(paymentDetails.endDate);
     } else {
       // Calculate end date based on subscription type and start date
-      if (paymentDetails?.subscriptionType === SubscriptionType.DAILY_GYM) {
+      if (
+        paymentDetails?.subscriptionType === SubscriptionType.DAILY_GYM &&
+        paymentDetails.subscription.duration === 1
+      ) {
         endDate = paymentDetails.giveFullDay
           ? addHours(startDate, 24)
           : endOfDay(startDate);
