@@ -41,6 +41,7 @@ import { PublicGymDto } from './dto/public-gym.dto';
 import { TransactionService } from 'src/transactions/subscription-instance.service';
 import { ProductEntity } from 'src/products/products.entity';
 import { MediaService } from 'src/media/media.service';
+import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 
 @Injectable()
 export class GymService {
@@ -1787,14 +1788,14 @@ export class GymService {
     resetNotifications,
     startDate,
     endDate,
-    externalId,
+    whishTransaction,
   }: {
     subscriptionTypeId: string;
     gymId: string;
     resetNotifications: boolean;
     startDate?: string;
     endDate?: string;
-    externalId?: string;
+    whishTransaction?: WhishTransaction;
   }) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -1816,7 +1817,7 @@ export class GymService {
       startDate,
       endDate,
       resetNotifications,
-      externalId,
+      whishTransaction,
     });
 
     return {

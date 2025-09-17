@@ -8,10 +8,12 @@ import {
   ManyToOne,
   JoinColumn,
   RelationId,
+  OneToMany,
 } from 'typeorm';
 import { OwnerSubscriptionTypeEntity } from '../../owner-subscriptions/owner-subscription-type.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { PgMainEntity } from 'src/main-classes/mainEntity';
+import { TransactionEntity } from 'src/transactions/transaction.entity';
 
 export type WhishStatus = 'pending' | 'success' | 'failed' | 'created';
 
@@ -64,4 +66,10 @@ export class WhishTransaction extends PgMainEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @ManyToOne(
+    () => TransactionEntity,
+    (transaction) => transaction.whishTransactions,
+  )
+  transaction: TransactionEntity;
 }

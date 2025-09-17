@@ -20,6 +20,7 @@ import { PaymentDetails } from '../stripe/stripe.interface';
 import { TransactionEntity, TransactionType } from './transaction.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
+import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -96,23 +97,13 @@ export class TransactionService {
     startDate?: string;
     endDate?: string;
     resetNotifications: boolean;
-    externalId?: string;
+    whishTransaction?: WhishTransaction;
   }) {
     const type = await this.ownerSubscriptionTypeRepository.findOne({
       where: { id: params.ownerSubscriptionTypeId },
     });
     if (!type) {
       throw new NotFoundException('Owner subscription type not found');
-    }
-
-    if (params.externalId) {
-      const checkIfThereIsTransactionWithSameExternalId =
-        await this.transactionModel.findOne({
-          where: { externalId: params.externalId },
-        });
-      if (checkIfThereIsTransactionWithSameExternalId) {
-        return checkIfThereIsTransactionWithSameExternalId;
-      }
     }
 
     if (params.resetNotifications) {
@@ -143,7 +134,7 @@ export class TransactionService {
         ' ' +
         `(${params.gym.name})`,
       owner: params.gym.owner,
-      externalId: params.externalId,
+      whishTransactions: [params.whishTransaction],
     });
     const trx = await this.transactionModel.save(trxModel);
 

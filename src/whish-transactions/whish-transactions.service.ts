@@ -203,7 +203,7 @@ export class WhishTransactionsService {
           subscriptionTypeId: tx.subscriptionTypeId,
           gymId: tx.gymId,
           resetNotifications: true,
-          externalId: externalId,
+          whishTransaction: tx,
         });
 
         this.logger.log(

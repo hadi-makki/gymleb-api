@@ -16,11 +16,13 @@ import {
   JoinColumn,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   OneToOne,
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
+import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -219,6 +221,9 @@ export class TransactionEntity extends PgMainEntity {
   @RelationId((transaction: TransactionEntity) => transaction.offer)
   offerId: string | null;
 
-  @Column('text', { nullable: true })
-  externalId: string;
+  @OneToMany(
+    () => WhishTransaction,
+    (whishTransaction) => whishTransaction.transaction,
+  )
+  whishTransactions: WhishTransaction[];
 }
