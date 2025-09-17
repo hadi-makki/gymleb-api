@@ -275,25 +275,6 @@ export class WhishTransactionsService {
         tx.status = newStatus;
         tx.rawResponse = data;
         await this.repo.save(tx);
-
-        // If payment successful and we have subscription info, assign it to the gym
-        if (newStatus === 'success' && tx.subscriptionTypeId && tx.gymId) {
-          try {
-            await this.gymService.setSubscriptionToGym(
-              tx.subscriptionTypeId,
-              tx.gymId,
-              true, // resetNotifications
-            );
-            this.logger.log(
-              `Subscription ${tx.subscriptionType?.title || tx.subscriptionTypeId} assigned to gym ${tx.gymId} via status check for transaction ${externalId}`,
-            );
-          } catch (error) {
-            this.logger.error(
-              `Failed to assign subscription via status check for transaction ${externalId}:`,
-              error,
-            );
-          }
-        }
       }
     }
 
