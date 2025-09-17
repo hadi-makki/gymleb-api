@@ -143,6 +143,7 @@ export class TransactionService {
         ' ' +
         `(${params.gym.name})`,
       owner: params.gym.owner,
+      externalId: params.externalId,
     });
     const trx = await this.transactionModel.save(trxModel);
 
