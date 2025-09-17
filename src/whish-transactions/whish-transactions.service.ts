@@ -192,6 +192,7 @@ export class WhishTransactionsService {
     tx.status = 'success';
     tx.rawResponse = payload;
     await this.repo.save(tx);
+    console.log('tx', JSON.stringify(tx, null, 2));
 
     // On success, assign subscription to gym
     if (tx.subscriptionType && tx.gym) {
