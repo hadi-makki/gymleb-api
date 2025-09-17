@@ -699,13 +699,13 @@ export class GymController {
     @Param('gymId') gymId: string,
     @Body() body: SetSubscriptionDto,
   ) {
-    return await this.gymService.setSubscriptionToGym(
-      body.subscriptionTypeId,
-      gymId,
-      body.resetNotifications,
-      body.startDate,
-      body.endDate,
-    );
+    return await this.gymService.setSubscriptionToGym({
+      subscriptionTypeId: body.subscriptionTypeId,
+      gymId: gymId,
+      resetNotifications: body.resetNotifications,
+      startDate: body.startDate,
+      endDate: body.endDate,
+    });
   }
 
   @Patch('update/auto-renew/:gymId')

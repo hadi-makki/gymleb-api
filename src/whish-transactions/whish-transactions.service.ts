@@ -199,12 +199,13 @@ export class WhishTransactionsService {
       try {
         console.log('tx.subscriptionType', tx.subscriptionType);
         console.log('tx.gym', tx.gym);
-        await this.gymService.setSubscriptionToGym(
-          tx.subscriptionTypeId,
-          tx.gymId,
-          true,
-          externalId,
-        );
+        await this.gymService.setSubscriptionToGym({
+          subscriptionTypeId: tx.subscriptionTypeId,
+          gymId: tx.gymId,
+          resetNotifications: true,
+          externalId: externalId,
+        });
+
         this.logger.log(
           `Subscription ${tx.subscriptionTypeId} assigned to gym ${tx.gymId} for transaction ${externalId}`,
         );

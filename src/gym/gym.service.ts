@@ -1781,14 +1781,21 @@ export class GymService {
     return true;
   }
 
-  async setSubscriptionToGym(
-    subscriptionTypeId: string,
-    gymId: string,
-    resetNotifications: boolean,
-    startDate?: string,
-    endDate?: string,
-    externalId?: string,
-  ) {
+  async setSubscriptionToGym({
+    subscriptionTypeId,
+    gymId,
+    resetNotifications,
+    startDate,
+    endDate,
+    externalId,
+  }: {
+    subscriptionTypeId: string;
+    gymId: string;
+    resetNotifications: boolean;
+    startDate?: string;
+    endDate?: string;
+    externalId?: string;
+  }) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
       relations: {
