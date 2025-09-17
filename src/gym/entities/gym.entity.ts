@@ -20,6 +20,7 @@ import {
 import { PgMainEntity } from '../../main-classes/mainEntity';
 import { MemberReservationEntity } from '../../member/entities/member-reservation.entity';
 import { GymPresetEntity } from './gym-preset.entity';
+import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 export enum GymTypeEnum {
   FITNESS = 'fitness',
   CALISTHENICS = 'calisthenics',
@@ -204,4 +205,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('int', { default: 0 })
   invoiceMessageNotified: number;
+
+  @OneToMany(() => WhishTransaction, (whishTransaction) => whishTransaction.gym)
+  whishTransactions: WhishTransaction[];
 }

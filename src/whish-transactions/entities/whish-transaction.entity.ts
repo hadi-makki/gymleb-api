@@ -9,8 +9,8 @@ import {
   JoinColumn,
   RelationId,
 } from 'typeorm';
-import { ManagerEntity } from '../../manager/manager.entity';
 import { OwnerSubscriptionTypeEntity } from '../../owner-subscriptions/owner-subscription-type.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
 
 export type WhishStatus = 'pending' | 'success' | 'failed' | 'created';
 
@@ -45,13 +45,13 @@ export class WhishTransaction {
   @Column({ type: 'json', nullable: true })
   rawResponse?: any; // store last raw response from WHISH for debugging
 
-  // Owner/Manager who initiated the payment
-  @ManyToOne(() => ManagerEntity)
-  @JoinColumn({ name: 'ownerId' })
-  owner?: ManagerEntity;
+  // Gym that the subscription is being purchased for
+  @ManyToOne(() => GymEntity, (gym) => gym.whishTransactions)
+  @JoinColumn({ name: 'gymId' })
+  gym?: GymEntity;
 
-  @RelationId((transaction: WhishTransaction) => transaction.owner)
-  ownerId?: string;
+  @RelationId((transaction: WhishTransaction) => transaction.gym)
+  gymId?: string;
 
   // Subscription type being purchased
   @ManyToOne(() => OwnerSubscriptionTypeEntity)

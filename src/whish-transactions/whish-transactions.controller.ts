@@ -13,7 +13,7 @@ import { WhishTransactionsService } from './whish-transactions.service';
 import { WhishCallbackDto } from './dto/whish-callback.dto';
 import { CreateWhishDto } from './dto/create-whish-transaction.dto';
 
-@Controller('api/payment/whish')
+@Controller('payment/whish')
 export class WhishTransactionsController {
   private readonly logger = new Logger(WhishTransactionsController.name);
 
@@ -90,6 +90,17 @@ export class WhishTransactionsController {
   async getOwnerTransactions(@Param('ownerId') ownerId: string) {
     this.logger.log(`Get transactions for owner=${ownerId}`);
     const transactions = await this.service.getTransactionsByOwner(ownerId);
+    return { success: true, data: transactions };
+  }
+
+  /**
+   * Get all transactions for a gym
+   * GET /api/payment/whish/gym/:gymId/transactions
+   */
+  @Get('gym/:gymId/transactions')
+  async getGymTransactions(@Param('gymId') gymId: string) {
+    this.logger.log(`Get transactions for gym=${gymId}`);
+    const transactions = await this.service.getTransactionsByGym(gymId);
     return { success: true, data: transactions };
   }
 

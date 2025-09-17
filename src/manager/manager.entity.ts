@@ -62,12 +62,6 @@ export class ManagerEntity extends PgMainEntity {
   })
   transactions: TransactionEntity[];
 
-  @OneToMany(() => WhishTransaction, (transaction) => transaction.owner, {
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
-  whishTransactions: WhishTransaction[];
-
   @OneToMany(() => MediaEntity, (media) => media.manager)
   media: MediaEntity[];
 
