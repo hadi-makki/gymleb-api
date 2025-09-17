@@ -368,11 +368,11 @@ export class GymService {
     return gym;
   }
 
-  async getGymById(gymId: string) {
+  async getGymById(gymId: string, throwError = true) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
     });
-    if (!gym) {
+    if (!gym && throwError) {
       throw new NotFoundException('Gym not found');
     }
     return gym;

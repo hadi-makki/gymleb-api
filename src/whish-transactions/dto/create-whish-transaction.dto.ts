@@ -13,13 +13,13 @@ export class CreateWhishDto {
   @IsString()
   invoice?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  externalId: string; // must be unique per order
+  externalId?: string; // generated server-side when omitted
 
   @IsOptional()
   @IsString()
-  orderId?: string;
+  orderId?: string; // gymId
 
   @IsOptional()
   @IsString()

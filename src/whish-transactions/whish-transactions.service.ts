@@ -12,6 +12,7 @@ import { WhishTransaction } from './entities/whish-transaction.entity';
 import { CreateWhishDto } from './dto/create-whish-transaction.dto';
 import { OwnerSubscriptionsService } from '../owner-subscriptions/owner-subscriptions.service';
 import { GymService } from '../gym/gym.service';
+import { checkNodeEnv } from 'src/config/helper/helper-functions';
 
 @Injectable()
 export class WhishTransactionsService {
@@ -59,43 +60,43 @@ export class WhishTransactionsService {
       throw new BadRequestException('WHISH headers not configured.');
     }
 
+    const gym = await this.gymService.getGymById(dto.orderId);
+
+    const subscriptionType =
+      await this.ownerSubscriptionsService.getSubscriptionTypeById(
+        dto.subscriptionTypeId,
+      );
+
     // Get backend and frontend URLs
     const backendUrl =
       this.config.get('WHISH_BACKEND_WEBSITEURL') || this.headers.websiteurl;
-    const frontendUrl = this.headers.websiteurl;
+    const frontendUrl = checkNodeEnv('production')
+      ? this.headers.websiteurl
+      : 'http://localhost:3000';
 
     // Determine redirect URLs based on whether this is a manager payment or public payment
     // For manager payments (gym subscriptions), redirect to dashboard
     // For public payments, redirect to public pages
-    const isManagerPayment = dto.ownerId && dto.subscriptionTypeId;
-    const successRedirectUrl = isManagerPayment
-      ? `${frontendUrl}/dashboard/${dto.orderId}/payment/success?externalId=${dto.externalId}`
-      : `${frontendUrl}/payment/whish/success?externalId=${dto.externalId}`;
-    const failureRedirectUrl = isManagerPayment
-      ? `${frontendUrl}/dashboard/${dto.orderId}/payment/failure?externalId=${dto.externalId}`
-      : `${frontendUrl}/payment/whish/failure?externalId=${dto.externalId}`;
+    // Generate a unique externalId if not provided by the caller
+    const generatedExternalId = `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`;
+    const externalId = dto.externalId || generatedExternalId;
 
-    // Create callback URLs with encoded parameters for transaction creation
-    const callbackParams = new URLSearchParams({
-      externalId: dto.externalId,
-      amount: dto.amount.toString(),
-      currency: dto.currency || 'USD',
-      invoice: dto.invoice || `Order #${dto.externalId}`,
-      ...(dto.orderId && { gymId: dto.orderId }), // orderId is actually gymId
-      ...(dto.ownerId && { ownerId: dto.ownerId }),
-      ...(dto.subscriptionTypeId && {
-        subscriptionTypeId: dto.subscriptionTypeId,
-      }),
-    });
+    const isManagerPayment = !!dto.subscriptionTypeId && !!dto.orderId;
+    const successRedirectUrl = isManagerPayment
+      ? `${frontendUrl}/dashboard/${dto.orderId}/payment/success?externalId=${externalId}`
+      : `${frontendUrl}/payment/whish/success?externalId=${externalId}`;
+    const failureRedirectUrl = isManagerPayment
+      ? `${frontendUrl}/dashboard/${dto.orderId}/payment/failure?externalId=${externalId}`
+      : `${frontendUrl}/payment/whish/failure?externalId=${externalId}`;
 
     const payload = {
       amount: dto.amount,
       currency: dto.currency || 'USD',
-      invoice: dto.invoice || `Order #${dto.externalId}`,
-      externalId: dto.externalId,
-      // callbacks go to backend API with all needed parameters
-      successCallbackUrl: `${backendUrl}/api/payment/whish/webhook/success?${callbackParams.toString()}`,
-      failureCallbackUrl: `${backendUrl}/api/payment/whish/webhook/failure?${callbackParams.toString()}`,
+      invoice: dto.invoice || `Order #${externalId}`,
+      externalId,
+      // callbacks go to backend API without extra params (per WHISH spec)
+      successCallbackUrl: `${backendUrl}/api/payment/whish/webhook/success`,
+      failureCallbackUrl: `${backendUrl}/api/payment/whish/webhook/failure`,
       // redirects go to appropriate pages
       successRedirectUrl,
       failureRedirectUrl,
@@ -103,9 +104,7 @@ export class WhishTransactionsService {
 
     const url = `/payment/whish`;
 
-    this.logger.debug(
-      `Initiating WHISH payment for externalId=${dto.externalId}`,
-    );
+    this.logger.debug(`Initiating WHISH payment for externalId=${externalId}`);
     this.logger.debug(
       `Payment type: ${isManagerPayment ? 'Manager' : 'Public'}, Success URL: ${successRedirectUrl}, Failure URL: ${failureRedirectUrl}`,
     );
@@ -141,9 +140,24 @@ export class WhishTransactionsService {
       );
     }
 
-    // Don't create transaction here - it will be created on successful callback
+    // Persist a pending transaction now, so we can correlate on callback
+    const pendingTx = this.repo.create({
+      externalId,
+      amount: dto.amount,
+      currency: dto.currency || 'USD',
+      invoice: payload.invoice,
+      whishUrl,
+      status: 'pending',
+      rawResponse: data,
+      // Save relations/ids needed for success handling
+      // Link gym by id without fetching entity
+      gym: gym,
+      subscriptionType: subscriptionType,
+    });
+    await this.repo.save(pendingTx);
+
     this.logger.log(
-      `WHISH payment initiated successfully for externalId=${dto.externalId}, redirecting to: ${whishUrl}`,
+      `WHISH payment initiated successfully for externalId=${externalId}, redirecting to: ${whishUrl}`,
     );
 
     return whishUrl;
@@ -154,18 +168,8 @@ export class WhishTransactionsService {
    * Create transaction and assign subscription to gym on success.
    */
   async handleCallback(payload: any): Promise<WhishTransaction | null> {
-    // Extract data from callback URL parameters
-    const externalId = payload.externalId;
-    const amount = payload.amount ? parseFloat(payload.amount) : null;
-    const currency = payload.currency || 'USD';
-    const invoice = payload.invoice;
-    const gymId = payload.gymId;
-    const ownerId = payload.ownerId;
-    const subscriptionTypeId = payload.subscriptionTypeId;
-
-    const getGym = await this.gymService.getGymById(gymId);
-
-    // Extract status from WHISH callback (could be in different formats)
+    // Extract externalId and status from callback
+    const externalId = payload.externalId || payload?.data?.externalId;
     const collectStatus =
       payload.collectStatus || payload?.data?.collectStatus || payload?.status;
 
@@ -174,72 +178,47 @@ export class WhishTransactionsService {
       return null;
     }
 
-    if (!amount) {
-      this.logger.warn('WHISH callback missing amount', payload);
-      return null;
-    }
-
-    // Check if transaction already exists (avoid duplicates)
-    let tx = await this.repo.findOne({
+    const tx = await this.repo.findOne({
       where: { externalId },
       relations: ['gym', 'subscriptionType'],
     });
-
-    // Map status values
-    let transactionStatus: WhishTransaction['status'] = 'pending';
-    if (collectStatus === 'success') transactionStatus = 'success';
-    else if (collectStatus === 'failed') transactionStatus = 'failed';
-
     if (!tx) {
-      // Create new transaction
-      tx = this.repo.create({
-        externalId,
-        gym: getGym,
-        amount,
-        currency,
-        invoice,
-        status: transactionStatus,
-        rawResponse: payload,
-        subscriptionTypeId,
-        whishUrl: null, // Not needed after payment
-      });
-      await this.repo.save(tx);
-      this.logger.log(`Created new transaction for externalId=${externalId}`);
-    } else {
-      // Update existing transaction
-      tx.status = transactionStatus;
-      tx.rawResponse = payload;
-      await this.repo.save(tx);
-      this.logger.log(`Updated transaction for externalId=${externalId}`);
+      this.logger.warn('WHISH callback for unknown externalId', externalId);
+      return null;
     }
 
-    // If payment successful and we have subscription info, assign it to the gym
-    if (transactionStatus === 'success' && subscriptionTypeId && gymId) {
+    // Map status values
+    let newStatus: WhishTransaction['status'] = 'pending';
+    if (collectStatus === 'success') newStatus = 'success';
+    else if (collectStatus === 'failed') newStatus = 'failed';
+
+    // Update transaction
+    tx.status = newStatus;
+    tx.rawResponse = payload;
+    await this.repo.save(tx);
+
+    // On success, assign subscription to gym
+    if (newStatus === 'success' && tx.subscriptionTypeId && tx.gymId) {
       try {
-        // Use gymService.setSubscriptionToGym instead of ownerSubscriptionsService
         await this.gymService.setSubscriptionToGym(
-          subscriptionTypeId,
-          gymId,
-          true, // resetNotifications
-          // startDate and endDate will be handled by the service
+          tx.subscriptionTypeId,
+          tx.gymId,
+          true,
         );
         this.logger.log(
-          `Subscription ${subscriptionTypeId} assigned to gym ${gymId} for transaction ${externalId}`,
+          `Subscription ${tx.subscriptionTypeId} assigned to gym ${tx.gymId} for transaction ${externalId}`,
         );
       } catch (error) {
         this.logger.error(
           `Failed to assign subscription for transaction ${externalId}:`,
           error,
         );
-        // Mark transaction for manual review
-        tx.status = 'failed';
-        tx.rawResponse = { ...tx.rawResponse, error: error.message };
-        await this.repo.save(tx);
+        // Keep transaction as success but log error for manual follow-up
       }
     }
 
     this.logger.log(
-      `WHISH callback processed for externalId=${externalId} status=${transactionStatus}`,
+      `WHISH callback processed for externalId=${externalId} status=${newStatus}`,
     );
 
     return tx;

@@ -107,4 +107,12 @@ export class OwnerSubscriptionsService {
     gym.welcomeMessageNotified = 0;
     return await this.gymModel.save(gym);
   }
+
+  async getSubscriptionTypeById(id: string, throwError = true) {
+    const subscriptionType = await this.typeModel.findOne({ where: { id } });
+    if (!subscriptionType && throwError) {
+      throw new NotFoundException('Subscription type not found');
+    }
+    return subscriptionType;
+  }
 }
