@@ -95,8 +95,8 @@ export class WhishTransactionsService {
       invoice: dto.invoice || `Order #${externalId}`,
       externalId,
       // callbacks go to backend API without extra params (per WHISH spec)
-      successCallbackUrl: `${backendUrl}/api/payment/whish/webhook/success`,
-      failureCallbackUrl: `${backendUrl}/api/payment/whish/webhook/failure`,
+      successCallbackUrl: `${backendUrl}/api/payment/whish/webhook/success?externalId=${externalId}`,
+      failureCallbackUrl: `${backendUrl}/api/payment/whish/webhook/failure?externalId=${externalId}`,
       // redirects go to appropriate pages
       successRedirectUrl,
       failureRedirectUrl,
@@ -277,23 +277,24 @@ export class WhishTransactionsService {
         await this.repo.save(tx);
 
         // If payment successful and we have subscription info, assign it to the gym
-        if (newStatus === 'success' && tx.subscriptionTypeId && tx.gymId) {
-          try {
-            await this.gymService.setSubscriptionToGym(
-              tx.subscriptionTypeId,
-              tx.gymId,
-              true, // resetNotifications
-            );
-            this.logger.log(
-              `Subscription ${tx.subscriptionType?.title || tx.subscriptionTypeId} assigned to gym ${tx.gymId} via status check for transaction ${externalId}`,
-            );
-          } catch (error) {
-            this.logger.error(
-              `Failed to assign subscription via status check for transaction ${externalId}:`,
-              error,
-            );
-          }
-        }
+        // if (newStatus === 'success' && tx.subscriptionTypeId && tx.gymId) {
+        //   try {
+        //     await this.gymService.setSubscriptionToGym(
+        //       tx.subscriptionTypeId,
+        //       tx.gymId,
+        //       true, // resetNotifications
+        //       externalId,
+        //     );
+        //     this.logger.log(
+        //       `Subscription ${tx.subscriptionType?.title || tx.subscriptionTypeId} assigned to gym ${tx.gymId} via status check for transaction ${externalId}`,
+        //     );
+        //   } catch (error) {
+        //     this.logger.error(
+        //       `Failed to assign subscription via status check for transaction ${externalId}:`,
+        //       error,
+        //     );
+        //   }
+        // }
       }
     }
 
