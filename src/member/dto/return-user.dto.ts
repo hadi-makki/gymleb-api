@@ -4,6 +4,7 @@ import { MemberAttendingDaysEntity } from '../entities/member-attending-days.ent
 import { MemberReservationEntity } from '../entities/member-reservation.entity';
 import { MemberTrainingProgramEntity } from '../entities/member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
+import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 
 export class ReturnUserDto {
   id: string;
@@ -11,7 +12,7 @@ export class ReturnUserDto {
   email: string;
   phone: string;
   gym: any;
-  subscription: any;
+  subscription: SubscriptionEntity;
   subscriptionTransactions: any[];
   createdAt: Date;
   updatedAt: Date;

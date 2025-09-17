@@ -20,6 +20,7 @@ import {
   TwilioMessageType,
 } from './entities/twilio-message.entity';
 import { NotFoundException } from 'src/error/not-found-error';
+import { SubscriptionType } from 'src/subscription/entities/subscription.entity';
 
 export const TwilioWhatsappTemplates = {
   expiaryReminder: {
@@ -345,6 +346,16 @@ export class TwilioService {
     ) {
       console.log('member', member.notificationSetting);
       console.log('member has no notification setting or monthly reminder');
+      return;
+    }
+
+    if (
+      member?.subscription.type === SubscriptionType.DAILY_GYM &&
+      member?.subscription?.duration < 3
+    ) {
+      console.log(
+        'member has daily gym subscription and duration is less than 3',
+      );
       return;
     }
 
