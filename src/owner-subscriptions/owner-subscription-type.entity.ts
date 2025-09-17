@@ -2,6 +2,7 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
+import { WhishTransaction } from '../whish-transactions/entities/whish-transaction.entity';
 
 @Entity('owner_subscription_types')
 export class OwnerSubscriptionTypeEntity extends PgMainEntity {
@@ -33,4 +34,13 @@ export class OwnerSubscriptionTypeEntity extends PgMainEntity {
     onDelete: 'SET NULL',
   })
   gyms: GymEntity[];
+
+  @OneToMany(
+    () => WhishTransaction,
+    (transaction) => transaction.subscriptionType,
+    {
+      onDelete: 'SET NULL',
+    },
+  )
+  whishTransactions: WhishTransaction[];
 }

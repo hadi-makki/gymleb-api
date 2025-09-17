@@ -32,7 +32,7 @@ export class OwnerSubscriptionsController {
   }
 
   @Get('types')
-  @Roles(Permissions.SuperAdmin)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
   listTypes() {
     return this.service.listTypes();
   }

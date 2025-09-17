@@ -46,6 +46,7 @@ import { UserModule } from './user/user.module';
 import { AiChatModule } from './ai-chat/ai-chat.module';
 import { NotificationSettingsModule } from './notification-settings/notification-settings.module';
 import { ManagerNotificationSettingsModule } from './manager-notification-settings/manager-notification-settings.module';
+import { WhishTransactionsModule } from './whish-transactions/whish-transactions.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { ManagerNotificationSettingsModule } from './manager-notification-settin
     AiChatModule,
     NotificationSettingsModule,
     ManagerNotificationSettingsModule,
+    WhishTransactionsModule,
   ],
   controllers: [AppController],
   providers: [

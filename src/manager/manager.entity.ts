@@ -17,6 +17,7 @@ import {
 import { Permissions } from '../decorators/roles/role.enum';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 
 @Entity('managers')
 export class ManagerEntity extends PgMainEntity {
@@ -60,6 +61,12 @@ export class ManagerEntity extends PgMainEntity {
     nullable: true,
   })
   transactions: TransactionEntity[];
+
+  @OneToMany(() => WhishTransaction, (transaction) => transaction.owner, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  whishTransactions: WhishTransaction[];
 
   @OneToMany(() => MediaEntity, (media) => media.manager)
   media: MediaEntity[];
