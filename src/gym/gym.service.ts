@@ -1787,6 +1787,7 @@ export class GymService {
     resetNotifications: boolean,
     startDate?: string,
     endDate?: string,
+    externalId?: string,
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -1808,6 +1809,7 @@ export class GymService {
       startDate,
       endDate,
       resetNotifications,
+      externalId,
     });
 
     return {

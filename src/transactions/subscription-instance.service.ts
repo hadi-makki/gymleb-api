@@ -96,12 +96,23 @@ export class TransactionService {
     startDate?: string;
     endDate?: string;
     resetNotifications: boolean;
+    externalId?: string;
   }) {
     const type = await this.ownerSubscriptionTypeRepository.findOne({
       where: { id: params.ownerSubscriptionTypeId },
     });
     if (!type) {
       throw new NotFoundException('Owner subscription type not found');
+    }
+
+    if (params.externalId) {
+      const checkIfThereIsTransactionWithSameExternalId =
+        await this.transactionModel.findOne({
+          where: { externalId: params.externalId },
+        });
+      if (checkIfThereIsTransactionWithSameExternalId) {
+        return checkIfThereIsTransactionWithSameExternalId;
+      }
     }
 
     if (params.resetNotifications) {

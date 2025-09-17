@@ -218,4 +218,7 @@ export class TransactionEntity extends PgMainEntity {
 
   @RelationId((transaction: TransactionEntity) => transaction.offer)
   offerId: string | null;
+
+  @Column('text', { nullable: true })
+  externalId: string;
 }

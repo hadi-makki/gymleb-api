@@ -204,6 +204,7 @@ export class WhishTransactionsService {
           tx.subscriptionTypeId,
           tx.gymId,
           true,
+          externalId,
         );
         this.logger.log(
           `Subscription ${tx.subscriptionTypeId} assigned to gym ${tx.gymId} for transaction ${externalId}`,

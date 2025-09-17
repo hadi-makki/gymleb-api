@@ -11,14 +11,12 @@ import {
 } from 'typeorm';
 import { OwnerSubscriptionTypeEntity } from '../../owner-subscriptions/owner-subscription-type.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
+import { PgMainEntity } from 'src/main-classes/mainEntity';
 
 export type WhishStatus = 'pending' | 'success' | 'failed' | 'created';
 
 @Entity('whish_transactions')
-export class WhishTransaction {
-  @PrimaryGeneratedColumn()
-  id: number;
-
+export class WhishTransaction extends PgMainEntity {
   // externalId used with WHISH API (long from your side)
   @Index()
   @Column({ type: 'varchar', length: 128, nullable: false })
