@@ -38,8 +38,9 @@ export class WhishTransactionsController {
 
   @Get('webhook/success')
   @HttpCode(HttpStatus.OK)
-  async webhookSuccess(@Query() query: any) {
+  async webhookSuccess(@Query() query: any, @Body() body: any) {
     this.logger.log('WHISH webhook success received', JSON.stringify(query));
+    this.logger.log('WHISH webhook success received', JSON.stringify(body));
     await this.service.handleCallback(query);
     // WHISH does not require any special response per spec; just return 200
     return { status: 'ok' };
@@ -47,7 +48,8 @@ export class WhishTransactionsController {
 
   @Get('webhook/failure')
   @HttpCode(HttpStatus.OK)
-  async webhookFailure(@Query() query: any) {
+  async webhookFailure(@Query() query: any, @Body() body: any) {
+    this.logger.log('WHISH webhook failure received', JSON.stringify(body));
     this.logger.log('WHISH webhook failure received', JSON.stringify(query));
     await this.service.handleCallback(query);
     return { status: 'ok' };
