@@ -170,8 +170,6 @@ export class WhishTransactionsService {
   async handleCallback(payload: any): Promise<WhishTransaction | null> {
     // Extract externalId and status from callback
     const externalId = payload.externalId || payload?.data?.externalId;
-    const collectStatus =
-      payload.collectStatus || payload?.data?.collectStatus || payload?.status;
 
     if (!externalId) {
       this.logger.warn('WHISH callback missing externalId', payload);
@@ -180,26 +178,26 @@ export class WhishTransactionsService {
 
     const tx = await this.repo.findOne({
       where: { externalId },
-      relations: ['gym', 'subscriptionType'],
+      relations: {
+        gym: true,
+        subscriptionType: true,
+      },
     });
     if (!tx) {
       this.logger.warn('WHISH callback for unknown externalId', externalId);
       return null;
     }
 
-    // Map status values
-    let newStatus: WhishTransaction['status'] = 'pending';
-    if (collectStatus === 'success') newStatus = 'success';
-    else if (collectStatus === 'failed') newStatus = 'failed';
-
     // Update transaction
-    tx.status = newStatus;
+    tx.status = 'success';
     tx.rawResponse = payload;
     await this.repo.save(tx);
 
     // On success, assign subscription to gym
-    if (newStatus === 'success' && tx.subscriptionTypeId && tx.gymId) {
+    if (tx.subscriptionType && tx.gym) {
       try {
+        console.log('tx.subscriptionType', tx.subscriptionType);
+        console.log('tx.gym', tx.gym);
         await this.gymService.setSubscriptionToGym(
           tx.subscriptionTypeId,
           tx.gymId,
@@ -219,7 +217,7 @@ export class WhishTransactionsService {
     }
 
     this.logger.log(
-      `WHISH callback processed for externalId=${externalId} status=${newStatus}`,
+      `WHISH callback processed for externalId=${externalId} status=success`,
     );
 
     return tx;
