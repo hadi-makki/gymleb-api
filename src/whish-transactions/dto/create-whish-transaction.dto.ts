@@ -1,31 +1,15 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateWhishDto {
-  @IsNotEmpty()
-  @IsNumber()
-  amount: number;
-
-  @IsOptional()
-  @IsString()
-  currency?: string = 'USD';
-
-  @IsOptional()
-  @IsString()
-  invoice?: string;
-
   @IsOptional()
   @IsString()
   externalId?: string; // generated server-side when omitted
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  orderId?: string; // gymId
+  orderId: string; // gymId
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  ownerId?: string;
-
-  @IsOptional()
-  @IsString()
-  subscriptionTypeId?: string;
+  subscriptionTypeId: string;
 }

@@ -65,6 +65,68 @@ export class OwnerSubscriptionsService {
     return await this.gymService.getGymActiveSubscription(gym);
   }
 
+  /**
+   * Returns an array containing either the current active subscription
+   * for the gym or, if none, the last subscription the user had.
+   * The array is intended for future expansion to multiple options.
+   */
+  async listMyCurrentOrLastSubscriptions(gymId: string) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: {
+        transactions: {
+          ownerSubscriptionType: true,
+        },
+      },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const agg = await this.gymService.getGymActiveSubscription(gym.id);
+    const result: Array<{
+      status: 'active' | 'last';
+      ownerSubscriptionType: any;
+      startDate?: string | null;
+      endDate?: string | null;
+    }> = [];
+
+    if (
+      agg?.activeSubscription &&
+      (!agg.activeSubscription.ownerSubscriptionType?.title
+        .toLowerCase()
+        .includes('demo') ||
+        !agg.activeSubscription.ownerSubscriptionType?.title
+          .toLowerCase()
+          .includes('free'))
+    ) {
+      result.push({
+        status: 'active',
+        ownerSubscriptionType: agg.activeSubscription.ownerSubscriptionType,
+        startDate: agg.activeSubscription.startDate.toISOString() ?? null,
+        endDate: agg.activeSubscription.endDate.toISOString() ?? null,
+      });
+    } else if (
+      agg?.lastSubscription &&
+      (!agg.lastSubscription.ownerSubscriptionType?.title
+        .toLowerCase()
+        .includes('demo') ||
+        !agg.lastSubscription.ownerSubscriptionType?.title
+          .toLowerCase()
+          .includes('free'))
+    ) {
+      result.push({
+        status: 'last',
+        ownerSubscriptionType: agg.lastSubscription.ownerSubscriptionType,
+        startDate: agg.lastSubscription.startDate.toISOString() ?? null,
+        endDate: agg.lastSubscription.endDate.toISOString() ?? null,
+      });
+    }
+
+    return result;
+  }
+
   async deleteType(id: string) {
     // Check if the subscription type exists
     const subscriptionType = await this.typeModel.findOne({ where: { id } });

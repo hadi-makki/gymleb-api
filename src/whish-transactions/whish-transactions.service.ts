@@ -60,13 +60,25 @@ export class WhishTransactionsService {
       throw new BadRequestException('WHISH headers not configured.');
     }
 
+    // Validate gym exists
     const gym = await this.gymService.getGymById(dto.orderId);
+    if (!gym) {
+      throw new BadRequestException('Gym not found.');
+    }
 
+    // Get subscription type details from backend
     const subscriptionType =
       await this.ownerSubscriptionsService.getSubscriptionTypeById(
         dto.subscriptionTypeId,
       );
+    if (!subscriptionType) {
+      throw new BadRequestException('Subscription type not found.');
+    }
 
+    // Calculate amount and currency from subscription type (backend security)
+    const amount = subscriptionType.price;
+    const currency = 'USD'; // Fixed currency for now
+    const invoice = `Subscription: ${subscriptionType.title} - ${subscriptionType.durationDays} days`;
     // Get backend and frontend URLs
     const backendUrl =
       this.config.get('WHISH_BACKEND_WEBSITEURL') || this.headers.websiteurl;
@@ -90,9 +102,9 @@ export class WhishTransactionsService {
       : `${frontendUrl}/payment/whish/failure?externalId=${externalId}`;
 
     const payload = {
-      amount: dto.amount,
-      currency: dto.currency || 'USD',
-      invoice: dto.invoice || `Order #${externalId}`,
+      amount,
+      currency,
+      invoice,
       externalId,
       // callbacks go to backend API without extra params (per WHISH spec)
       successCallbackUrl: `${backendUrl}/api/payment/whish/webhook/success?externalId=${externalId}`,
@@ -143,14 +155,13 @@ export class WhishTransactionsService {
     // Persist a pending transaction now, so we can correlate on callback
     const pendingTx = this.repo.create({
       externalId,
-      amount: dto.amount,
-      currency: dto.currency || 'USD',
-      invoice: payload.invoice,
+      amount,
+      currency,
+      invoice,
       whishUrl,
       status: 'pending',
       rawResponse: data,
       // Save relations/ids needed for success handling
-      // Link gym by id without fetching entity
       gym: gym,
       subscriptionType: subscriptionType,
     });

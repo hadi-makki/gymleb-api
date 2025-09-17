@@ -43,4 +43,7 @@ export class OwnerSubscriptionTypeEntity extends PgMainEntity {
     },
   )
   whishTransactions: WhishTransaction[];
+
+  @Column('boolean', { default: false })
+  isTurnedOnForUsers: boolean;
 }

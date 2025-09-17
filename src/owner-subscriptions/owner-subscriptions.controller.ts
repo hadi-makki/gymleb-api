@@ -49,6 +49,13 @@ export class OwnerSubscriptionsController {
     return this.service.getOwnerSubscription(gymId);
   }
 
+  // New endpoint: return an array with current or last subscription for the gym
+  @Get('me/options')
+  @Roles(Permissions.Any)
+  listMyOptions(@User() user: ManagerEntity, @Query('gymId') gymId: string) {
+    return this.service.listMyCurrentOrLastSubscriptions(gymId);
+  }
+
   @Delete(':id')
   @Roles(Permissions.SuperAdmin)
   deleteType(@Param('id') id: string) {
