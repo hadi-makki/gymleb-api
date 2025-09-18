@@ -709,4 +709,49 @@ export class TwilioService {
       },
     };
   }
+
+  async notifyExpiredMember(memberId: string, gymId: string) {
+    const member = await this.memberService.getMemberByIdAndGym(
+      memberId,
+      gymId,
+    );
+    const activeSubscription =
+      await this.gymService.getGymActiveSubscription(gymId);
+    if (!activeSubscription) {
+      throw new BadRequestException('Active subscription not found');
+    }
+    return await this.notifySingleMember({
+      userId: memberId,
+      gymId,
+      activeSubscription:
+        activeSubscription.activeSubscription.ownerSubscriptionType,
+      memberPhoneISOCode: member.phoneNumberISOCode,
+      dontCheckExpired: true,
+    });
+  }
+
+  async notifyMonthlyReminderToManyMembers(gymId: string, memberIds: string[]) {
+    const results = [];
+    let successCount = 0;
+    const errors = [];
+
+    for (const memberId of memberIds) {
+      try {
+        await this.notifyExpiredMember(memberId, gymId);
+        successCount++;
+        results.push({ memberId, success: true });
+      } catch (error) {
+        errors.push({ memberId, error: error.message });
+        results.push({ memberId, success: false, error: error.message });
+      }
+    }
+
+    return {
+      message: `Processed ${memberIds.length} members`,
+      successCount,
+      errorCount: errors.length,
+      errors,
+      results,
+    };
+  }
 }

@@ -14,7 +14,10 @@ import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { ManagerEntity } from '../manager/manager.entity';
 import { CreateTwilioDto } from './dto/create-twilio.dto';
+import { NotifyManyMembersDto } from './dto/notify-many-members.dto';
 import { TwilioService } from './twilio.service';
+import { ValidateGymRelatedToManagerOrManagerInGym } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
+import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 
 @Controller('notifications')
 export class TwilioController {
@@ -123,6 +126,36 @@ export class TwilioController {
       Number(limit),
       Number(page),
       search || '',
+    );
+  }
+
+  @Get('notify-expired-member/:gymId/:memberId')
+  @ApiOperation({ summary: 'Notify expired member' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  @ValidateMemberRelatedToGym()
+  async notifyExpiredMember(
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return await this.twilioService.notifyExpiredMember(memberId, gymId);
+  }
+
+  @Post('notify-monthly-reminder/many-members/:gymId')
+  @ApiOperation({ summary: 'Notify monthly reminder to many members' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  async notifyMonthlyReminderToManyMembers(
+    @Param('gymId') gymId: string,
+    @Body() body: NotifyManyMembersDto,
+  ) {
+    return await this.twilioService.notifyMonthlyReminderToManyMembers(
+      gymId,
+      body.memberIds,
     );
   }
 }

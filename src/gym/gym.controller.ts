@@ -11,38 +11,39 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { ManagerEntity } from 'src/manager/manager.entity';
-import { Roles } from '../decorators/roles/Role';
-import { Permissions } from '../decorators/roles/role.enum';
-import { User } from '../decorators/users.decorator';
-import { ManagerAuthGuard } from '../guards/manager-auth.guard';
-import { GymEntity } from './entities/gym.entity';
-import {
-  TransactionEntity,
-  TransactionType,
-} from 'src/transactions/transaction.entity';
-import { AddOfferDto } from './dto/add-offer.dto';
-import { CreateGymDto } from './dto/create-gym.dto';
-import { UpdateGymNameDto } from './dto/update-name.dto';
-import { UpdateGymNoteDto } from './dto/update-note.dto';
-import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
-import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
-import { GymService } from './gym.service';
-import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
-import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
-import { SetSubscriptionDto } from './dto/set-subscription.dto';
-import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
-import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
-import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
-import { UpdateInvoiceMessagesDto } from './dto/update-invoice-messages.dto';
-import { UpdateGymPhoneDto } from './dto/update-gym-phone.dto';
-import { PublicGymDto } from './dto/public-gym.dto';
+import { ValidateGymRelatedToManagerOrManagerInGym } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
-import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
 import {
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
 } from 'src/error/api-responses.decorator';
+import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import {
+  TransactionEntity,
+  TransactionType,
+} from 'src/transactions/transaction.entity';
+import { Roles } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
+import { User } from '../decorators/users.decorator';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { AddOfferDto } from './dto/add-offer.dto';
+import { CreateGymDto } from './dto/create-gym.dto';
+import { PublicGymDto } from './dto/public-gym.dto';
+import { SetSubscriptionDto } from './dto/set-subscription.dto';
+import { UpdateAiChatDto } from './dto/update-ai-chat.dto';
+import { UpdateAutoRenewDto } from './dto/update-auto-renew.dto';
+import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
+import { UpdateGymPhoneDto } from './dto/update-gym-phone.dto';
+import { UpdateInvoiceMessagesDto } from './dto/update-invoice-messages.dto';
+import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
+import { UpdateGymNameDto } from './dto/update-name.dto';
+import { UpdateGymNoteDto } from './dto/update-note.dto';
+import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
+import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
+import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
+import { GymEntity } from './entities/gym.entity';
+import { GymService } from './gym.service';
 @Controller('gym')
 export class GymController {
   constructor(private readonly gymService: GymService) {}
@@ -105,7 +106,7 @@ export class GymController {
     return this.gymService.findAll();
   }
 
-  @Get('/get-one/:id')
+  @Get('/get-one/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.Any)
   @ApiOperation({ summary: 'Get a gym by id' })
@@ -113,7 +114,8 @@ export class GymController {
     description: 'The gym has been successfully retrieved.',
     type: GymEntity,
   })
-  findOne(@Param('id') id: string) {
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  findOne(@Param('gymId') id: string) {
     return this.gymService.findOne(id);
   }
 
