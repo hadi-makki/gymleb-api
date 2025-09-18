@@ -364,8 +364,7 @@ export class MemberService {
         memberPhone: member.phone,
         memberPhoneISOCode: member.phoneNumberISOCode,
         gym,
-        amountPaid:
-          getLatestGymSubscription.activeSubscription.paidAmount.toString(),
+        amountPaid: subscription.price.toString(),
         paymentFor: subscription.title,
         paymentDate: format(
           getLatestGymSubscription.activeSubscription.startDate,

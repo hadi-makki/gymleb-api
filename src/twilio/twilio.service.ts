@@ -66,7 +66,7 @@ export class TwilioService {
 
   checkIfMessageShouldBeSent(phoneNumber: string, phoneNumberISOCode: string) {
     if (
-      !checkNodeEnv('local') &&
+      checkNodeEnv('local') &&
       isValidPhoneUsingISO(phoneNumber, phoneNumberISOCode as CountryCode)
     ) {
       return true;
