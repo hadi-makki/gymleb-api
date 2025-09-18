@@ -19,7 +19,7 @@ import {
 } from '../error/api-responses.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { TransactionService } from './subscription-instance.service';
+import { TransactionService } from './transaction.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 
 @Controller('transactions')

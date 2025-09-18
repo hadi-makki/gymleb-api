@@ -6,7 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from '../auth/auth.service';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TokenService } from '../token/token.service';
-import { TransactionModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/transaction.module';
 import { UserService } from '../user/user.service';
 import { UserModule } from '../user/user.module';
 import { ManagerController } from './manager.controller';

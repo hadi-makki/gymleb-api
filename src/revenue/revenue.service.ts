@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
 import { BadRequestException } from '../error/bad-request-error';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/transaction.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RevenueEntity } from './revenue.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';

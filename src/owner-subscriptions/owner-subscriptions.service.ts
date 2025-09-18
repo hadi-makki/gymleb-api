@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { Repository } from 'typeorm';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/transaction.service';
 import { TransactionType } from '../transactions/transaction.entity';
 import {
   AssignOwnerSubscriptionDto,

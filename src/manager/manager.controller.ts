@@ -36,7 +36,7 @@ import {
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { GymService } from '../gym/gym.service';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/transaction.service';
 import { CookieNames, cookieOptions } from '../utils/constants';
 import { CreateManagerDto } from './dtos/create-manager.dto';
 import { LoginManagerDto } from './dtos/login-manager.dto';

@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ProductsService } from '../products/products.service';
 import { TokenService } from '../token/token.service';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/transaction.service';
 
 @Module({
   imports: [],

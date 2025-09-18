@@ -38,7 +38,7 @@ import { SubscriptionEntity } from './subscription/entities/subscription.entity'
 import { SubscriptionModule } from './subscription/subscription.module';
 import { TokenEntity } from './token/token.entity';
 import { TokenModule } from './token/token.module';
-import { TransactionModule } from './transactions/subscription-instance.module';
+import { TransactionModule } from './transactions/transaction.module';
 import { TransactionEntity } from './transactions/transaction.entity';
 import { TwilioModule } from './twilio/twilio.module';
 import { AiChatEntity } from './ai-chat/entities/ai-chat.entity';

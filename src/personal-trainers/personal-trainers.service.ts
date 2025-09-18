@@ -5,7 +5,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { ManagerService } from 'src/manager/manager.service';
 import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { TransactionService } from 'src/transactions/transaction.service';
 import { Between, ILike, In, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Permissions } from '../decorators/roles/role.enum';

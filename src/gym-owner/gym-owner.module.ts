@@ -15,7 +15,7 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import { MediaModule } from '../media/media.module';
 import { MemberService } from '../member/member.service';
 import { SubscriptionService } from '../subscription/subscription.service';
-import { TransactionModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/transaction.module';
 import { GymOwnerController } from './gym-owner.controller';
 import { GymOwnerService } from './gym-owner.service';
 import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-days.entity';

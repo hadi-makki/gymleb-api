@@ -4,7 +4,7 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
-import { TransactionModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/transaction.module';
 import { RevenueController } from './revenue.controller';
 import { RevenueEntity } from './revenue.entity';
 import { RevenueService } from './revenue.service';

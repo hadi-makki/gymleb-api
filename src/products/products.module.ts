@@ -11,7 +11,7 @@ import { ProductsController } from './products.controller';
 import { ProductEntity } from './products.entity';
 import { SubscriptionPlanSeeding } from './products.seed';
 import { ProductsService } from './products.service';
-import { TransactionModule } from 'src/transactions/subscription-instance.module';
+import { TransactionModule } from 'src/transactions/transaction.module';
 import { ProductsOffersEntity } from './products-offers.entity';
 
 @Module({

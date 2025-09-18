@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthenticationModule } from '../common/AuthModule.module';
-import { TransactionModule } from '../transactions/subscription-instance.module';
+import { TransactionModule } from '../transactions/transaction.module';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
 import { MemberReservationController } from './member-reservation.controller';

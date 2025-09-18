@@ -133,6 +133,7 @@ export class MemberController {
     @Query('page') page = '1',
     @Query('limit') limit = '5',
     @Param('gymId') gymId: string,
+    @Query('expiringInDays') expiringInDays?: string,
   ) {
     console.log('reachint the controller');
     return await this.memberService.findAll(
@@ -141,6 +142,7 @@ export class MemberController {
       Number(limit),
       Number(page),
       gymId,
+      expiringInDays ? Number(expiringInDays) : undefined,
     );
   }
 

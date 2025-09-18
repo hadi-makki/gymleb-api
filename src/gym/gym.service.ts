@@ -38,7 +38,7 @@ import { isUUID } from 'class-validator';
 import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { PublicGymDto } from './dto/public-gym.dto';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { TransactionService } from 'src/transactions/transaction.service';
 import { ProductEntity } from 'src/products/products.entity';
 import { MediaService } from 'src/media/media.service';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';

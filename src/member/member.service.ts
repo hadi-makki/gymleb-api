@@ -25,7 +25,7 @@ import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
 import { TokenService } from '../token/token.service';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/transaction.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { ReturnUserDto } from './dto/return-user.dto';
@@ -533,6 +533,7 @@ export class MemberService {
     limit: number,
     page: number,
     gymId: string,
+    expiringInDays?: number,
   ) {
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -540,35 +541,69 @@ export class MemberService {
     if (!checkGym) {
       throw new NotFoundException('Gym not found');
     }
-    const res = await paginate(
-      {
-        limit,
-        page,
-        search,
-        path: 'phone',
+
+    let queryBuilder = this.memberModel
+      .createQueryBuilder('member')
+      .leftJoinAndSelect('member.gym', 'gym')
+      .leftJoinAndSelect('member.subscription', 'subscription')
+      .leftJoinAndSelect('member.transactions', 'transactions')
+      .leftJoinAndSelect('member.profileImage', 'profileImage')
+      .leftJoinAndSelect('member.attendingDays', 'attendingDays')
+      .leftJoinAndSelect('member.notificationSetting', 'notificationSetting')
+      .where('gym.id = :gymId', { gymId: checkGym.id });
+
+    // Add search filter
+    if (search) {
+      queryBuilder.andWhere(
+        '(member.name ILIKE :search OR member.phone ILIKE :search OR member.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Add expiration filter
+    if (expiringInDays !== undefined) {
+      console.log('this is the expiring in days', expiringInDays);
+      const today = new Date();
+      const todayStr = format(startOfDay(today), 'yyyy-MM-dd');
+      const endDate = addDays(today, expiringInDays);
+      const endDateStr = format(endOfDay(endDate), 'yyyy-MM-dd');
+
+      queryBuilder
+        .andWhere('transactions.type = :transactionType', {
+          transactionType: 'subscription',
+        })
+        .andWhere('transactions.isInvalidated = :isInvalidated', {
+          isInvalidated: false,
+        })
+        .andWhere('DATE(transactions.endDate) >= :todayDate', {
+          todayDate: todayStr,
+        })
+        .andWhere('DATE(transactions.endDate) <= :endDate', {
+          endDate: endDateStr,
+        });
+    }
+
+    // Add ordering
+    queryBuilder.orderBy('member.createdAt', 'DESC');
+
+    // Get total count
+    const totalItems = await queryBuilder.getCount();
+
+    // Add pagination
+    const offset = (page - 1) * limit;
+    queryBuilder.skip(offset).take(limit);
+
+    const members = await queryBuilder.getMany();
+
+    const res = {
+      data: members,
+      meta: {
+        itemsPerPage: limit,
+        totalItems,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
       },
-      this.memberModel,
-      {
-        relations: {
-          gym: true,
-          subscription: true,
-          transactions: true,
-          profileImage: true,
-          attendingDays: true,
-        },
-        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
-        searchableColumns: ['name', 'phone', 'email'],
-        defaultSortBy: [['createdAt', 'DESC']],
-        where: { gym: { id: checkGym.id } },
-        filterableColumns: {
-          name: [FilterOperator.ILIKE],
-          phone: [FilterOperator.ILIKE],
-          email: [FilterOperator.ILIKE],
-        },
-        // select: ['id', 'name', 'email', 'phone', 'createdAt', 'updatedAt'],
-        maxLimit: 100,
-      },
-    );
+    };
 
     const items = await Promise.all(
       res.data.map(async (m: any) => this.returnMember(m)),

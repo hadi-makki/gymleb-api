@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { ProductsService } from '../products/products.service';
-import { TransactionService } from '../transactions/subscription-instance.service';
+import { TransactionService } from '../transactions/transaction.service';
 import {
   CallWith,
   CreatePaymentIntentDto,

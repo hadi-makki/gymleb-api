@@ -19,7 +19,7 @@ import { ProductEntity } from './products.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { UserEntity } from 'src/user/user.entity';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { TransactionService } from 'src/transactions/transaction.service';
 import { ProductsOffersEntity } from './products-offers.entity';
 
 @Injectable()

@@ -15,7 +15,7 @@ import { ProductEntity } from 'src/products/products.entity';
 import { ProductsModule } from 'src/products/products.module';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { TransactionService } from 'src/transactions/subscription-instance.service';
+import { TransactionService } from 'src/transactions/transaction.service';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { MemberModule } from '../member/member.module';
