@@ -31,11 +31,11 @@ export class CronService {
     await this.memberService.notifyMembersWithExpiringSubscriptions();
   }
 
-  @Cron('0 7-23/4 * * *', {
-    name: 'notify-expired-members-reminder',
-    timeZone: 'Asia/Beirut', // Lebanon timezone
-  })
-  async notifyExpiredMembersReminder() {
-    await this.memberService.notifyMembersWithExpiringSubscriptionsReminder();
-  }
+  // @Cron('0 7-23/4 * * *', {
+  //   name: 'notify-expired-members-reminder',
+  //   timeZone: 'Asia/Beirut', // Lebanon timezone
+  // })
+  // async notifyExpiredMembersReminder() {
+  //   await this.memberService.notifyMembersWithExpiringSubscriptionsReminder();
+  // }
 }
