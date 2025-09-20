@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  IsNumber,
 } from 'class-validator';
 
 export class CreateMemberDto {
@@ -53,4 +54,8 @@ export class CreateMemberDto {
   @IsOptional()
   @IsBoolean()
   sendInvoiceMessage?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  paidAmount?: number;
 }

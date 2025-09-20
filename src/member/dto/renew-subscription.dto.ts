@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsDateString,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -43,4 +44,8 @@ export class RenewSubscriptionDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @IsOptional()
+  @IsNumber()
+  paidAmount?: number;
 }

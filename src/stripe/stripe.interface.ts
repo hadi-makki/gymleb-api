@@ -1,6 +1,9 @@
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
-import { SubscriptionEntity, SubscriptionType } from 'src/subscription/entities/subscription.entity';
+import {
+  SubscriptionEntity,
+  SubscriptionType,
+} from 'src/subscription/entities/subscription.entity';
 
 export interface PaymentDetails {
   subscription: SubscriptionEntity;
@@ -15,6 +18,8 @@ export interface PaymentDetails {
   // Optional custom end date for subscription instance
   endDate?: string;
   willPayLater?: boolean;
+
+  paidAmount?: number;
 }
 
 export interface GooglePaymentsDetails {

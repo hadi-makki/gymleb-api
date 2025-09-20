@@ -198,7 +198,6 @@ export class MemberController {
     @Body() renewSubscriptionDto: RenewSubscriptionDto,
     @Param('gymId') gymId: string,
   ) {
-    console.log('renewSubscriptionDto', renewSubscriptionDto);
     return await this.memberService.renewSubscription(
       memberId,
       renewSubscriptionDto.subscriptionId,
@@ -207,6 +206,7 @@ export class MemberController {
       renewSubscriptionDto.willPayLater,
       renewSubscriptionDto.startDate,
       renewSubscriptionDto.endDate,
+      renewSubscriptionDto.paidAmount,
     );
   }
 

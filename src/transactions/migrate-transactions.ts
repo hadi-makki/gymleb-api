@@ -12,6 +12,7 @@ export class MigrateTransactions implements OnModuleInit {
 
   async onModuleInit() {
     // await this.migrateTransactions();
+    // await this.migrateTransactionAmounts();
   }
 
   async migrateTransactions() {
@@ -22,6 +23,16 @@ export class MigrateTransactions implements OnModuleInit {
       transaction.status = transaction.isPaid
         ? PaymentStatus.PAID
         : PaymentStatus.UNPAID;
+      await this.transactionRepository.save(transaction);
+    }
+  }
+
+  async migrateTransactionAmounts() {
+    const transactions = await this.transactionRepository.find({
+      where: { isPaid: true },
+    });
+    for (const transaction of transactions) {
+      transaction.originalAmount = transaction.paidAmount;
       await this.transactionRepository.save(transaction);
     }
   }

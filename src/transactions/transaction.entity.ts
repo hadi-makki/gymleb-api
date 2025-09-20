@@ -66,6 +66,9 @@ export class TransactionEntity extends PgMainEntity {
   @Column('float')
   paidAmount: number;
 
+  @Column('float', { nullable: true })
+  originalAmount: number;
+
   @Column('text', { default: Currency.USD })
   currency: Currency;
 

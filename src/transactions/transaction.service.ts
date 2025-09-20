@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { addDays, addHours, endOfDay, isAfter } from 'date-fns';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
@@ -52,7 +56,6 @@ export class TransactionService {
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
-    console.log('this is the will pay later', paymentDetails.willPayLater);
     // Use custom dates if provided, otherwise calculate based on subscription type
     let startDate = paymentDetails.startDate
       ? new Date(paymentDetails.startDate)
@@ -83,12 +86,16 @@ export class TransactionService {
       gym: paymentDetails.gym,
       subscription: paymentDetails.subscription,
       endDate: endDate,
-      paidAmount: paymentDetails.amount,
+      paidAmount: paymentDetails.paidAmount || paymentDetails.amount,
+      originalAmount: paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
-      status: paymentDetails.willPayLater
-        ? PaymentStatus.UNPAID
-        : PaymentStatus.PAID,
+      status:
+        paymentDetails.paidAmount < paymentDetails.amount
+          ? PaymentStatus.PARTIALLY_PAID
+          : paymentDetails.willPayLater
+            ? PaymentStatus.UNPAID
+            : PaymentStatus.PAID,
       willPayLater: paymentDetails.willPayLater,
     });
     const createdTransaction = await this.transactionModel.save(newTransaction);
@@ -629,5 +636,43 @@ export class TransactionService {
       newReturnTransaction: createdReturnTransaction,
       newReceiveTransaction: createdReceiveTransaction,
     };
+  }
+
+  async updatePaidAmount(transactionId: string, paidAmount: number) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    const newTotalAmount = transaction.paidAmount + paidAmount;
+
+    if (newTotalAmount > transaction.originalAmount) {
+      throw new BadRequestException(
+        'Paid amount is greater than the original amount',
+      );
+    }
+
+    if (newTotalAmount === transaction.originalAmount) {
+      transaction.status = PaymentStatus.PAID;
+    }
+
+    transaction.paidAmount = paidAmount;
+    await this.transactionModel.save(transaction);
+    return transaction;
+  }
+
+  async completePayment(transactionId: string) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+    transaction.status = PaymentStatus.PAID;
+    transaction.paidAmount = transaction.originalAmount;
+    await this.transactionModel.save(transaction);
+    return transaction;
   }
 }

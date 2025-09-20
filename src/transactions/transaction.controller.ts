@@ -5,10 +5,14 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Convert } from 'easy-currencies';
+import { ValidateGymRelatedToManagerOrManagerInGym } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
+import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
+import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
@@ -19,9 +23,8 @@ import {
 } from '../error/api-responses.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
-import { TransactionService } from './transaction.service';
-import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { PaymentStatus } from './transaction.entity';
+import { TransactionService } from './transaction.service';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -110,5 +113,34 @@ export class TransactionController {
   async currencyExchange() {
     const convert = await Convert().from('USD').fetch();
     console.log(await convert.amount(1).to('LBP'));
+  }
+
+  @Post('update-paid-amount/:gymId/:memberId/:transactionId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  @ValidateMemberRelatedToGym()
+  async updatePaidAmount(
+    @Param('transactionId') transactionId: string,
+    @Body() body: { paidAmount: number },
+  ) {
+    return this.service.updatePaidAmount(transactionId, body.paidAmount);
+  }
+
+  @Post('complete-payment/:gymId/:memberId/:transactionId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  @ValidateMemberRelatedToGym()
+  async completePayment(@Param('transactionId') transactionId: string) {
+    return this.service.completePayment(transactionId);
   }
 }

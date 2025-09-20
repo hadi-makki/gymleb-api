@@ -321,6 +321,7 @@ export class MemberService {
         startDate: createMemberDto.startDate,
         endDate: createMemberDto.endDate,
         willPayLater: createMemberDto.willPayLater,
+        paidAmount: createMemberDto.paidAmount,
       });
 
     member.transactions = [subscriptionInstance];
@@ -684,6 +685,7 @@ export class MemberService {
     willPayLater?: boolean,
     startDate?: string,
     endDate?: string,
+    paidAmount?: number,
   ) {
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -785,6 +787,7 @@ export class MemberService {
         willPayLater,
         startDate,
         endDate,
+        paidAmount,
       });
 
     member.transactions.push(createSubscriptionInstance);
