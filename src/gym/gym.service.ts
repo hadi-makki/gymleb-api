@@ -29,6 +29,7 @@ import {
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import {
+  PaymentStatus,
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
@@ -597,6 +598,7 @@ export class GymService {
     search: string,
     type: TransactionType,
     gymId: string,
+    status: PaymentStatus,
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -641,6 +643,7 @@ export class GymService {
           gym: { id: gym.id },
           ...(search ? { member: { id: In(memberIds) } } : {}),
           ...(type ? { type: type as TransactionType } : {}),
+          ...(status ? { status: status as PaymentStatus } : {}),
         },
         filterableColumns: { type: [FilterOperator.EQ] },
         maxLimit: 100,

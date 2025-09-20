@@ -20,6 +20,7 @@ import {
 import { SuccessMessageReturn } from 'src/main-classes/success-message-return';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import {
+  PaymentStatus,
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
@@ -44,6 +45,7 @@ import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { GymEntity } from './entities/gym.entity';
 import { GymService } from './gym.service';
+
 @Controller('gym')
 export class GymController {
   constructor(private readonly gymService: GymService) {}
@@ -352,6 +354,7 @@ export class GymController {
     @Query('search') search: string,
     @Query('type') type: TransactionType,
     @Param('gymId') gymId: string,
+    @Query('status') status: PaymentStatus,
   ) {
     return this.gymService.getTransactionHistory(
       user,
@@ -360,6 +363,7 @@ export class GymController {
       search,
       type,
       gymId,
+      status,
     );
   }
 
