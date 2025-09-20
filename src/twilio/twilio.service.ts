@@ -6,7 +6,10 @@ import { MemberService } from '../member/member.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isPhoneNumber } from 'class-validator';
 import { format } from 'date-fns';
-import { checkNodeEnv } from 'src/config/helper/helper-functions';
+import {
+  checkNodeEnv,
+  AllowSendTwilioMessages,
+} from 'src/config/helper/helper-functions';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { Twilio } from 'twilio';
@@ -66,7 +69,7 @@ export class TwilioService {
 
   checkIfMessageShouldBeSent(phoneNumber: string, phoneNumberISOCode: string) {
     if (
-      !checkNodeEnv('local') &&
+      AllowSendTwilioMessages() &&
       isValidPhoneUsingISO(phoneNumber, phoneNumberISOCode as CountryCode)
     ) {
       return true;

@@ -9,3 +9,7 @@ export function isUsingLocalNetwork(): boolean {
 export function checkNodeEnv(env: 'local' | 'production') {
   return process.env.NODE_ENV === env;
 }
+
+export function AllowSendTwilioMessages(): boolean {
+  return process.env.SEND_TWILIO_MESSAGES === 'true';
+}
