@@ -484,7 +484,12 @@ export class TransactionService {
       throw new NotFoundException('Gym not found');
     }
 
-    transaction.status = !transaction.status ? status : status;
+    console.log('this is the transaction status', transaction.status);
+
+    transaction.status =
+      transaction.status === PaymentStatus.PAID
+        ? PaymentStatus.UNPAID
+        : PaymentStatus.PAID;
     console.log(transaction.status);
     console.log(transaction.willPayLater);
     await this.transactionModel.save(transaction);
