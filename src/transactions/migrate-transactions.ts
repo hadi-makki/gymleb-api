@@ -2,7 +2,7 @@ import { OnModuleInit } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { PaymentStatus, TransactionEntity } from './transaction.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 export class MigrateTransactions implements OnModuleInit {
   constructor(
@@ -29,11 +29,16 @@ export class MigrateTransactions implements OnModuleInit {
 
   async migrateTransactionAmounts() {
     const transactions = await this.transactionRepository.find({
-      where: { isPaid: true },
+      where: { originalAmount: IsNull() },
     });
-    for (const transaction of transactions) {
-      transaction.originalAmount = transaction.paidAmount;
-      await this.transactionRepository.save(transaction);
-    }
+    console.log(transactions.length);
+    let count = 0;
+
+    // Promise.all(
+    //   transactions.map(async (transaction) => {
+    //     transaction.originalAmount = transaction.paidAmount;
+    //     await this.transactionRepository.save(transaction);
+    //   }),
+    // );
   }
 }

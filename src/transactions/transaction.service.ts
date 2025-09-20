@@ -658,7 +658,7 @@ export class TransactionService {
       transaction.status = PaymentStatus.PAID;
     }
 
-    transaction.paidAmount = paidAmount;
+    transaction.paidAmount = transaction.paidAmount + paidAmount;
     await this.transactionModel.save(transaction);
     return transaction;
   }

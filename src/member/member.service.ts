@@ -91,6 +91,7 @@ export class MemberService {
       where: { member: { id: memberId } },
       order: { createdAt: 'DESC' },
     });
+
     return latestSubscription;
   }
 
