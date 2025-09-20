@@ -75,11 +75,14 @@ export class MemberService {
   ) {}
 
   async checkIfUserHasActiveSubscription(memberId: string) {
-    const activeSubscription = await this.transactionModel.findOne({
+    const activeSubscription = await this.transactionModel.find({
       where: {
         member: { id: memberId },
         endDate: MoreThan(new Date()),
         isInvalidated: false,
+      },
+      relations: {
+        subscription: true,
       },
       order: { endDate: 'DESC' },
     });
@@ -131,10 +134,10 @@ export class MemberService {
           endDate: Between(startOfTargetDate, endOfTargetDate),
           type: TransactionType.SUBSCRIPTION,
           isInvalidated: false,
-          member: { isNotified: false },
+          isNotified: false,
           subscription: {
             type: Not(SubscriptionType.DAILY_GYM),
-            duration: Not(LessThan(15)),
+            duration: Not(LessThan(7)),
           },
         },
       ],
@@ -145,9 +148,14 @@ export class MemberService {
       },
     });
 
+    console.log(
+      'this is the expiring transactions',
+      expiringTransactions.length,
+    );
+
     const newMembers = expiringTransactions
       .filter((t) => {
-        return t.member && t.member.isNotified === false;
+        return t.member;
       })
       .map((t) => {
         return {
@@ -167,7 +175,7 @@ export class MemberService {
 
     // Use SQL queries to get subscription data efficiently
     const [
-      activeSubscription,
+      activeSubscriptions,
       lastSubscription,
       attendingDays,
       reservations,
@@ -206,8 +214,8 @@ export class MemberService {
       subscriptionTransactions: member.transactions,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
-      hasActiveSubscription: !!activeSubscription,
-      currentActiveSubscription: activeSubscription,
+      hasActiveSubscription: activeSubscriptions.length > 0,
+      currentActiveSubscriptions: activeSubscriptions,
       lastSubscription: lastSubscription,
       isNotified: member.isNotified,
       profileImage: member.profileImage,
@@ -816,6 +824,54 @@ export class MemberService {
     };
   }
 
+  async addSubscriptionToMember(
+    memberId: string,
+    subscriptionId: string,
+    gymId: string,
+    giveFullDay?: boolean,
+    willPayLater?: boolean,
+    startDate?: string,
+    endDate?: string,
+    paidAmount?: number,
+  ) {
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const getSubscription = await this.subscriptionModel.findOne({
+      where: { id: subscriptionId, gym: { id: gymId } },
+    });
+    if (!getSubscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: gymId } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    member.subscription = getSubscription;
+    await this.memberModel.save(member);
+
+    await this.transactionService.createSubscriptionInstance({
+      member: member,
+      gym: checkGym,
+      subscription: getSubscription,
+      subscriptionType: getSubscription?.type,
+      amount: getSubscription?.price,
+      giveFullDay,
+      willPayLater,
+      startDate,
+      endDate,
+      paidAmount,
+    });
+    return {
+      message: 'Subscription added to member successfully',
+    };
+  }
+
   async update(id: string, updateMemberDto: UpdateMemberDto, gymId: string) {
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid member id');
@@ -1080,7 +1136,12 @@ export class MemberService {
     await this.tokenService.deleteTokensByUserId(member.id, deviceId);
   }
 
-  async invalidateMemberSubscription(id: string, gymId: string) {
+  async invalidateMemberSubscription(
+    id: string,
+    gymId: string,
+    transactionId: string,
+  ) {
+    console.log('invalidateMemberSubscription', id, gymId, transactionId);
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
     });
@@ -1093,7 +1154,10 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    await this.transactionService.invalidateSubscriptionInstance(member.id);
+    await this.transactionService.invalidateSubscriptionInstance(
+      member.id,
+      transactionId,
+    );
     await this.memberModel.save(member);
     return { message: 'Member subscription invalidated successfully' };
   }
@@ -1586,6 +1650,7 @@ export class MemberService {
     memberId: string,
     gymId: string,
     extendMembershipDurationDto: ExtendMembershipDurationDto,
+    transactionId: string,
   ) {
     // Validate member exists and belongs to the gym
     const member = await this.memberModel.findOne({
@@ -1608,12 +1673,14 @@ export class MemberService {
     }
 
     // Calculate new end date by adding the specified days
-    const currentEndDate = new Date(activeSubscription.endDate);
+    const currentEndDate = new Date(
+      activeSubscription.find((t) => t.id === transactionId).endDate,
+    );
     const newEndDate = new Date(currentEndDate);
     newEndDate.setDate(newEndDate.getDate() + extendMembershipDurationDto.days);
 
     // Update the subscription end date
-    await this.transactionModel.update(activeSubscription.id, {
+    await this.transactionModel.update(transactionId, {
       endDate: newEndDate,
     });
 

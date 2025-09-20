@@ -208,4 +208,7 @@ export class GymEntity extends PgMainEntity {
 
   @OneToMany(() => WhishTransaction, (whishTransaction) => whishTransaction.gym)
   whishTransactions: WhishTransaction[];
+
+  @Column('boolean', { default: false })
+  enableMultiSubscription: boolean;
 }

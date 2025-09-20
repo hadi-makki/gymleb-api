@@ -1876,6 +1876,24 @@ export class GymService {
     };
   }
 
+  async updateMultiSubscriptionStatus(
+    gymId: string,
+    enableMultiSubscription: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.enableMultiSubscription = enableMultiSubscription;
+    await this.gymModel.save(gym);
+
+    return {
+      message: 'Multi-subscription status updated successfully',
+      enableMultiSubscription: gym.enableMultiSubscription,
+    };
+  }
+
   async updateMessageLanguage(
     gymId: string,
     messagesLanguage: MessageLanguage,

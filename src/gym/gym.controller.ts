@@ -38,6 +38,7 @@ import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
 import { UpdateGymPhoneDto } from './dto/update-gym-phone.dto';
 import { UpdateInvoiceMessagesDto } from './dto/update-invoice-messages.dto';
 import { UpdateMessageLanguageDto } from './dto/update-message-language.dto';
+import { UpdateMultiSubscriptionDto } from './dto/update-multi-subscription.dto';
 import { UpdateGymNameDto } from './dto/update-name.dto';
 import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
@@ -758,6 +759,23 @@ export class GymController {
     return await this.gymService.updateInvoiceMessagesStatus(
       gymId,
       updateInvoiceMessagesDto.sendInvoiceMessages,
+    );
+  }
+
+  @Patch('update/multi-subscription/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym multi-subscription feature status' })
+  @ApiOkResponse({
+    description: 'Multi-subscription status updated successfully',
+  })
+  @Roles(Permissions.SuperAdmin)
+  async updateMultiSubscriptionStatus(
+    @Param('gymId') gymId: string,
+    @Body() updateMultiSubscriptionDto: UpdateMultiSubscriptionDto,
+  ) {
+    return await this.gymService.updateMultiSubscriptionStatus(
+      gymId,
+      updateMultiSubscriptionDto.enableMultiSubscription,
     );
   }
 

@@ -17,7 +17,7 @@ export class ReturnUserDto {
   createdAt: Date;
   updatedAt: Date;
   hasActiveSubscription: boolean;
-  currentActiveSubscription: any;
+  currentActiveSubscriptions: TransactionEntity[];
   isNotified: boolean;
   lastSubscription: TransactionEntity;
   profileImage: MediaEntity;

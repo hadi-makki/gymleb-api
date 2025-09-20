@@ -6,10 +6,10 @@ import {
 } from 'src/subscription/entities/subscription.entity';
 
 export interface PaymentDetails {
-  subscription: SubscriptionEntity;
+  subscription?: SubscriptionEntity;
   member: MemberEntity;
   gym: GymEntity;
-  subscriptionType: SubscriptionType;
+  subscriptionType?: SubscriptionType;
   amount: number;
   // If true for daily subscriptions, grant a full 24 hours. If false/undefined, expire at end of day
   giveFullDay?: boolean;

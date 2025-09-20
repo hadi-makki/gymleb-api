@@ -69,12 +69,17 @@ export class TransactionService {
       // Calculate end date based on subscription type and start date
       if (
         paymentDetails?.subscriptionType === SubscriptionType.DAILY_GYM &&
-        paymentDetails.subscription.duration === 1
+        paymentDetails.subscription.duration <= 1
       ) {
+        console.log('this is the daily gym subscription');
         endDate = paymentDetails.giveFullDay
           ? addHours(startDate, 24)
           : endOfDay(startDate);
       } else {
+        console.log(
+          'this is the duration',
+          paymentDetails.subscription.duration,
+        );
         endDate = addDays(startDate, paymentDetails.subscription.duration);
       }
     }
@@ -197,7 +202,10 @@ export class TransactionService {
     return subscriptionInstance;
   }
 
-  async invalidateSubscriptionInstance(memberId: string) {
+  async invalidateSubscriptionInstance(
+    memberId: string,
+    transactionId: string,
+  ) {
     const member = await this.memberRepository.findOne({
       where: { id: memberId },
       relations: { transactions: true },
@@ -208,7 +216,8 @@ export class TransactionService {
     const activeSubscriptionInstance = member.transactions.find(
       (transaction) =>
         isAfter(new Date(transaction.endDate), new Date()) &&
-        !transaction.isInvalidated,
+        !transaction.isInvalidated &&
+        transaction.id === transactionId,
     );
 
     if (!activeSubscriptionInstance) {
@@ -676,6 +685,18 @@ export class TransactionService {
     }
     transaction.status = PaymentStatus.PAID;
     transaction.paidAmount = transaction.originalAmount;
+    await this.transactionModel.save(transaction);
+    return transaction;
+  }
+
+  async toggleNotified(transactionId: string, isNotified: boolean) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+    transaction.isNotified = isNotified;
     await this.transactionModel.save(transaction);
     return transaction;
   }

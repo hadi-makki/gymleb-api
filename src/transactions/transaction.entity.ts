@@ -238,4 +238,7 @@ export class TransactionEntity extends PgMainEntity {
     (whishTransaction) => whishTransaction.transaction,
   )
   whishTransactions: WhishTransaction[];
+
+  @Column('boolean', { default: false })
+  isNotified: boolean;
 }

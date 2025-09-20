@@ -37,6 +37,7 @@ import { CreateMemberDto } from './dto/create-member.dto';
 import { DeleteMemberDto } from './dto/delete-member.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
+import { AddSubscriptionToMemberDto } from './dto/add-subscription-to-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
@@ -210,6 +211,35 @@ export class MemberController {
     );
   }
 
+  @Post(':gymId/:memberId/add-subscription')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({ summary: 'Add a subscription to a member' })
+  @ApiCreatedResponse({
+    description: 'Subscription added to member successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Member, gym, or subscription not found',
+  })
+  async addSubscriptionToMember(
+    @Param('memberId') memberId: string,
+    @Body() addSubscriptionDto: AddSubscriptionToMemberDto,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.addSubscriptionToMember(
+      memberId,
+      addSubscriptionDto.subscriptionId,
+      gymId,
+      addSubscriptionDto.giveFullDay,
+      addSubscriptionDto.willPayLater,
+      addSubscriptionDto.startDate,
+      addSubscriptionDto.endDate,
+      addSubscriptionDto.paidAmount,
+    );
+  }
+
   @Get('expired/:gymId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
@@ -256,18 +286,25 @@ export class MemberController {
     return await this.memberService.getMember(id);
   }
 
-  @Post(':gymId/:memberId/invalidate')
+  @Post(':gymId/:memberId/invalidate/:transactionId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
+  @ApiOperation({
+    summary: 'Invalidate a specific member subscription transaction',
+  })
+  @ApiCreatedResponse({ description: 'Subscription invalidated successfully' })
+  @ApiNotFoundResponse({ description: 'Member, gym, or transaction not found' })
   async invalidateMemberSubscription(
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
+    @Param('transactionId') transactionId: string,
   ) {
     return await this.memberService.invalidateMemberSubscription(
       memberId,
       gymId,
+      transactionId,
     );
   }
 
@@ -504,7 +541,7 @@ export class MemberController {
     );
   }
 
-  @Patch('membership/extend-duration/:gymId/:memberId')
+  @Patch('membership/extend-duration/:gymId/:memberId/:transactionId')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
@@ -513,11 +550,13 @@ export class MemberController {
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
     @Body() extendMembershipDurationDto: ExtendMembershipDurationDto,
+    @Param('transactionId') transactionId: string,
   ) {
     return await this.memberService.extendMembershipDuration(
       memberId,
       gymId,
       extendMembershipDurationDto,
+      transactionId,
     );
   }
 
