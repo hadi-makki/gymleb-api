@@ -21,6 +21,7 @@ import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { TransactionService } from './transaction.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
+import { PaymentStatus } from './transaction.entity';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -73,13 +74,13 @@ export class TransactionController {
     @Param('id') id: string,
     @User() manager: ManagerEntity,
     @Param('gymId') gymId: string,
-    @Body() body: { isPaid: boolean },
+    @Body() body: { status: PaymentStatus },
   ) {
     return this.service.updateTransactionPaymentStatus(
       id,
       manager,
       gymId,
-      body.isPaid,
+      body.status,
     );
   }
 
@@ -93,12 +94,12 @@ export class TransactionController {
   async togglePtSessionPayment(
     @Param('sessionId') sessionId: string,
     @Param('gymId') gymId: string,
-    @Body() body: { isPaid: boolean },
+    @Body() body: { status: PaymentStatus },
   ) {
     return this.service.togglePtSessionTransactionsPayment(
       sessionId,
       gymId,
-      body.isPaid,
+      body.status,
     );
   }
 

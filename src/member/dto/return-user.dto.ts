@@ -42,6 +42,7 @@ export class ReturnUserDto {
   medications?: string;
   emergencyContact?: string;
   emergencyPhone?: string;
+  birthday?: Date;
   lastHealthCheck?: string;
   programLink?: string;
   isWelcomeMessageSent?: boolean;

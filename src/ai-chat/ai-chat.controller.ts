@@ -143,8 +143,11 @@ export class AiChatController {
     const userId = req.user.id;
     const userType = req.user.role === 'manager' ? 'manager' : 'member';
 
-    const messages =
-      await this.aiChatService.getConversationHistory(conversationId);
+    const messages = await this.aiChatService.getConversationHistory(
+      conversationId,
+      userId,
+      userType,
+    );
 
     if (messages.length === 0) {
       return {

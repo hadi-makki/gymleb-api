@@ -40,6 +40,12 @@ export enum Currency {
   LBP = 'LBP',
 }
 
+export enum PaymentStatus {
+  PAID = 'paid',
+  UNPAID = 'unpaid',
+  PARTIALLY_PAID = 'partially_paid',
+}
+
 @Entity('transactions')
 export class TransactionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
@@ -169,6 +175,9 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: true })
   isPaid: boolean;
+
+  @Column('text', { default: PaymentStatus.PAID })
+  status: PaymentStatus;
 
   @Column('boolean', { default: false })
   isSubscription: boolean;

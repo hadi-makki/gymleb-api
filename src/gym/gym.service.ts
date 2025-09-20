@@ -2066,6 +2066,7 @@ export class GymService {
         'messagesLanguage',
         'createdAt',
         'updatedAt',
+        'gymType',
       ],
     });
 

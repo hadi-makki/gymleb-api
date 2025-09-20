@@ -231,6 +231,7 @@ export class MemberService {
       medications: member.medications,
       emergencyContact: member.emergencyContact,
       emergencyPhone: member.emergencyPhone,
+      birthday: member.birthday,
       lastHealthCheck: member.lastHealthCheck?.toISOString(),
       programLink: member.programLink,
       isWelcomeMessageSent: member.isWelcomeMessageSent,

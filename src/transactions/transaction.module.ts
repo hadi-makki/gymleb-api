@@ -15,6 +15,7 @@ import { UserEntity } from 'src/user/user.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionEntity } from './transaction.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { MigrateTransactions } from './migrate-transactions';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
     ]),
     AuthenticationModule,
   ],
-  providers: [TransactionService],
+  providers: [TransactionService, MigrateTransactions],
   controllers: [TransactionController],
   exports: [TransactionService, TypeOrmModule],
 })

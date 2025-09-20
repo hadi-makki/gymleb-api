@@ -17,7 +17,11 @@ import { UserEntity } from 'src/user/user.entity';
 import { In, Repository } from 'typeorm';
 import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
-import { TransactionEntity, TransactionType } from './transaction.entity';
+import {
+  PaymentStatus,
+  TransactionEntity,
+  TransactionType,
+} from './transaction.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
@@ -82,7 +86,9 @@ export class TransactionService {
       paidAmount: paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
-      isPaid: paymentDetails.willPayLater ? false : true,
+      status: paymentDetails.willPayLater
+        ? PaymentStatus.UNPAID
+        : PaymentStatus.PAID,
       willPayLater: paymentDetails.willPayLater,
     });
     const createdTransaction = await this.transactionModel.save(newTransaction);
@@ -447,7 +453,7 @@ export class TransactionService {
       member: dto.member,
       paidAmount: dto.amount,
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
-      isPaid: !dto.willPayLater,
+      status: !dto.willPayLater ? PaymentStatus.UNPAID : PaymentStatus.PAID,
       // Use many-to-one relation so multiple transactions can link to the same session
       relatedPtSession: dto.ptSession,
       isTakingPtSessionsCut: dto.isTakingPtSessionsCut,
@@ -461,7 +467,7 @@ export class TransactionService {
     transactionId: string,
     manager: ManagerEntity,
     gymId: string,
-    isPaid: boolean,
+    status: PaymentStatus,
   ) {
     const transaction = await this.transactionModel.findOne({
       where: { id: transactionId },
@@ -478,13 +484,13 @@ export class TransactionService {
       throw new NotFoundException('Gym not found');
     }
 
-    transaction.isPaid = !transaction.isPaid;
-    console.log(transaction.isPaid);
+    transaction.status = !transaction.status ? status : status;
+    console.log(transaction.status);
     console.log(transaction.willPayLater);
     await this.transactionModel.save(transaction);
 
     return {
-      message: `Transaction payment status updated to ${isPaid ? 'paid' : 'unpaid'}`,
+      message: `Transaction payment status updated to ${status}`,
       transaction,
     };
   }
@@ -492,7 +498,7 @@ export class TransactionService {
   async togglePtSessionTransactionsPayment(
     sessionId: string,
     gymId: string,
-    isPaid: boolean,
+    status: PaymentStatus,
   ) {
     const ptSession = await this.ptSessionRepository.findOne({
       where: { id: sessionId, gym: { id: gymId } },
@@ -504,12 +510,12 @@ export class TransactionService {
 
     const transactions = ptSession.transactions || [];
     for (const trx of transactions) {
-      trx.isPaid = isPaid;
+      trx.status = status;
       await this.transactionModel.save(trx);
     }
 
     return {
-      message: `All transactions for the session marked as ${isPaid ? 'paid' : 'unpaid'}`,
+      message: `All transactions for the session marked as ${status}`,
     };
   }
 
