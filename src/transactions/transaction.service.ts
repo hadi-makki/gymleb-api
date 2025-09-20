@@ -497,6 +497,10 @@ export class TransactionService {
       transaction.status === PaymentStatus.PAID
         ? PaymentStatus.UNPAID
         : PaymentStatus.PAID;
+
+    if (transaction.paidAmount !== transaction.originalAmount) {
+      transaction.paidAmount = transaction.originalAmount;
+    }
     console.log(transaction.status);
     console.log(transaction.willPayLater);
     await this.transactionModel.save(transaction);
