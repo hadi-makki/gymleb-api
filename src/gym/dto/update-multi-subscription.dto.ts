@@ -3,9 +3,12 @@ import { IsBoolean } from 'class-validator';
 
 export class UpdateMultiSubscriptionDto {
   @ApiProperty({
-    description: 'Enable multi-subscription feature for the gym',
+    description: 'Enable or disable multi-subscription feature for the gym',
     example: true,
+    type: Boolean,
   })
-  @IsBoolean()
+  @IsBoolean({
+    message: 'enableMultiSubscription must be a boolean value',
+  })
   enableMultiSubscription: boolean;
 }

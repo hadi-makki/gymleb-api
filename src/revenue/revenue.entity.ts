@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
 
 @Entity('revenues')
 export class RevenueEntity extends PgMainEntity {
@@ -48,4 +49,10 @@ export class RevenueEntity extends PgMainEntity {
 
   @RelationId((revenue: RevenueEntity) => revenue.offer)
   offerId: string | null;
+
+  @ManyToOne(() => ManagerEntity, (manager) => manager.createdRevenues)
+  createdBy: ManagerEntity;
+
+  @RelationId((revenue: RevenueEntity) => revenue.createdBy)
+  createdById: string | null;
 }

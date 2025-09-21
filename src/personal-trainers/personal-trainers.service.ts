@@ -1129,4 +1129,192 @@ export class PersonalTrainersService {
 
     return calendarSessions;
   }
+
+  async getSessionsByDate(
+    gymId: string,
+    date: string,
+    filterBy: 'time' | 'owner' = 'time',
+  ) {
+    const startDate = new Date(date);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        sessionDate: Between(startDate, endDate),
+      },
+      relations: [
+        'personalTrainer',
+        'members',
+        'gym',
+        'personalTrainer.profileImage',
+      ],
+      order: {
+        sessionDate: 'ASC',
+      },
+    });
+
+    if (filterBy === 'time') {
+      return this.groupSessionsByTime(sessions);
+    } else {
+      return this.groupSessionsByOwner(sessions);
+    }
+  }
+
+  async getAllSessionsByDate(
+    date: string,
+    filterBy: 'time' | 'owner' = 'time',
+  ) {
+    const startDate = new Date(date);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const sessions = await this.sessionEntity.find({
+      where: {
+        sessionDate: Between(startDate, endDate),
+      },
+      relations: [
+        'personalTrainer',
+        'members',
+        'gym',
+        'personalTrainer.profileImage',
+      ],
+      order: {
+        sessionDate: 'ASC',
+      },
+    });
+
+    if (filterBy === 'time') {
+      return this.groupSessionsByTime(sessions);
+    } else {
+      return this.groupSessionsByOwner(sessions);
+    }
+  }
+
+  async getMySessionsByDate(
+    trainerId: string,
+    gymId: string,
+    date: string,
+    filterBy: 'time' | 'owner' = 'time',
+  ) {
+    const startDate = new Date(date);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const sessions = await this.sessionEntity.find({
+      where: {
+        personalTrainer: { id: trainerId },
+        gym: { id: gymId },
+        sessionDate: Between(startDate, endDate),
+      },
+      relations: [
+        'personalTrainer',
+        'members',
+        'gym',
+        'personalTrainer.profileImage',
+      ],
+      order: {
+        sessionDate: 'ASC',
+      },
+    });
+
+    if (filterBy === 'time') {
+      return this.groupSessionsByTime(sessions);
+    } else {
+      return this.groupSessionsByOwner(sessions);
+    }
+  }
+
+  private groupSessionsByTime(sessions: PTSessionEntity[]) {
+    const timeGroups = new Map<string, PTSessionEntity[]>();
+
+    sessions.forEach((session) => {
+      const timeKey = session.sessionDate
+        ? session.sessionDate.toTimeString().slice(0, 5)
+        : 'No Time';
+
+      if (!timeGroups.has(timeKey)) {
+        timeGroups.set(timeKey, []);
+      }
+      timeGroups.get(timeKey)!.push(session);
+    });
+
+    const groups = Array.from(timeGroups.entries()).map(
+      ([time, groupSessions]) => ({
+        id: time.replace(':', '-'),
+        label: time === 'No Time' ? 'No Time Set' : this.formatTime(time),
+        sessions: groupSessions.map(this.formatSessionForResponse.bind(this)),
+      }),
+    );
+
+    return {
+      filterBy: 'time' as const,
+      groups: groups.sort((a, b) => a.label.localeCompare(b.label)),
+    };
+  }
+
+  private groupSessionsByOwner(sessions: PTSessionEntity[]) {
+    const ownerGroups = new Map<string, PTSessionEntity[]>();
+
+    sessions.forEach((session) => {
+      const ownerKey = `${session.personalTrainer.firstName} ${session.personalTrainer.lastName}`;
+
+      if (!ownerGroups.has(ownerKey)) {
+        ownerGroups.set(ownerKey, []);
+      }
+      ownerGroups.get(ownerKey)!.push(session);
+    });
+
+    const groups = Array.from(ownerGroups.entries()).map(
+      ([owner, groupSessions]) => ({
+        id: owner.replace(/\s+/g, '-').toLowerCase(),
+        label: owner,
+        sessions: groupSessions.map(this.formatSessionForResponse.bind(this)),
+      }),
+    );
+
+    return {
+      filterBy: 'owner' as const,
+      groups: groups.sort((a, b) => a.label.localeCompare(b.label)),
+    };
+  }
+
+  private formatTime(time: string): string {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  }
+
+  private formatSessionForResponse(session: PTSessionEntity) {
+    return {
+      id: session.id,
+      personalTrainer: {
+        id: session.personalTrainer.id,
+        firstName: session.personalTrainer.firstName,
+        lastName: session.personalTrainer.lastName,
+        email: session.personalTrainer.email,
+        phoneNumber: session.personalTrainer.phoneNumber,
+        profileImage: session.personalTrainer.profileImage,
+      },
+      members: session.members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        phone: member.phone,
+      })),
+      gym: {
+        id: session.gym?.id,
+        name: session.gym?.name,
+      },
+      sessionDate: session.sessionDate,
+      isCancelled: session.isCancelled,
+      cancelledReason: session.cancelledReason,
+      cancelledAt: session.cancelledAt,
+      sessionPrice: session.sessionPrice,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+    };
+  }
 }

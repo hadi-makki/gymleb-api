@@ -21,8 +21,8 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { ValidateRevenueRelatedToGym } from 'src/decorators/validate-revenue-related-to-gym.decorator';
 
 @Controller('revenue')
-@Roles(Permissions.GymOwner, Permissions.revenue)
 @UseGuards(ManagerAuthGuard)
+@Roles(Permissions.GymOwner, Permissions.revenue, Permissions.personalTrainers)
 export class RevenueController {
   constructor(private readonly revenueService: RevenueService) {}
 

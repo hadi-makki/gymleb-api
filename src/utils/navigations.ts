@@ -109,7 +109,11 @@ export const navItems: NavItem[] = [
     icon: 'trending-up',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.revenue],
+    roles: [
+      Permissions.GymOwner,
+      Permissions.revenue,
+      Permissions.personalTrainers,
+    ],
   },
   {
     title: 'Expenses',

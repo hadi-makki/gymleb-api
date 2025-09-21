@@ -10,6 +10,7 @@ import { ProductEntity } from 'src/products/products.entity';
 import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
+import { Permissions } from 'src/decorators/roles/role.enum';
 
 @Injectable()
 export class RevenueService {
@@ -23,6 +24,8 @@ export class RevenueService {
     private readonly transactionService: TransactionService,
     @InjectRepository(ProductsOffersEntity)
     private productsOfferModel: Repository<ProductsOffersEntity>,
+    @InjectRepository(ManagerEntity)
+    private managerModel: Repository<ManagerEntity>,
   ) {}
 
   async create(manager: ManagerEntity, dto: CreateRevenueDto, gymId: string) {
@@ -73,6 +76,7 @@ export class RevenueService {
       date: dto.date ? new Date(dto.date) : new Date(),
       gym: gym,
       offer: offer,
+      createdBy: manager,
     });
     const revenue = await this.revenueModel.save(createRevenueModel);
 
@@ -101,6 +105,14 @@ export class RevenueService {
     end?: string,
     gymId?: string,
   ) {
+    let createdBy: ManagerEntity | null = null;
+    // if manager is personal trainer, then return only their revenues
+    if (manager.permissions.includes(Permissions.personalTrainers)) {
+      createdBy = await this.managerModel.findOne({
+        where: { id: manager.id },
+      });
+    }
+
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
@@ -120,6 +132,7 @@ export class RevenueService {
       where: {
         ...filter,
         gym: { id: gym.id },
+        ...(createdBy && { createdBy: { id: createdBy.id } }),
       },
       relations: ['transaction'],
       order: { date: 'DESC' },

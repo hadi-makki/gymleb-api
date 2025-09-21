@@ -551,4 +551,83 @@ export class PersonalTrainersController {
       endDate,
     );
   }
+
+  @Get('sessions-by-date/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.personalTrainers,
+  )
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get PT sessions filtered by date',
+    description:
+      'Get all PT sessions for a specific date with filtering options',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The PT sessions have been successfully retrieved by date.',
+  })
+  async getSessionsByDate(
+    @Param('gymId') gymId: string,
+    @Query('date') date: string,
+    @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
+  ) {
+    return await this.personalTrainersService.getSessionsByDate(
+      gymId,
+      date,
+      filterBy,
+    );
+  }
+
+  @Get('all-sessions-by-date/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get all PT sessions across all gyms by date (Super Admin only)',
+    description:
+      'Get all PT sessions for all gyms on a specific date with filtering options',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All PT sessions have been successfully retrieved by date.',
+  })
+  async getAllSessionsByDate(
+    @Query('date') date: string,
+    @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
+  ) {
+    return await this.personalTrainersService.getAllSessionsByDate(
+      date,
+      filterBy,
+    );
+  }
+
+  @Get('my-sessions-by-date/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.personalTrainers)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get my PT sessions by date',
+    description:
+      'Get PT sessions for the current trainer on a specific date with filtering options',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'My PT sessions have been successfully retrieved by date.',
+  })
+  async getMySessionsByDate(
+    @User() user: ManagerEntity,
+    @Param('gymId') gymId: string,
+    @Query('date') date: string,
+    @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
+  ) {
+    return await this.personalTrainersService.getMySessionsByDate(
+      user.id,
+      gymId,
+      date,
+      filterBy,
+    );
+  }
 }

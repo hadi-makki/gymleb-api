@@ -18,6 +18,7 @@ import { Permissions } from '../decorators/roles/role.enum';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
+import { RevenueEntity } from 'src/revenue/revenue.entity';
 
 @Entity('managers')
 export class ManagerEntity extends PgMainEntity {
@@ -86,6 +87,9 @@ export class ManagerEntity extends PgMainEntity {
 
   @Column('text', { nullable: true })
   description: string;
+
+  @OneToMany(() => RevenueEntity, (revenue) => revenue.createdBy)
+  createdRevenues: RevenueEntity[];
 
   static async isPasswordMatch(
     password: string,
