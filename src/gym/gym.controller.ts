@@ -117,7 +117,6 @@ export class GymController {
     description: 'The gym has been successfully retrieved.',
     type: GymEntity,
   })
-  @ValidateGymRelatedToManagerOrManagerInGym()
   findOne(@Param('gymId') id: string) {
     return this.gymService.findOne(id);
   }
