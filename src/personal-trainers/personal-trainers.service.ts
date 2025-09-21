@@ -687,6 +687,7 @@ export class PersonalTrainersService {
     trainerId: string,
     memberId: string,
     gymId: string,
+    status?: 'active' | 'inactive',
   ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
@@ -726,7 +727,8 @@ export class PersonalTrainersService {
           transactions: true,
         },
       });
-      return sessions.sort((a, b) => {
+
+      const sortedSessions = sessions.sort((a, b) => {
         if (a.sessionDate && b.sessionDate) {
           return (
             new Date(a.sessionDate).getTime() -
@@ -737,6 +739,27 @@ export class PersonalTrainersService {
         if (!a.sessionDate && b.sessionDate) return 1;
         return 0;
       });
+
+      // Apply status filtering if provided
+      if (status) {
+        return sortedSessions.filter((session) => {
+          const isCompleted =
+            session.sessionDate && new Date(session.sessionDate) <= new Date();
+          const isCancelled = session.isCancelled;
+
+          if (status === 'active') {
+            // Active: not completed and not cancelled
+            return !isCompleted && !isCancelled;
+          } else if (status === 'inactive') {
+            // Inactive: completed or cancelled
+            return isCompleted || isCancelled;
+          }
+
+          return true;
+        });
+      }
+
+      return sortedSessions;
     }
 
     // Multi-member: require sessions whose members set exactly matches targetIds
@@ -762,7 +785,7 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    return sessions.sort((a, b) => {
+    const sortedSessions = sessions.sort((a, b) => {
       // If both have dates, sort by date
       if (a.sessionDate && b.sessionDate) {
         return (
@@ -780,12 +803,34 @@ export class PersonalTrainersService {
       // If neither has date, maintain original order
       return 0;
     });
+
+    // Apply status filtering if provided
+    if (status) {
+      return sortedSessions.filter((session) => {
+        const isCompleted =
+          session.sessionDate && new Date(session.sessionDate) <= new Date();
+        const isCancelled = session.isCancelled;
+
+        if (status === 'active') {
+          // Active: not completed and not cancelled
+          return !isCompleted && !isCancelled;
+        } else if (status === 'inactive') {
+          // Inactive: completed or cancelled
+          return isCompleted || isCancelled;
+        }
+
+        return true;
+      });
+    }
+
+    return sortedSessions;
   }
 
   async getTrainerGroupSessions(
     trainerId: string,
     gymId: string,
     memberIds: string[],
+    status?: 'active' | 'inactive',
   ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
@@ -815,7 +860,7 @@ export class PersonalTrainersService {
       return key === targetKey;
     });
 
-    return filtered.sort((a, b) => {
+    const sortedSessions = filtered.sort((a, b) => {
       if (a.sessionDate && b.sessionDate) {
         return (
           new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
@@ -829,6 +874,27 @@ export class PersonalTrainersService {
       }
       return 0;
     });
+
+    // Apply status filtering if provided
+    if (status) {
+      return sortedSessions.filter((session) => {
+        const isCompleted =
+          session.sessionDate && new Date(session.sessionDate) <= new Date();
+        const isCancelled = session.isCancelled;
+
+        if (status === 'active') {
+          // Active: not completed and not cancelled
+          return !isCompleted && !isCancelled;
+        } else if (status === 'inactive') {
+          // Inactive: completed or cancelled
+          return isCompleted || isCancelled;
+        }
+
+        return true;
+      });
+    }
+
+    return sortedSessions;
   }
 
   async mySessions(gymId: string, personalTrainer: ManagerEntity) {

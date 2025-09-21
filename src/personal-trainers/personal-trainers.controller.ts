@@ -415,11 +415,13 @@ export class PersonalTrainersController {
     @Param('gymId') gymId: string,
     @Param('personalTrainerId') personalTrainerId: string,
     @Param('memberId') memberId: string,
+    @Query('status') status?: 'active' | 'inactive',
   ) {
     return this.personalTrainersService.getTrainerClientSessions(
       personalTrainerId,
       memberId,
       gymId,
+      status,
     );
   }
 
@@ -440,6 +442,7 @@ export class PersonalTrainersController {
     @Param('gymId') gymId: string,
     @Param('personalTrainerId') personalTrainerId: string,
     @Query('memberIds') memberIds: string,
+    @Query('status') status?: 'active' | 'inactive',
   ) {
     const ids = (memberIds || '')
       .split(',')
@@ -449,6 +452,7 @@ export class PersonalTrainersController {
       personalTrainerId,
       gymId,
       ids,
+      status,
     );
   }
 
