@@ -573,11 +573,13 @@ export class PersonalTrainersController {
     @Param('gymId') gymId: string,
     @Query('date') date: string,
     @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
+    @Query('trainerId') trainerId: string,
   ) {
     return await this.personalTrainersService.getSessionsByDate(
       gymId,
       date,
       filterBy,
+      trainerId,
     );
   }
 
@@ -597,10 +599,12 @@ export class PersonalTrainersController {
   async getAllSessionsByDate(
     @Query('date') date: string,
     @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
+    @Query('trainerId') trainerId: string,
   ) {
     return await this.personalTrainersService.getAllSessionsByDate(
       date,
       filterBy,
+      trainerId,
     );
   }
 

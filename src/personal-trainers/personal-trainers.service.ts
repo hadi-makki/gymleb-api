@@ -1134,6 +1134,7 @@ export class PersonalTrainersService {
     gymId: string,
     date: string,
     filterBy: 'time' | 'owner' = 'time',
+    trainerId: string,
   ) {
     const startDate = new Date(date);
     const endDate = new Date(date);
@@ -1142,6 +1143,7 @@ export class PersonalTrainersService {
     const sessions = await this.sessionEntity.find({
       where: {
         gym: { id: gymId },
+        ...(trainerId ? { personalTrainer: { id: trainerId } } : {}),
         sessionDate: Between(startDate, endDate),
       },
       relations: [
@@ -1165,6 +1167,7 @@ export class PersonalTrainersService {
   async getAllSessionsByDate(
     date: string,
     filterBy: 'time' | 'owner' = 'time',
+    trainerId: string,
   ) {
     const startDate = new Date(date);
     const endDate = new Date(date);
@@ -1172,6 +1175,7 @@ export class PersonalTrainersService {
 
     const sessions = await this.sessionEntity.find({
       where: {
+        ...(trainerId ? { personalTrainer: { id: trainerId } } : {}),
         sessionDate: Between(startDate, endDate),
       },
       relations: [
