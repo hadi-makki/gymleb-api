@@ -21,7 +21,6 @@ export class RevenueEntity extends PgMainEntity {
   @Column('decimal', { default: 0 })
   amount: number;
 
-  // timestamp with time zone
   @Column('timestamp without time zone', { nullable: true })
   date: Date;
 

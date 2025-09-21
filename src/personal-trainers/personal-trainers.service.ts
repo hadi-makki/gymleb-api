@@ -349,7 +349,7 @@ export class PersonalTrainersService {
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
         sessionPrice: createSessionDto.sessionPrice,
-        sessionDate: !setDateDone ? new Date(createSessionDto.date) : null,
+        sessionDate: !setDateDone ? createSessionDto.date : null,
       });
       const createdSession = await this.sessionEntity.save(createSessionModel);
       // Create a separate transaction per member for this session

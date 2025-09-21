@@ -18,7 +18,6 @@ export class ExpenseEntity extends PgMainEntity {
   @Column('int')
   amount: number;
 
-  // timestamp with time zone
   @Column('timestamp without time zone', { nullable: true })
   date: Date;
 

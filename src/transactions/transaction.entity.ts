@@ -57,11 +57,9 @@ export class TransactionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   subscriptionType: SubscriptionType;
 
-  // timestamp with time zone
   @Column('timestamp without time zone', { nullable: true })
   endDate: Date;
 
-  // timestamp with time zone
   @Column('timestamp without time zone', { nullable: true })
   startDate: Date;
 
@@ -133,7 +131,6 @@ export class TransactionEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isInvalidated: boolean;
 
-  // timestamp with time zone
   @Column('timestamp without time zone', { nullable: true })
   invalidatedAt: Date;
 
@@ -162,7 +159,6 @@ export class TransactionEntity extends PgMainEntity {
   })
   expense: ExpenseEntity;
 
-  // timestamp with time zone
   @Column('timestamp without time zone', { nullable: true })
   date: Date;
 
