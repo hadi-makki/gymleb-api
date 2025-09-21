@@ -270,6 +270,7 @@ export class GymController {
 
   @Patch('day/:gymId')
   @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: 'Update a gym day' })
   @ValidateGymRelatedToOwner()
   @ApiOkResponse({
@@ -295,6 +296,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym name' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
   updateGymName(
     @Param('gymId') gymId: string,
     @Body() updateGymNameDto: UpdateGymNameDto,
@@ -306,6 +308,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set gym finished page setup' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
   async setGymFinishedPageSetup(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
@@ -332,6 +335,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym note' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
   updateGymNote(
     @Param('gymId') gymId: string,
     @Body() updateGymNoteDto: UpdateGymNoteDto,
@@ -371,6 +375,7 @@ export class GymController {
   @Post('add-offer/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Add a gym offer' })
+  @Roles(Permissions.GymOwner)
   @ApiOkResponse({
     description: 'The gym offer has been successfully added.',
     type: GymEntity,
