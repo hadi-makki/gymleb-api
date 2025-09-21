@@ -130,13 +130,13 @@ export class PersonalTrainersService {
 
     // Update additional fields if provided
     const updateData: any = {};
-    if (createPersonalTrainerDto.description !== undefined) {
+    if (createPersonalTrainerDto.description) {
       updateData.description = createPersonalTrainerDto.description;
     }
-    if (createPersonalTrainerDto.shiftStartTime !== undefined) {
+    if (createPersonalTrainerDto.shiftStartTime) {
       updateData.shiftStartTime = createPersonalTrainerDto.shiftStartTime;
     }
-    if (createPersonalTrainerDto.shiftEndTime !== undefined) {
+    if (createPersonalTrainerDto.shiftEndTime) {
       updateData.shiftEndTime = createPersonalTrainerDto.shiftEndTime;
     }
 

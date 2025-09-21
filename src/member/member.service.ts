@@ -255,6 +255,7 @@ export class MemberService {
     gymId: string,
     image?: Express.Multer.File,
   ) {
+    console.log('this is the paid amount', createMemberDto.paidAmount);
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
     });
