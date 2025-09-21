@@ -57,10 +57,12 @@ export class TransactionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   subscriptionType: SubscriptionType;
 
-  @Column('timestamp with time zone', { nullable: true })
+  // timestamp with time zone
+  @Column('timestamp without time zone', { nullable: true })
   endDate: Date;
 
-  @Column('timestamp with time zone', { nullable: true })
+  // timestamp with time zone
+  @Column('timestamp without time zone', { nullable: true })
   startDate: Date;
 
   @Column('float')
@@ -131,7 +133,8 @@ export class TransactionEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isInvalidated: boolean;
 
-  @Column('timestamp with time zone', { nullable: true })
+  // timestamp with time zone
+  @Column('timestamp without time zone', { nullable: true })
   invalidatedAt: Date;
 
   @ManyToOne(() => ProductEntity, (product) => product.transactions, {
@@ -159,7 +162,8 @@ export class TransactionEntity extends PgMainEntity {
   })
   expense: ExpenseEntity;
 
-  @Column('timestamp with time zone', { nullable: true })
+  // timestamp with time zone
+  @Column('timestamp without time zone', { nullable: true })
   date: Date;
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.transactions, {

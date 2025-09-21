@@ -17,11 +17,17 @@ export class TokenEntity extends PgMainEntity {
   @Column({ unique: true, default: null })
   refreshToken: string;
 
-  @Column({ type: 'timestamp with time zone', default: null })
+  // timestamp with time zone
+  @Column({ type: 'timestamp without time zone', default: null })
   refreshExpirationDate: Date;
 
-  @Column({ type: 'timestamp with time zone', default: null })
+
+
+  // timestamp with time zone
+  @Column({ type: 'timestamp without time zone', default: null })
   accessExpirationDate: Date;
+
+ 
 
   @Column({ default: null })
   deviceId: string;

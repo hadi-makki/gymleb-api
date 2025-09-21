@@ -33,6 +33,12 @@ export class PgMainEntity {
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
 
+  @Column('timestamp without time zone', { nullable: true })
+  temporaryCreatedAt: Date;
+
   @UpdateDateColumn({ type: 'timestamp with time zone' })
   updatedAt: Date;
+
+  @Column('timestamp without time zone', { nullable: true })
+  temporaryUpdatedAt: Date;
 }

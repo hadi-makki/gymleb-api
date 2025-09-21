@@ -34,7 +34,8 @@ export class PTSessionEntity extends PgMainEntity {
   @RelationId((ptSession: PTSessionEntity) => ptSession.member)
   memberId: string | null;
 
-  @Column('timestamp with time zone', { nullable: true })
+  // timestamp with time zone
+  @Column('timestamp without time zone', { nullable: true })
   sessionDate: Date;
 
   @Column('boolean', { default: false })
@@ -43,7 +44,8 @@ export class PTSessionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   cancelledReason: string;
 
-  @Column('timestamp with time zone', { nullable: true })
+  // timestamp with time zone
+  @Column('timestamp without time zone', { nullable: true })
   cancelledAt: Date;
 
   @ManyToOne(() => GymEntity, (gym) => gym.ptSessions, {

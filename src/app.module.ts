@@ -47,6 +47,7 @@ import { AiChatModule } from './ai-chat/ai-chat.module';
 import { NotificationSettingsModule } from './notification-settings/notification-settings.module';
 import { ManagerNotificationSettingsModule } from './manager-notification-settings/manager-notification-settings.module';
 import { WhishTransactionsModule } from './whish-transactions/whish-transactions.module';
+import { DatabaseMigration } from './database.migration';
 
 @Module({
   imports: [
@@ -109,7 +110,7 @@ import { WhishTransactionsModule } from './whish-transactions/whish-transactions
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    // DatabaseMigration,
+    DatabaseMigration,
   ],
 })
 export class AppModule implements NestModule {
