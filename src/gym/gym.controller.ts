@@ -805,6 +805,7 @@ export class GymController {
   @ApiOperation({ summary: 'Update gym description' })
   @ApiOkResponse({ description: 'Gym description updated successfully' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
   async updateGymDescription(
     @Param('gymId') gymId: string,
     @Body() body: { description: string },
@@ -835,6 +836,7 @@ export class GymController {
   @ApiOperation({ summary: 'Update gym phone number' })
   @ApiOkResponse({ description: 'Gym phone number updated successfully' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
   async updateGymPhone(
     @Param('gymId') gymId: string,
     @Body() updateGymPhoneDto: UpdateGymPhoneDto,
