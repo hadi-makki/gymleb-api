@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -27,6 +27,8 @@ export class TokenService {
     @InjectRepository(ManagerEntity)
     private readonly managerRepository: Repository<ManagerEntity>,
   ) {}
+
+  private readonly logger = new Logger(TokenService.name);
 
   async generateAccessToken(
     userId: string,
@@ -227,6 +229,9 @@ export class TokenService {
     const tokenToUse = isMember ? memberToken : token;
 
     if (!tokenToUse) {
+      this.logger.warn(
+        `Missing auth cookie. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+      );
       throw new UnauthorizedException('Missing Authorization Header');
     }
 
@@ -241,8 +246,14 @@ export class TokenService {
         iat: number;
         exp: number;
       };
+      this.logger.debug(
+        `Access token verified. sub=${decodedJwt.sub} exp=${decodedJwt.exp}`,
+      );
     } catch (error) {
       // Token is invalid or expired
+      this.logger.warn(
+        `Access token verification failed. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'} error=${(error as Error)?.message}`,
+      );
       isTokenExpired = true;
     }
 
@@ -254,16 +265,25 @@ export class TokenService {
 
     if (!checkToken) {
       // Token not found in database
+      this.logger.warn(
+        `Access token not found in DB. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+      );
       isTokenExpired = true;
     } else if (
       differenceInHours(new Date(), checkToken.accessExpirationDate) > 0
     ) {
       // Check if token is expired by date
+      this.logger.warn(
+        `Access token expired by date. deviceId=${req.cookies?.deviceId || 'unknown'} accessExpirationDate=${checkToken.accessExpirationDate.toISOString()}`,
+      );
       isTokenExpired = true;
     }
 
     // If token is expired, try to refresh it
     if (isTokenExpired) {
+      this.logger.log(
+        `Attempting to refresh access token. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+      );
       const newToken = await this.refreshToken(
         tokenToUse,
         req.cookies.deviceId,
@@ -271,14 +291,21 @@ export class TokenService {
       );
       if (newToken) {
         // Return the new decoded JWT
-        return (await this.jwtService.verifyAsync(newToken, {
+        const refreshed = (await this.jwtService.verifyAsync(newToken, {
           secret: this.configService.get('JWT_ACCESS_SECRET'),
         })) as {
           sub: string;
           iat: number;
           exp: number;
         };
+        this.logger.log(
+          `Access token refreshed successfully. sub=${refreshed.sub} exp=${refreshed.exp}`,
+        );
+        return refreshed;
       } else {
+        this.logger.warn(
+          `Access token refresh failed. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+        );
         throw new UnauthorizedException('Unable to refresh token');
       }
     }
@@ -292,12 +319,18 @@ export class TokenService {
     res: Response,
   ): Promise<string | null> {
     try {
+      this.logger.debug(
+        `Refresh flow started. deviceId=${deviceId || 'unknown'}`,
+      );
       const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
         deviceId,
         token,
       );
 
       if (!checkToken) {
+        this.logger.warn(
+          `No token record found for device. deviceId=${deviceId || 'unknown'}`,
+        );
         return null;
       }
 
@@ -318,10 +351,16 @@ export class TokenService {
         if (
           differenceInHours(new Date(), checkToken.refreshExpirationDate) > 0
         ) {
+          this.logger.warn(
+            `Refresh token expired by date. deviceId=${deviceId || 'unknown'} refreshExpirationDate=${checkToken.refreshExpirationDate.toISOString()}`,
+          );
           return null;
         }
         const { accessToken, accessExpirationDate } =
           await this.generateAccessToken(decodedJwt.sub);
+        this.logger.debug(
+          `Generated new access token from refresh. sub=${decodedJwt.sub} exp=${accessExpirationDate.getTime() / 1000}`,
+        );
         checkToken.accessToken = accessToken;
         checkToken.accessExpirationDate = accessExpirationDate;
         await this.tokenRepository.save(checkToken);
@@ -329,12 +368,18 @@ export class TokenService {
         // Set the new token in cookies
         const cookieName = checkToken.member ? 'memberToken' : 'token';
         res.cookie(cookieName, accessToken, cookieOptions);
+        this.logger.debug(
+          `Set refreshed access token cookie. cookieName=${cookieName} deviceId=${deviceId || 'unknown'}`,
+        );
 
         return accessToken;
       }
       return null;
     } catch (error) {
       // Refresh token is also expired or invalid
+      this.logger.warn(
+        `Refresh flow failed. deviceId=${deviceId || 'unknown'} error=${(error as Error)?.message}`,
+      );
       return null;
     }
   }
