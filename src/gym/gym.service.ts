@@ -152,7 +152,7 @@ export class GymService {
 
     // Fetch all transactions for the gym in the specified range (defaults to current month)
     const allTransactions = await this.transactionModel.find({
-      where: { gym: { id: gym.id }, isPaid: true, ...dateFilter },
+      where: { gym: { id: gym.id }, status: PaymentStatus.PAID, ...dateFilter },
       relations: ['subscription', 'revenue', 'expense', 'ptSession'],
     });
 
@@ -162,7 +162,7 @@ export class GymService {
         gym: {
           id: gym.id,
         },
-        isPaid: true,
+        status: PaymentStatus.PAID,
 
         createdAt: Between(lastMonthStart, lastMonthEnd),
       },
@@ -175,7 +175,7 @@ export class GymService {
         gym: {
           id: gym.id,
         },
-        isPaid: true,
+        status: PaymentStatus.PAID,
         createdAt: MoreThanOrEqual(currentMonthStart),
       },
       relations: ['subscription', 'revenue', 'expense'],
@@ -687,7 +687,7 @@ export class GymService {
       where: {
         gym: { id: gym.id },
         createdAt: Between(lastMonthStart, lastMonthEnd),
-        isPaid: true,
+        status: PaymentStatus.PAID,
       },
 
       relations: ['subscription', 'revenue', 'expense'],
@@ -698,7 +698,7 @@ export class GymService {
       where: {
         gym: { id: gym.id },
         createdAt: MoreThanOrEqual(currentMonthStart),
-        isPaid: true,
+        status: PaymentStatus.PAID,
       },
       relations: ['subscription', 'revenue', 'expense'],
     });
@@ -1343,7 +1343,7 @@ export class GymService {
       where: {
         gym: { id: gym.id },
         createdAt: Between(startDate, endDate),
-        isPaid: true,
+        status: PaymentStatus.PAID,
       },
 
       relations: ['member'],

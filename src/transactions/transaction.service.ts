@@ -469,7 +469,7 @@ export class TransactionService {
       member: dto.member,
       paidAmount: dto.amount,
       gymsPTSessionPercentage: gymsPTSessionPercentage || 0,
-      status: !dto.willPayLater ? PaymentStatus.UNPAID : PaymentStatus.PAID,
+      status: dto.willPayLater ? PaymentStatus.UNPAID : PaymentStatus.PAID,
       // Use many-to-one relation so multiple transactions can link to the same session
       relatedPtSession: dto.ptSession,
       isTakingPtSessionsCut: dto.isTakingPtSessionsCut,
