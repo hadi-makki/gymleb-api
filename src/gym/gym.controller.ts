@@ -315,6 +315,26 @@ export class GymController {
     return await this.gymService.setGymFinishedPageSetup(user, gymId);
   }
 
+  @Patch('restrict-public-programs/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Toggle restrict public programs to active members',
+  })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ schema: { properties: { restrict: { type: 'boolean' } } } })
+  async setRestrictPublicPrograms(
+    @User() user: ManagerEntity,
+    @Param('gymId') gymId: string,
+    @Body('restrict') restrict: boolean,
+  ) {
+    return await this.gymService.setRestrictPublicPrograms(
+      user,
+      gymId,
+      restrict,
+    );
+  }
+
   @Patch('womens-times/:gymId')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner)

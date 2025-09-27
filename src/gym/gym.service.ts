@@ -483,6 +483,20 @@ export class GymService {
     return gym;
   }
 
+  async setRestrictPublicPrograms(
+    manager: ManagerEntity,
+    gymId: string,
+    restrict: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.restrictPublicProgramsToActiveMembers = !!restrict;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async setWomensTimes(
     gymId: string,
     womensTimes: { day: string; from: string; to: string }[],
@@ -2008,6 +2022,7 @@ export class GymService {
         'womensTimes',
         'offers',
         'showPersonalTrainers',
+        'restrictPublicProgramsToActiveMembers',
         'messagesLanguage',
         'createdAt',
         'updatedAt',
@@ -2045,6 +2060,7 @@ export class GymService {
         'womensTimes',
         'offers',
         'showPersonalTrainers',
+        'restrictPublicProgramsToActiveMembers',
         'messagesLanguage',
         'createdAt',
         'updatedAt',
@@ -2084,6 +2100,7 @@ export class GymService {
         'womensTimes',
         'offers',
         'showPersonalTrainers',
+        'restrictPublicProgramsToActiveMembers',
         'messagesLanguage',
         'createdAt',
         'updatedAt',
@@ -2119,6 +2136,8 @@ export class GymService {
       womensTimes: gym.womensTimes,
       offers: gym.offers,
       showPersonalTrainers: gym.showPersonalTrainers,
+      restrictPublicProgramsToActiveMembers:
+        gym.restrictPublicProgramsToActiveMembers,
       messagesLanguage: gym.messagesLanguage,
       createdAt: gym.createdAt.toISOString(),
       updatedAt: gym.updatedAt.toISOString(),

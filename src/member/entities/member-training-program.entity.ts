@@ -1,7 +1,17 @@
 import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
 import { MemberEntity } from './member.entity';
 import { PgMainEntity } from 'src/main-classes/mainEntity';
-import { DayOfWeek } from './member-attending-days.entity';
+
+export enum ProgramKey {
+  traps = 'traps',
+  chest = 'chest',
+  shoulders = 'shoulders',
+  back = 'back',
+  biceps = 'biceps',
+  triceps = 'triceps',
+  legs = 'legs',
+  abs = 'abs',
+}
 
 @Entity('member_training_programs')
 export class MemberTrainingProgramEntity extends PgMainEntity {
@@ -15,8 +25,8 @@ export class MemberTrainingProgramEntity extends PgMainEntity {
   )
   memberId: string;
 
-  @Column('text')
-  dayOfWeek: DayOfWeek;
+  @Column({ type: 'text' })
+  programKey: ProgramKey;
 
   @Column('text')
   name: string;

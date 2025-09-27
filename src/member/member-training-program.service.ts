@@ -10,7 +10,7 @@ import { MemberEntity } from './entities/member.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { CreateTrainingProgramDto } from './dto/create-training-program.dto';
 import { UpdateTrainingProgramDto } from './dto/update-training-program.dto';
-import { DayOfWeek } from './entities/member-attending-days.entity';
+import { ProgramKey } from './entities/member-training-program.entity';
 import { isUUID } from 'class-validator';
 
 @Injectable()
@@ -43,11 +43,11 @@ export class MemberTrainingProgramService {
       throw new NotFoundException('Member not found');
     }
 
-    // Check if training program already exists for this day
+    // Check if training program already exists for this key
     const existingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        dayOfWeek: createTrainingProgramDto.dayOfWeek,
+        programKey: createTrainingProgramDto.programKey,
       },
     });
 
@@ -68,7 +68,7 @@ export class MemberTrainingProgramService {
       // Create new program
       const newProgram = this.trainingProgramRepository.create({
         member: { id: memberId },
-        dayOfWeek: createTrainingProgramDto.dayOfWeek,
+        programKey: createTrainingProgramDto.programKey,
         name: createTrainingProgramDto.name,
         exercises: createTrainingProgramDto.exercises.map((exercise) => ({
           name: exercise.name,
@@ -104,31 +104,18 @@ export class MemberTrainingProgramService {
     const trainingPrograms = await this.trainingProgramRepository.find({
       where: { member: { id: memberId } },
       order: {
-        dayOfWeek: 'ASC',
+        programKey: 'ASC',
       },
     });
 
-    // Create a map for all days of the week
-    const allDays = Object.values(DayOfWeek);
-    const programsMap = new Map();
-
-    trainingPrograms.forEach((program) => {
-      programsMap.set(program.dayOfWeek, program);
-    });
-
-    // Return programs organized by day
-    const result = allDays.map((day) => ({
-      dayOfWeek: day,
-      program: programsMap.get(day) || null,
-    }));
-
-    return result;
+    // Return flat list of named programs
+    return trainingPrograms;
   }
 
-  async getTrainingProgramByDay(
+  async getTrainingProgramByKey(
     memberId: string,
     gymId: string,
-    dayOfWeek: string,
+    programKey: string,
     manager: ManagerEntity | null,
   ) {
     // Verify member exists and belongs to the gym
@@ -145,15 +132,10 @@ export class MemberTrainingProgramService {
       throw new NotFoundException('Member not found');
     }
 
-    // Validate day of week
-    if (!Object.values(DayOfWeek).includes(dayOfWeek as DayOfWeek)) {
-      throw new NotFoundException('Invalid day of week');
-    }
-
     const trainingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        dayOfWeek: dayOfWeek as DayOfWeek,
+        programKey: programKey as ProgramKey,
       },
     });
 
@@ -163,7 +145,7 @@ export class MemberTrainingProgramService {
   async updateTrainingProgram(
     memberId: string,
     gymId: string,
-    dayOfWeek: string,
+    programKey: string,
     updateTrainingProgramDto: UpdateTrainingProgramDto,
     manager: ManagerEntity,
   ) {
@@ -181,20 +163,15 @@ export class MemberTrainingProgramService {
       throw new NotFoundException('Member not found');
     }
 
-    // Validate day of week
-    if (!Object.values(DayOfWeek).includes(dayOfWeek as DayOfWeek)) {
-      throw new NotFoundException('Invalid day of week');
-    }
-
     const trainingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        dayOfWeek: dayOfWeek as DayOfWeek,
+        programKey: programKey as ProgramKey,
       },
     });
 
     if (!trainingProgram) {
-      throw new NotFoundException('Training program not found for this day');
+      throw new NotFoundException('Training program not found for this key');
     }
 
     trainingProgram.name = updateTrainingProgramDto.name;
@@ -214,7 +191,7 @@ export class MemberTrainingProgramService {
   async deleteTrainingProgram(
     memberId: string,
     gymId: string,
-    dayOfWeek: string,
+    programKey: string,
     manager: ManagerEntity,
   ) {
     // Verify member exists and belongs to the gym
@@ -231,20 +208,15 @@ export class MemberTrainingProgramService {
       throw new NotFoundException('Member not found');
     }
 
-    // Validate day of week
-    if (!Object.values(DayOfWeek).includes(dayOfWeek as DayOfWeek)) {
-      throw new NotFoundException('Invalid day of week');
-    }
-
     const trainingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        dayOfWeek: dayOfWeek as DayOfWeek,
+        programKey: programKey as ProgramKey,
       },
     });
 
     if (!trainingProgram) {
-      throw new NotFoundException('Training program not found for this day');
+      throw new NotFoundException('Training program not found for this key');
     }
 
     await this.trainingProgramRepository.remove(trainingProgram);

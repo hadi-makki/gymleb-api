@@ -114,6 +114,9 @@ export class GymEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   showPersonalTrainers: boolean;
 
+  @Column('boolean', { default: false })
+  restrictPublicProgramsToActiveMembers: boolean;
+
   @OneToMany(() => ProductEntity, (product) => product.gym)
   products: ProductEntity[];
 

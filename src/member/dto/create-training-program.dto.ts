@@ -7,7 +7,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { DayOfWeek } from '../entities/member-attending-days.entity';
+import { ProgramKey } from '../entities/member-training-program.entity';
 
 export class SetDto {
   @IsNotEmpty()
@@ -29,8 +29,8 @@ export class ExerciseDto {
 }
 
 export class CreateTrainingProgramDto {
-  @IsEnum(DayOfWeek)
-  dayOfWeek: DayOfWeek;
+  @IsEnum(ProgramKey)
+  programKey: ProgramKey;
 
   @IsString()
   @IsNotEmpty()

@@ -74,6 +74,9 @@ export class PublicGymDto {
   showPersonalTrainers: boolean;
 
   @ApiProperty()
+  restrictPublicProgramsToActiveMembers: boolean;
+
+  @ApiProperty()
   messagesLanguage: MessageLanguage;
 
   @ApiProperty()

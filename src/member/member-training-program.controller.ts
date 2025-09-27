@@ -38,7 +38,7 @@ export class MemberTrainingProgramController {
   @ApiOperation({
     summary: 'Create or update training program for a member',
     description:
-      'Create a new training program for a specific day or update existing one',
+      'Create a new named training program or update an existing one',
   })
   @ApiResponse({
     status: 201,
@@ -83,15 +83,14 @@ export class MemberTrainingProgramController {
     );
   }
 
-  @Get('/manager/:gymId/:memberId/:dayOfWeek')
+  @Get('/manager/:gymId/:memberId/:programKey')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   @ValidateMemberRelatedToGym()
   @ValidateGymRelatedToOwner()
   @ApiOperation({
-    summary: 'Get training program for a specific day',
-    description:
-      'Get training program for a specific member and day of the week',
+    summary: 'Get training program by key',
+    description: 'Get training program for a specific member and program key',
   })
   @ApiResponse({
     status: 200,
@@ -100,26 +99,26 @@ export class MemberTrainingProgramController {
   async getTrainingProgramByDay(
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
-    @Param('dayOfWeek') dayOfWeek: string,
+    @Param('programKey') programKey: string,
     @User() manager: ManagerEntity,
   ) {
-    return await this.memberTrainingProgramService.getTrainingProgramByDay(
+    return await this.memberTrainingProgramService.getTrainingProgramByKey(
       memberId,
       gymId,
-      dayOfWeek,
+      programKey,
       manager,
     );
   }
 
-  @Patch('/manager/:gymId/:memberId/:dayOfWeek')
+  @Patch('/manager/:gymId/:memberId/:programKey')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   @ValidateMemberRelatedToGym()
   @ValidateGymRelatedToOwner()
   @ApiOperation({
-    summary: 'Update training program for a specific day',
+    summary: 'Update training program by key',
     description:
-      'Update training program for a specific member and day of the week',
+      'Update training program for a specific member and program key',
   })
   @ApiResponse({
     status: 200,
@@ -128,28 +127,28 @@ export class MemberTrainingProgramController {
   async updateTrainingProgram(
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
-    @Param('dayOfWeek') dayOfWeek: string,
+    @Param('programKey') programKey: string,
     @Body() updateTrainingProgramDto: UpdateTrainingProgramDto,
     @User() manager: ManagerEntity,
   ) {
     return await this.memberTrainingProgramService.updateTrainingProgram(
       memberId,
       gymId,
-      dayOfWeek,
+      programKey,
       updateTrainingProgramDto,
       manager,
     );
   }
 
-  @Delete('/manager/:gymId/:memberId/:dayOfWeek')
+  @Delete('/manager/:gymId/:memberId/:programKey')
   @Roles(Permissions.GymOwner, Permissions.members)
   @UseGuards(ManagerAuthGuard)
   @ValidateMemberRelatedToGym()
   @ValidateGymRelatedToOwner()
   @ApiOperation({
-    summary: 'Delete training program for a specific day',
+    summary: 'Delete training program by key',
     description:
-      'Delete training program for a specific member and day of the week',
+      'Delete training program for a specific member and program key',
   })
   @ApiResponse({
     status: 200,
@@ -158,13 +157,13 @@ export class MemberTrainingProgramController {
   async deleteTrainingProgram(
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
-    @Param('dayOfWeek') dayOfWeek: string,
+    @Param('programKey') programKey: string,
     @User() manager: ManagerEntity,
   ) {
     return await this.memberTrainingProgramService.deleteTrainingProgram(
       memberId,
       gymId,
-      dayOfWeek,
+      programKey,
       manager,
     );
   }
@@ -191,12 +190,12 @@ export class MemberTrainingProgramController {
     );
   }
 
-  @Get('member/:gymId/:dayOfWeek')
+  @Get('member/:gymId/:programKey')
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Get my training program for a specific day',
+    summary: 'Get my training program by key',
     description:
-      'Get training program for a specific day for the authenticated member',
+      'Get training program for a specific key for the authenticated member',
   })
   @ApiResponse({
     status: 200,
@@ -205,12 +204,12 @@ export class MemberTrainingProgramController {
   async getMyTrainingProgramByDay(
     @User() member: MemberEntity,
     @Param('gymId') gymId: string,
-    @Param('dayOfWeek') dayOfWeek: string,
+    @Param('programKey') programKey: string,
   ) {
-    return await this.memberTrainingProgramService.getTrainingProgramByDay(
+    return await this.memberTrainingProgramService.getTrainingProgramByKey(
       member.id,
       gymId,
-      dayOfWeek,
+      programKey,
       null, // No manager needed for member access
     );
   }
@@ -239,12 +238,12 @@ export class MemberTrainingProgramController {
     );
   }
 
-  @Patch('member/:gymId/:dayOfWeek')
+  @Patch('member/:gymId/:programKey')
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Update my training program for a specific day',
+    summary: 'Update my training program by key',
     description:
-      'Update training program for a specific day for the authenticated member',
+      'Update training program for a specific key for the authenticated member',
   })
   @ApiResponse({
     status: 200,
@@ -253,24 +252,24 @@ export class MemberTrainingProgramController {
   async updateMyTrainingProgram(
     @User() member: MemberEntity,
     @Param('gymId') gymId: string,
-    @Param('dayOfWeek') dayOfWeek: string,
+    @Param('programKey') programKey: string,
     @Body() updateTrainingProgramDto: UpdateTrainingProgramDto,
   ) {
     return await this.memberTrainingProgramService.updateTrainingProgram(
       member.id,
       gymId,
-      dayOfWeek,
+      programKey,
       updateTrainingProgramDto,
       null, // No manager needed for member access
     );
   }
 
-  @Delete('member/:gymId/:dayOfWeek')
+  @Delete('member/:gymId/:programKey')
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Delete my training program for a specific day',
+    summary: 'Delete my training program by key',
     description:
-      'Delete training program for a specific day for the authenticated member',
+      'Delete training program for a specific key for the authenticated member',
   })
   @ApiResponse({
     status: 200,
@@ -279,12 +278,12 @@ export class MemberTrainingProgramController {
   async deleteMyTrainingProgram(
     @User() member: MemberEntity,
     @Param('gymId') gymId: string,
-    @Param('dayOfWeek') dayOfWeek: string,
+    @Param('programKey') programKey: string,
   ) {
     return await this.memberTrainingProgramService.deleteTrainingProgram(
       member.id,
       gymId,
-      dayOfWeek,
+      programKey,
       null, // No manager needed for member access
     );
   }
