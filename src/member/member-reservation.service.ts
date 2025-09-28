@@ -62,6 +62,20 @@ export class MemberReservationService {
       throw new NotFoundException('Member not found');
     }
 
+    // Enforce per-member allowed reservations
+    // If allowedReservations is 0, member cannot reserve
+    if (member.allowedReservations <= 0) {
+      throw new BadRequestException(
+        'Your current plan does not allow reservations',
+      );
+    }
+
+    if (member.usedReservations >= member.allowedReservations) {
+      throw new BadRequestException(
+        'You have reached your reservation limit for this subscription',
+      );
+    }
+
     // Enforce 1 active reservation per member per day (replace if exists)
     const reservationDateOnly = new Date(createReservationDto.reservationDate);
 
@@ -131,7 +145,13 @@ export class MemberReservationService {
       notes: createReservationDto.notes,
     });
 
-    return this.reservationRepository.save(reservation);
+    const saved = await this.reservationRepository.save(reservation);
+
+    // Increment usedReservations after successful reservation creation
+    member.usedReservations = (member.usedReservations || 0) + 1;
+    await this.memberRepository.save(member);
+
+    return saved;
   }
 
   async getAvailableSlots(
@@ -217,7 +237,10 @@ export class MemberReservationService {
         gym: { ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }) },
         isActive: true,
       },
-      relations: ['gym'],
+      relations: {
+        gym: true,
+        member: true,
+      },
       order: { reservationDate: 'ASC', startTime: 'ASC' },
     });
   }
@@ -236,6 +259,15 @@ export class MemberReservationService {
 
     reservation.isActive = false;
     await this.reservationRepository.save(reservation);
+
+    // Decrement used reservations count
+    const member = await this.memberRepository.findOne({
+      where: { id: memberId },
+    });
+    if (member) {
+      member.usedReservations = Math.max(0, (member.usedReservations || 0) - 1);
+      await this.memberRepository.save(member);
+    }
   }
 
   async getGymReservations(

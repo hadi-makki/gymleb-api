@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { SubscriptionType } from '../entities/subscription.entity';
 export class CreateSubscriptionDto {
   @IsString()
@@ -12,4 +12,9 @@ export class CreateSubscriptionDto {
 
   @IsNumber()
   duration: number;
+
+  // Optional: omitted defaults to 0 (cannot reserve)
+  @IsOptional()
+  @IsNumber()
+  allowedReservations?: number;
 }

@@ -48,6 +48,8 @@ export class ReturnUserDto {
   isWelcomeMessageSent?: boolean;
   notificationSetting?: NotificationSettingEntity;
   phoneNumberISOCode?: string;
+  allowedReservations?: number | null;
+  usedReservations?: number;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

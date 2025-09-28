@@ -334,6 +334,8 @@ export class MemberService {
       profileImage: member.profileImage,
       attendingDays: attendingDays,
       reservations,
+      allowedReservations: member.allowedReservations,
+      usedReservations: member.usedReservations,
       trainingLevel: member.trainingLevel,
       trainingGoals: member.trainingGoals,
       trainingPreferences: member.trainingPreferences,
@@ -425,6 +427,8 @@ export class MemberService {
       phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
       gym: gym,
       subscription: subscription,
+      allowedReservations: subscription.allowedReservations ?? 0,
+      usedReservations: 0,
     });
     const member = await this.memberModel.save(createMemberModel);
     // Optional image upload and assignment
@@ -919,6 +923,9 @@ export class MemberService {
 
     member.transactions.push(createSubscriptionInstance);
     member.isNotified = false;
+    // Reset reservations counters on renewal
+    member.allowedReservations = checkSubscription.allowedReservations ?? 0;
+    member.usedReservations = 0;
 
     await this.memberModel.save(member);
 
@@ -987,6 +994,9 @@ export class MemberService {
     // Reset birthday handled when adding a new subscription instance
     member.isBirthdayHandled = false;
     member.subscription = getSubscription;
+    // Reset reservations counters when adding a new subscription instance
+    member.allowedReservations = getSubscription.allowedReservations ?? 0;
+    member.usedReservations = 0;
     await this.memberModel.save(member);
 
     console.log('forFree', forFree);
@@ -1272,6 +1282,46 @@ export class MemberService {
 
   async logout(member: MemberEntity, deviceId: string) {
     await this.tokenService.deleteTokensByUserId(member.id, deviceId);
+  }
+
+  async increaseMemberAllowedReservations(
+    memberId: string,
+    gymId: string,
+    amount: number,
+  ) {
+    const checkGym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new BadRequestException('Amount must be a positive integer');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    if (
+      member.allowedReservations === null ||
+      member.allowedReservations === undefined
+    ) {
+      member.allowedReservations = amount;
+    } else {
+      member.allowedReservations += amount;
+    }
+
+    await this.memberModel.save(member);
+    return {
+      message: 'Member reservations allowance increased successfully',
+      allowedReservations: member.allowedReservations,
+      usedReservations: member.usedReservations,
+    };
   }
 
   async invalidateMemberSubscription(

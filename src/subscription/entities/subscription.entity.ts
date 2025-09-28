@@ -26,6 +26,11 @@ export class SubscriptionEntity extends PgMainEntity {
   @Column('int')
   duration: number;
 
+  // Number of reservations allowed for members on this subscription.
+  // 0 means member cannot make reservations.
+  @Column('int', { default: 0, nullable: true })
+  allowedReservations: number;
+
   @Column('text', { nullable: true })
   user: string;
 

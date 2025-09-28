@@ -215,4 +215,12 @@ export class MemberEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isBirthdayHandled: boolean;
+
+  // Allowed number of reservations for this member (0 = cannot reserve)
+  @Column('int', { default: 0, nullable: true })
+  allowedReservations: number;
+
+  // Number of reservations used within the current subscription period
+  @Column('int', { default: 0, nullable: true })
+  usedReservations: number;
 }

@@ -39,6 +39,7 @@ import { LoginMemberDto } from './dto/login-member.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { AddSubscriptionToMemberDto } from './dto/add-subscription-to-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { IncreaseReservationsDto } from './dto/increase-reservations.dto';
 import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 import { SignupMemberDto } from './dto/signup-member.dto';
@@ -170,6 +171,23 @@ export class MemberController {
     @Param('gymId') gymId: string,
   ) {
     return await this.memberService.update(memberId, updateMemberDto, gymId);
+  }
+
+  @Post(':gymId/:memberId/increase-reservations')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  async increaseReservations(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+    @Body() body: IncreaseReservationsDto,
+  ) {
+    return await this.memberService.increaseMemberAllowedReservations(
+      memberId,
+      gymId,
+      body.amount,
+    );
   }
 
   @Post(':gymId/:memberId/delete')

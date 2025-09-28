@@ -46,6 +46,7 @@ export class SubscriptionService {
       price: createSubscriptionDto.price,
       gym: gym,
       duration: subscriptionDuration,
+      allowedReservations: createSubscriptionDto.allowedReservations ?? 0,
     });
     const subscription = await this.subscriptionModel.save(
       createSubscriptionModel,
