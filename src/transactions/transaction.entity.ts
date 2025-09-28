@@ -241,4 +241,10 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isNotified: boolean;
+
+  @Column('boolean', { default: false })
+  forFree: boolean;
+
+  @Column('boolean', { default: false })
+  isBirthdaySubscription: boolean;
 }

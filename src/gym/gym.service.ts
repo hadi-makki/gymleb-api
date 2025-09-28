@@ -575,6 +575,18 @@ export class GymService {
     return gym;
   }
 
+  async addGymBirthdayMessageNotified(gymId: string, number: number) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.birthdayMessageNotified = (gym.birthdayMessageNotified || 0) + number;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async getGymByManager(manager: ManagerEntity) {
     const gym = await this.gymModel.findOne({
       where: { owner: { id: manager.id } },
@@ -1608,6 +1620,29 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
     gym.allowUserResevations = allowUserResevations;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
+  async updateBirthdayAutomationSettings(
+    gymId: string,
+    settings: {
+      enableBirthdayAutomation: boolean;
+      sendBirthdayMessage: boolean;
+      grantBirthdaySubscription: boolean;
+      birthdaySubscriptionId?: string | null;
+    },
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.enableBirthdayAutomation = settings.enableBirthdayAutomation;
+    gym.sendBirthdayMessage = settings.sendBirthdayMessage;
+    gym.grantBirthdaySubscription = settings.grantBirthdaySubscription;
+    gym.birthdaySubscriptionId = settings.birthdaySubscriptionId || null;
+
     await this.gymModel.save(gym);
     return gym;
   }

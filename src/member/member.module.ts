@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionModule } from '../transactions/transaction.module';
 import { MemberController } from './member.controller';

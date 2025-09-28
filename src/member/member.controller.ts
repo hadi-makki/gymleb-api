@@ -228,16 +228,16 @@ export class MemberController {
     @Body() addSubscriptionDto: AddSubscriptionToMemberDto,
     @Param('gymId') gymId: string,
   ) {
-    return await this.memberService.addSubscriptionToMember(
+    return await this.memberService.addSubscriptionToMember({
       memberId,
-      addSubscriptionDto.subscriptionId,
-      gymId,
-      addSubscriptionDto.giveFullDay,
-      addSubscriptionDto.willPayLater,
-      addSubscriptionDto.startDate,
-      addSubscriptionDto.endDate,
-      addSubscriptionDto.paidAmount,
-    );
+      subscriptionId: addSubscriptionDto.subscriptionId,
+      gymId: gymId,
+      giveFullDay: addSubscriptionDto.giveFullDay,
+      willPayLater: addSubscriptionDto.willPayLater,
+      startDate: addSubscriptionDto.startDate,
+      endDate: addSubscriptionDto.endDate,
+      paidAmount: addSubscriptionDto.paidAmount,
+    });
   }
 
   @Get('expired/:gymId')

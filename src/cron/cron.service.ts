@@ -7,6 +7,7 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { Repository } from 'typeorm';
 import { MemberService } from '../member/member.service';
 import { TwilioService } from '../twilio/twilio.service';
+import { addDays } from 'date-fns';
 
 @Injectable()
 export class CronService {
@@ -38,4 +39,18 @@ export class CronService {
   // async notifyExpiredMembersReminder() {
   //   await this.memberService.notifyMembersWithExpiringSubscriptionsReminder();
   // }
+
+  @Cron('0 9 * * *', {
+    name: 'birthday-automation',
+    timeZone: 'Asia/Beirut',
+  })
+  async processBirthdays() {
+    const gyms = await this.gymModel.find({
+      where: { enableBirthdayAutomation: true },
+      relations: { ownerSubscriptionType: true },
+    });
+    for (const gym of gyms) {
+      await this.memberService.processBirthdayAutomationForGym(gym);
+    }
+  }
 }

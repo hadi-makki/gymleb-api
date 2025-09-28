@@ -84,6 +84,12 @@ export class TransactionService {
       }
     }
 
+    console.log(
+      'this is the member in createSubscriptionInstance',
+      paymentDetails.member,
+    );
+    const forFree =
+      paymentDetails.forFree || paymentDetails.isBirthdaySubscription;
     const newTransaction = this.transactionModel.create({
       title: paymentDetails.subscription.title,
       type: TransactionType.SUBSCRIPTION,
@@ -91,17 +97,22 @@ export class TransactionService {
       gym: paymentDetails.gym,
       subscription: paymentDetails.subscription,
       endDate: endDate,
-      paidAmount: paymentDetails.paidAmount || paymentDetails.amount,
-      originalAmount: paymentDetails.amount,
+      paidAmount: forFree
+        ? 0
+        : paymentDetails.paidAmount || paymentDetails.amount,
+      originalAmount: forFree ? 0 : paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
-      status:
-        paymentDetails.paidAmount < paymentDetails.amount
+      status: forFree
+        ? PaymentStatus.PAID
+        : paymentDetails.paidAmount < paymentDetails.amount
           ? PaymentStatus.PARTIALLY_PAID
           : paymentDetails.willPayLater
             ? PaymentStatus.UNPAID
             : PaymentStatus.PAID,
       willPayLater: paymentDetails.willPayLater,
+      forFree: forFree,
+      isBirthdaySubscription: paymentDetails.isBirthdaySubscription,
     });
     const createdTransaction = await this.transactionModel.save(newTransaction);
     return createdTransaction;

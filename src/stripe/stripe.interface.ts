@@ -20,6 +20,10 @@ export interface PaymentDetails {
   willPayLater?: boolean;
 
   paidAmount?: number;
+
+  forFree?: boolean;
+
+  isBirthdaySubscription?: boolean;
 }
 
 export interface GooglePaymentsDetails {

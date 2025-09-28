@@ -44,6 +44,17 @@ import { UpdateGymNoteDto } from './dto/update-note.dto';
 import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
+import { UpdateShowPersonalTrainersDto } from './dto/update-show-personal-trainers.dto';
+import { UpdateAllowUserSignupDto } from './dto/update-allow-user-signup.dto';
+import { UpdateBirthdayAutomationDto } from './dto/update-birthday-automation.dto';
+import { UpdateAllowUserReservationsDto } from './dto/update-allow-user-reservations.dto';
+import { UpdateMaxReservationsPerSessionDto } from './dto/update-max-reservations-per-session.dto';
+import { UpdateSessionTimeDto } from './dto/update-session-time.dto';
+import { UpdateWomensTimesDto } from './dto/update-womens-times.dto';
+import { UpdateGymDescriptionDto } from './dto/update-gym-description.dto';
+import { UpdateWelcomeMessageAutomationDto } from './dto/update-welcome-message-automation.dto';
+import { UpdateRestrictPublicProgramsDto } from './dto/update-restrict-public-programs.dto';
+import { BulkDeleteTransactionsDto } from './dto/bulk-delete-transactions.dto';
 import { GymEntity } from './entities/gym.entity';
 import { GymService } from './gym.service';
 
@@ -322,16 +333,16 @@ export class GymController {
   })
   @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner)
-  @ApiBody({ schema: { properties: { restrict: { type: 'boolean' } } } })
+  @ApiBody({ type: UpdateRestrictPublicProgramsDto })
   async setRestrictPublicPrograms(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
-    @Body('restrict') restrict: boolean,
+    @Body() updateRestrictPublicProgramsDto: UpdateRestrictPublicProgramsDto,
   ) {
     return await this.gymService.setRestrictPublicPrograms(
       user,
       gymId,
-      restrict,
+      updateRestrictPublicProgramsDto.restrict,
     );
   }
 
@@ -340,14 +351,15 @@ export class GymController {
   @Roles(Permissions.GymOwner)
   @ApiOperation({ summary: "Update women's-only times" })
   @ValidateGymRelatedToOwner()
+  @ApiBody({ type: UpdateWomensTimesDto })
   async setWomensTimes(
     @Param('gymId') gymId: string,
-    @Body()
-    body: {
-      womensTimes: { day: string; from: string; to: string }[];
-    },
+    @Body() updateWomensTimesDto: UpdateWomensTimesDto,
   ) {
-    return await this.gymService.setWomensTimes(gymId, body.womensTimes || []);
+    return await this.gymService.setWomensTimes(
+      gymId,
+      updateWomensTimesDto.womensTimes || [],
+    );
   }
 
   @Patch('update/note/:gymId')
@@ -508,8 +520,13 @@ export class GymController {
   })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
-  bulkDeleteTransactions(@Body() body: { transactionIds: string[] }) {
-    return this.gymService.bulkDeleteTransactions(body.transactionIds);
+  @ApiBody({ type: BulkDeleteTransactionsDto })
+  bulkDeleteTransactions(
+    @Body() bulkDeleteTransactionsDto: BulkDeleteTransactionsDto,
+  ) {
+    return this.gymService.bulkDeleteTransactions(
+      bulkDeleteTransactionsDto.transactionIds,
+    );
   }
 
   @Get('admin/graphs/revenue/:gymId')
@@ -628,13 +645,15 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym show personal trainers setting' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateShowPersonalTrainersDto })
   updateShowPersonalTrainers(
     @Param('gymId') gymId: string,
-    @Body() body: { showPersonalTrainers: boolean },
+    @Body() updateShowPersonalTrainersDto: UpdateShowPersonalTrainersDto,
   ) {
     return this.gymService.updateShowPersonalTrainers(
       gymId,
-      body.showPersonalTrainers,
+      updateShowPersonalTrainersDto.showPersonalTrainers,
     );
   }
 
@@ -642,24 +661,47 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym allow user signup setting' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateAllowUserSignupDto })
   updateAllowUserSignUp(
     @Param('gymId') gymId: string,
-    @Body() body: { allowUserSignUp: boolean },
+    @Body() updateAllowUserSignupDto: UpdateAllowUserSignupDto,
   ) {
-    return this.gymService.updateAllowUserSignUp(gymId, body.allowUserSignUp);
+    return this.gymService.updateAllowUserSignUp(
+      gymId,
+      updateAllowUserSignupDto.allowUserSignUp,
+    );
+  }
+
+  @Patch('birthday-automation/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym birthday automation settings' })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateBirthdayAutomationDto })
+  updateBirthdayAutomation(
+    @Param('gymId') gymId: string,
+    @Body() updateBirthdayAutomationDto: UpdateBirthdayAutomationDto,
+  ) {
+    return this.gymService.updateBirthdayAutomationSettings(
+      gymId,
+      updateBirthdayAutomationDto,
+    );
   }
 
   @Patch('allow-user-reservations/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym allow user reservations setting' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateAllowUserReservationsDto })
   updateAllowUserReservations(
     @Param('gymId') gymId: string,
-    @Body() body: { allowUserResevations: boolean },
+    @Body() updateAllowUserReservationsDto: UpdateAllowUserReservationsDto,
   ) {
     return this.gymService.updateAllowUserReservations(
       gymId,
-      body.allowUserResevations,
+      updateAllowUserReservationsDto.allowUserResevations,
     );
   }
 
@@ -667,13 +709,16 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update max reservations allowed per session' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateMaxReservationsPerSessionDto })
   updateMaxReservationsPerSession(
     @Param('gymId') gymId: string,
-    @Body() body: { allowedUserResevationsPerSession: number },
+    @Body()
+    updateMaxReservationsPerSessionDto: UpdateMaxReservationsPerSessionDto,
   ) {
     return this.gymService.updateMaxReservationsPerSession(
       gymId,
-      body.allowedUserResevationsPerSession,
+      updateMaxReservationsPerSessionDto.allowedUserResevationsPerSession,
     );
   }
 
@@ -681,13 +726,15 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym session time in hours (0.25 steps)' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateSessionTimeDto })
   updateSessionTime(
     @Param('gymId') gymId: string,
-    @Body() body: { sessionTimeInHours: number },
+    @Body() updateSessionTimeDto: UpdateSessionTimeDto,
   ) {
     return this.gymService.updateSessionTimeInHours(
       gymId,
-      body.sessionTimeInHours,
+      updateSessionTimeDto.sessionTimeInHours,
     );
   }
 
@@ -825,11 +872,15 @@ export class GymController {
   @ApiOkResponse({ description: 'Gym description updated successfully' })
   @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateGymDescriptionDto })
   async updateGymDescription(
     @Param('gymId') gymId: string,
-    @Body() body: { description: string },
+    @Body() updateGymDescriptionDto: UpdateGymDescriptionDto,
   ) {
-    return await this.gymService.updateGymDescription(gymId, body.description);
+    return await this.gymService.updateGymDescription(
+      gymId,
+      updateGymDescriptionDto.description,
+    );
   }
 
   @Patch('update/welcome-message-automation/:gymId')
@@ -840,13 +891,15 @@ export class GymController {
   })
   @ValidateGymRelatedToOwner()
   @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateWelcomeMessageAutomationDto })
   async updateWelcomeMessageAutomation(
     @Param('gymId') gymId: string,
-    @Body() body: { sendWelcomeMessageAutomatically: boolean },
+    @Body()
+    updateWelcomeMessageAutomationDto: UpdateWelcomeMessageAutomationDto,
   ) {
     return await this.gymService.updateWelcomeMessageAutomation(
       gymId,
-      body.sendWelcomeMessageAutomatically,
+      updateWelcomeMessageAutomationDto.sendWelcomeMessageAutomatically,
     );
   }
 

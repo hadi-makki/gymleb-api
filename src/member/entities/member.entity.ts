@@ -212,4 +212,7 @@ export class MemberEntity extends PgMainEntity {
 
   @RelationId((member: MemberEntity) => member.notificationSetting)
   notificationSettingId: string | null;
+
+  @Column('boolean', { default: false })
+  isBirthdayHandled: boolean;
 }

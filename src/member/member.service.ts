@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
-import { addDays, endOfDay, isBefore, startOfDay } from 'date-fns';
+import { addDays, endOfDay, isBefore, isSameDay, startOfDay } from 'date-fns';
 import { Response } from 'express';
 import { FilterOperator, paginate } from 'nestjs-paginate';
 import { GymEntity } from 'src/gym/entities/gym.entity';
@@ -46,6 +46,7 @@ import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dt
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 import { format } from 'date-fns';
+import { IsNull } from 'typeorm';
 
 @Injectable()
 export class MemberService {
@@ -89,10 +90,122 @@ export class MemberService {
     return activeSubscription;
   }
 
-  async getLatestSubscription(memberId: string) {
+  async processBirthdayAutomationForGym(gym: GymEntity) {
+    // Ensure gym includes ownerSubscriptionType
+    const gymWithSettings = await this.gymModel.findOne({
+      where: { id: typeof gym === 'string' ? gym : gym.id },
+      relations: { ownerSubscriptionType: true },
+    });
+    if (!gymWithSettings || !gymWithSettings.enableBirthdayAutomation) {
+      return;
+    }
+
+    const today = new Date();
+    // Fetch only members with non-null birthdays and not yet handled in this gym
+    const members = await this.memberModel.find({
+      where: {
+        gym: { id: gymWithSettings.id },
+        birthday: Not(IsNull()),
+        isBirthdayHandled: false,
+      },
+      relations: {
+        gym: true,
+        subscription: true,
+        transactions: true,
+      },
+    });
+
+    for (const member of members) {
+      console.log('member', member.birthday);
+      if (!member.birthday) continue;
+      const isBirthdayToday = isSameDay(member.birthday, today);
+      if (isBirthdayToday) {
+        console.log('isBirthdayToday');
+        // Send birthday message
+        if (gymWithSettings.sendBirthdayMessage) {
+          const activeSubscription =
+            await this.gymService.getGymActiveSubscription(gymWithSettings.id);
+          await this.twilioService.sendWhatsappMessage({
+            phoneNumber: member.phone,
+            twilioTemplate: this.twilioService.getBirthdayTemplateSid(
+              gymWithSettings.messagesLanguage,
+            ),
+            contentVariables: {
+              name: member.name,
+              gymName: gymWithSettings.name,
+            },
+            phoneNumberISOCode: member.phoneNumberISOCode,
+            gym: gymWithSettings,
+            activeSubscription:
+              activeSubscription.activeSubscription.ownerSubscriptionType,
+          });
+
+          // Increment birthday messages counter (non-blocking)
+          await this.gymService.addGymBirthdayMessageNotified(
+            gymWithSettings.id,
+            1,
+          );
+        }
+
+        console.log(
+          'gymWithSettings.grantBirthdaySubscription',
+          gymWithSettings.grantBirthdaySubscription,
+        );
+
+        // Grant subscription
+        if (
+          gymWithSettings.grantBirthdaySubscription &&
+          gymWithSettings.birthdaySubscriptionId
+        ) {
+          console.log('grant birthday subscription');
+          const getMemberActiveSubscription = await this.getActiveSubscription(
+            member.id,
+          );
+          const getSubscription = await this.subscriptionModel.findOne({
+            where: { id: gymWithSettings.birthdaySubscriptionId },
+          });
+          if (getMemberActiveSubscription.length === 0) {
+            console.log('add subscription to member');
+            await this.addSubscriptionToMember({
+              memberId: member.id,
+              subscriptionId: gymWithSettings.birthdaySubscriptionId,
+              gymId: gymWithSettings.id,
+              giveFullDay: true, // giveFullDay
+              forFree: true, // forFree
+            });
+          } else {
+            console.log('extend membership duration');
+            await this.extendMembershipDuration(
+              member.id,
+              gymWithSettings.id,
+              {
+                days: getSubscription.duration,
+              },
+              getMemberActiveSubscription[0].id,
+            );
+          }
+        }
+
+        // Mark as handled to avoid duplicate processing
+        const reGetMember = await this.memberModel.findOne({
+          where: { id: member.id },
+        });
+        reGetMember.isBirthdayHandled = true;
+        await this.memberModel.save(reGetMember);
+      }
+    }
+  }
+
+  async getLatestSubscription(
+    memberId: string,
+    withSubscription: boolean = false,
+  ) {
     const latestSubscription = await this.transactionModel.findOne({
       where: { member: { id: memberId } },
       order: { createdAt: 'DESC' },
+      relations: {
+        ...(withSubscription && { subscription: true }),
+      },
     });
 
     return latestSubscription;
@@ -719,6 +832,10 @@ export class MemberService {
       throw new NotFoundException('Member not found');
     }
 
+    // Reset birthday handled on renewal
+    member.isBirthdayHandled = false;
+    await this.memberModel.save(member);
+
     let checkSubscription;
 
     // If subscriptionId is provided, use it; otherwise use existing subscription
@@ -825,16 +942,29 @@ export class MemberService {
     };
   }
 
-  async addSubscriptionToMember(
-    memberId: string,
-    subscriptionId: string,
-    gymId: string,
-    giveFullDay?: boolean,
-    willPayLater?: boolean,
-    startDate?: string,
-    endDate?: string,
-    paidAmount?: number,
-  ) {
+  async addSubscriptionToMember({
+    memberId,
+    gymId,
+    subscriptionId,
+    endDate,
+    giveFullDay,
+    willPayLater,
+    startDate,
+    paidAmount,
+    forFree,
+    isBirthdaySubscription,
+  }: {
+    memberId: string;
+    subscriptionId: string;
+    gymId: string;
+    giveFullDay?: boolean;
+    willPayLater?: boolean;
+    startDate?: string;
+    endDate?: string;
+    paidAmount?: number;
+    forFree?: boolean;
+    isBirthdaySubscription?: boolean;
+  }) {
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
     });
@@ -853,9 +983,14 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+    console.log('this is the member', member);
+    // Reset birthday handled when adding a new subscription instance
+    member.isBirthdayHandled = false;
     member.subscription = getSubscription;
     await this.memberModel.save(member);
 
+    console.log('forFree', forFree);
+    console.log('paidAmount', paidAmount);
     await this.transactionService.createSubscriptionInstance({
       member: member,
       gym: checkGym,
@@ -867,6 +1002,8 @@ export class MemberService {
       startDate,
       endDate,
       paidAmount,
+      forFree,
+      isBirthdaySubscription,
     });
     return {
       message: 'Subscription added to member successfully',
@@ -1679,6 +1816,8 @@ export class MemberService {
     );
     const newEndDate = new Date(currentEndDate);
     newEndDate.setDate(newEndDate.getDate() + extendMembershipDurationDto.days);
+    console.log('currentEndDate', currentEndDate);
+    console.log('newEndDate', newEndDate);
 
     // Update the subscription end date
     await this.transactionModel.update(transactionId, {

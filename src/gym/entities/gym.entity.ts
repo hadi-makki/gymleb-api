@@ -209,9 +209,27 @@ export class GymEntity extends PgMainEntity {
   @Column('int', { default: 0 })
   invoiceMessageNotified: number;
 
+  // Count of birthday messages sent (for notification limits and UI)
+  @Column('int', { default: 0 })
+  birthdayMessageNotified: number;
+
   @OneToMany(() => WhishTransaction, (whishTransaction) => whishTransaction.gym)
   whishTransactions: WhishTransaction[];
 
   @Column('boolean', { default: false })
   enableMultiSubscription: boolean;
+
+  // Birthday automation settings
+  @Column('boolean', { default: false })
+  enableBirthdayAutomation: boolean;
+
+  @Column('boolean', { default: false })
+  sendBirthdayMessage: boolean;
+
+  @Column('boolean', { default: false })
+  grantBirthdaySubscription: boolean;
+
+  // Selected subscription to grant on birthday (stored by id)
+  @Column('text', { nullable: true })
+  birthdaySubscriptionId: string | null;
 }

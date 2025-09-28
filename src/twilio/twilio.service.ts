@@ -57,6 +57,11 @@ export const TwilioWhatsappTemplates = {
     ar: 'HX3cf3613e737af059b07ca59cd95c6e61',
     numberOfVariables: 5,
   },
+  birthdayMessage: {
+    en: 'HXb3c0a9b8f4b94f88934b1bdaytpl0001',
+    ar: 'HXb3c0a9b8f4b94f88934b1bdaytpl0002',
+    numberOfVariables: 2,
+  },
 };
 
 @Injectable()
@@ -88,9 +93,10 @@ export class TwilioService {
     activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
     const totalMessages =
-      gym.welcomeMessageNotified +
-      gym.membersNotified +
-      gym.invoiceMessageNotified;
+      (gym.welcomeMessageNotified || 0) +
+      (gym.membersNotified || 0) +
+      (gym.invoiceMessageNotified || 0) +
+      (gym.birthdayMessageNotified || 0);
     console.log('this is the totalMessages', totalMessages);
     console.log(
       'this is the activeSubscription.allowedNotificationsNumber',
@@ -143,6 +149,20 @@ export class TwilioService {
       console.log('this is twilio response', res);
       return res;
     }
+  }
+
+  getBirthdayTemplateSid(lang: string) {
+    const isArabic = (lang || 'en') === 'ar';
+    const tpl = TwilioWhatsappTemplates.birthdayMessage?.[
+      isArabic ? 'ar' : 'en'
+    ] as string | undefined;
+    return (
+      tpl ||
+      (TwilioWhatsappTemplates.welcomeMessage?.[
+        isArabic ? 'ar' : 'en'
+      ] as string) ||
+      TwilioWhatsappTemplates.memberExpiredReminder?.[isArabic ? 'ar' : 'en']
+    );
   }
 
   async saveTwilioMessage({
