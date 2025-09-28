@@ -229,9 +229,11 @@ export class MemberService {
   async getMembersWithExpiringSubscriptions({
     days,
     isNotified = false,
+    ignoreMemberWhereGymDisabledMonthlyReminder = false,
   }: {
     days: number;
     isNotified?: boolean;
+    ignoreMemberWhereGymDisabledMonthlyReminder?: boolean;
   }) {
     // Calculate the target date (X days from now)
     const targetDate = addDays(new Date(), days);
@@ -252,6 +254,11 @@ export class MemberService {
             type: Not(SubscriptionType.DAILY_GYM),
             duration: Not(LessThan(7)),
           },
+          ...(ignoreMemberWhereGymDisabledMonthlyReminder && {
+            gym: {
+              sendMonthlyReminder: true,
+            },
+          }),
         },
       ],
       relations: {
@@ -1541,6 +1548,7 @@ export class MemberService {
     const expiringMembers = await this.getMembersWithExpiringSubscriptions({
       days: 3,
       isNotified: false,
+      ignoreMemberWhereGymDisabledMonthlyReminder: true,
     });
     console.log(
       'expiringMembers',

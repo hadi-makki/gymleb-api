@@ -2178,4 +2178,34 @@ export class GymService {
       updatedAt: gym.updatedAt.toISOString(),
     };
   }
+
+  async updateMonthlyReminder(gymId: string, sendMonthlyReminder: boolean) {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    await this.gymModel.update(gymId, { sendMonthlyReminder });
+
+    return { message: 'Monthly reminder setting updated successfully' };
+  }
+
+  async updateManualMessages(gymId: string, allowManualMessages: boolean) {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    await this.gymModel.update(gymId, { allowManualMessages });
+
+    return { message: 'Manual messages permission updated successfully' };
+  }
 }

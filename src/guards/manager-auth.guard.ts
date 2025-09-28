@@ -86,7 +86,6 @@ export class ManagerAuthGuard implements CanActivate {
       where: { id: userId },
     });
 
-
     if (
       (!manager ||
         !requiredRoles.some((role) => manager.permissions.includes(role))) &&
@@ -117,6 +116,9 @@ export class ManagerAuthGuard implements CanActivate {
     manager: ManagerEntity,
     request: Request,
   ) {
+    if (manager.permissions.includes(Permissions.SuperAdmin)) {
+      return true;
+    }
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
 
@@ -230,7 +232,6 @@ export class ManagerAuthGuard implements CanActivate {
 
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
-
 
     if (!isUUID(personalTrainerId)) {
       throw new BadRequestException('Invalid personal trainer id');

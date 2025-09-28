@@ -47,6 +47,8 @@ import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { UpdateShowPersonalTrainersDto } from './dto/update-show-personal-trainers.dto';
 import { UpdateAllowUserSignupDto } from './dto/update-allow-user-signup.dto';
 import { UpdateBirthdayAutomationDto } from './dto/update-birthday-automation.dto';
+import { UpdateMonthlyReminderDto } from './dto/update-monthly-reminder.dto';
+import { UpdateManualMessagesDto } from './dto/update-manual-messages.dto';
 import { UpdateAllowUserReservationsDto } from './dto/update-allow-user-reservations.dto';
 import { UpdateMaxReservationsPerSessionDto } from './dto/update-max-reservations-per-session.dto';
 import { UpdateSessionTimeDto } from './dto/update-session-time.dto';
@@ -952,5 +954,42 @@ export class GymController {
   @ValidateGymRelatedToOwner()
   async getOwnerGyms(@Param('gymId') gymId: string) {
     return await this.gymService.getOwnerGyms(gymId);
+  }
+
+  @Patch('update/monthly-reminder/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update monthly reminder setting' })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  updateMonthlyReminder(
+    @Param('gymId') gymId: string,
+    @Body() updateMonthlyReminderDto: UpdateMonthlyReminderDto,
+  ) {
+    return this.gymService.updateMonthlyReminder(
+      gymId,
+      updateMonthlyReminderDto.sendMonthlyReminder,
+    );
+  }
+
+  @Patch('update/manual-messages/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Update manual messages permission (Super Admin only)',
+  })
+  @Roles(Permissions.SuperAdmin)
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  updateManualMessages(
+    @Param('gymId') gymId: string,
+    @Body() updateManualMessagesDto: UpdateManualMessagesDto,
+  ) {
+    return this.gymService.updateManualMessages(
+      gymId,
+      updateManualMessagesDto.allowManualMessages,
+    );
   }
 }

@@ -232,4 +232,12 @@ export class GymEntity extends PgMainEntity {
   // Selected subscription to grant on birthday (stored by id)
   @Column('text', { nullable: true })
   birthdaySubscriptionId: string | null;
+
+  // Monthly reminder settings (controlled by gym owner)
+  @Column('boolean', { default: true })
+  sendMonthlyReminder: boolean;
+
+  // Manual messages permission (controlled by super admin)
+  @Column('boolean', { default: false })
+  allowManualMessages: boolean;
 }
