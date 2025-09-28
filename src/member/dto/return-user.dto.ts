@@ -50,6 +50,7 @@ export class ReturnUserDto {
   phoneNumberISOCode?: string;
   allowedReservations?: number | null;
   usedReservations?: number;
+  welcomeMessageSentManually?: boolean;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

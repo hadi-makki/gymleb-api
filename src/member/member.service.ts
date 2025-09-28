@@ -361,6 +361,7 @@ export class MemberService {
       isWelcomeMessageSent: member.isWelcomeMessageSent,
       notificationSetting: notificationSetting,
       phoneNumberISOCode: member.phoneNumberISOCode,
+      welcomeMessageSentManually: member.welcomeMessageSentManually,
     };
   }
 
@@ -1903,5 +1904,84 @@ export class MemberService {
     });
 
     return { message: 'Program link updated successfully' };
+  }
+
+  async markWelcomeMessageSent(memberId: string, gymId: string) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Update the member with welcome message sent flag
+    await this.memberModel.update(memberId, {
+      welcomeMessageSentManually: true,
+    });
+
+    return { message: 'Welcome message marked as sent successfully' };
+  }
+
+  async markSubscriptionReminderSent(memberId: string, gymId: string) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Get active subscriptions
+    const activeSubscriptions =
+      await this.checkIfUserHasActiveSubscription(memberId);
+
+    let subscriptionToUpdate = null;
+
+    if (activeSubscriptions && activeSubscriptions.length > 0) {
+      // If user has active subscription, use the first one
+      subscriptionToUpdate = activeSubscriptions[0];
+    } else {
+      // If no active subscription, get the last subscription
+      subscriptionToUpdate = await this.getLatestSubscription(memberId);
+    }
+
+    if (!subscriptionToUpdate) {
+      throw new NotFoundException('No subscription found for this member');
+    }
+
+    // Update the subscription with reminder sent flag
+    await this.transactionModel.update(subscriptionToUpdate.id, {
+      subscriptionReminderSentManually: true,
+    });
+
+    return { message: 'Subscription reminder marked as sent successfully' };
   }
 }

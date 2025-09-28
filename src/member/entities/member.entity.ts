@@ -223,4 +223,7 @@ export class MemberEntity extends PgMainEntity {
   // Number of reservations used within the current subscription period
   @Column('int', { default: 0, nullable: true })
   usedReservations: number;
+
+  @Column('boolean', { default: false })
+  welcomeMessageSentManually: boolean;
 }

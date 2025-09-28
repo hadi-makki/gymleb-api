@@ -247,4 +247,7 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isBirthdaySubscription: boolean;
+
+  @Column('boolean', { default: false })
+  subscriptionReminderSentManually: boolean;
 }

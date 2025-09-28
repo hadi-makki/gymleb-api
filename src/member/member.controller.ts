@@ -619,4 +619,40 @@ export class MemberController {
       updateProgramLinkDto,
     );
   }
+
+  @Patch(':gymId/:memberId/mark-welcome-message-sent')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({
+    summary: 'Mark welcome message as sent manually',
+    description: 'Updates the welcomeMessageSentManually flag for a member',
+  })
+  async markWelcomeMessageSent(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.markWelcomeMessageSent(memberId, gymId);
+  }
+
+  @Patch(':gymId/:memberId/mark-subscription-reminder-sent')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({
+    summary: 'Mark subscription reminder as sent manually',
+    description:
+      'Updates the subscriptionReminderSentManually flag for a member',
+  })
+  async markSubscriptionReminderSent(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.markSubscriptionReminderSent(
+      memberId,
+      gymId,
+    );
+  }
 }
