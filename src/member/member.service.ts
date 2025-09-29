@@ -503,10 +503,7 @@ export class MemberService {
         gym,
         amountPaid: subscription.price.toString(),
         paymentFor: subscription.title,
-        paymentDate: format(
-          getLatestGymSubscription.activeSubscription.startDate,
-          'dd/MM/yyyy',
-        ),
+        paymentDate: format(new Date(), 'dd/MM/yyyy'),
       });
     }
 
@@ -947,7 +944,7 @@ export class MemberService {
       gym: member.gym,
       amountPaid: createSubscriptionInstance.paidAmount.toString(),
       paymentFor: checkSubscription.title,
-      paymentDate: format(createSubscriptionInstance.startDate, 'dd/MM/yyyy'),
+      paymentDate: format(new Date(), 'dd/MM/yyyy'),
       activeSubscription:
         getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
     });
