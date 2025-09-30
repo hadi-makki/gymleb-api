@@ -643,6 +643,31 @@ export class GymController {
     }
   }
 
+  @Get('admin/graphs/churn/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Get gym churn graph and metrics' })
+  @ApiOkResponse({
+    description: 'Churn graph data retrieved successfully.',
+  })
+  async getGymChurnGraphData(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('isMobile') isMobile?: boolean,
+  ) {
+    try {
+      return await this.gymService.getGymChurnGraphData(
+        gymId,
+        start,
+        end,
+        isMobile,
+      );
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch churn graph data');
+    }
+  }
+
   @Patch('show-personal-trainers/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym show personal trainers setting' })

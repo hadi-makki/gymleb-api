@@ -11,6 +11,7 @@ import {
   endOfMonth,
   subDays,
   isBefore,
+  differenceInCalendarDays,
 } from 'date-fns';
 import { AddOfferDto } from './dto/add-offer.dto';
 import { GymEntity, MessageLanguage } from './entities/gym.entity';
@@ -23,6 +24,7 @@ import {
   LessThanOrEqual,
   Like,
   MoreThanOrEqual,
+  MoreThan,
   Not,
   Repository,
 } from 'typeorm';
@@ -1579,6 +1581,270 @@ export class GymService {
       data: Array.from(transactionsByDate.values()),
       startDate,
       endDate,
+    };
+  }
+
+  async getGymChurnGraphData(
+    gymId: string,
+    start?: string,
+    end?: string,
+    isMobile?: boolean,
+  ): Promise<{
+    data: {
+      date: string;
+      churnRate: number;
+      lostMembers: number;
+      baseMembers: number;
+    }[];
+    startDate: Date;
+    endDate: Date;
+    periodChurnRate: number | null;
+    previousPeriodChurnRate: number | null;
+    changePercentage: number | null;
+    insufficientData?: {
+      neededDays: number;
+      reason: string;
+    };
+  }> {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start
+      ? new Date(start)
+      : subDays(new Date(), isMobile ? 7 : 30);
+
+    if (isBefore(endDate, startDate)) {
+      throw new BadRequestException('End date must be after start date');
+    }
+
+    // Build daily buckets for the period
+    const daysByDate = new Map<
+      string,
+      {
+        date: string;
+        lostMembers: number;
+        baseMembers: number;
+        churnRate: number;
+      }
+    >();
+    const cursor = new Date(startDate);
+    while (cursor <= endDate) {
+      const key = cursor.toISOString().split('T')[0];
+      daysByDate.set(key, {
+        date: key,
+        lostMembers: 0,
+        baseMembers: 0,
+        churnRate: 0,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    // Determine members active at the start of the window (baseline)
+    const baselineSubs = await this.transactionModel.find({
+      where: {
+        gym: { id: gym.id },
+        status: PaymentStatus.PAID,
+        isInvalidated: false,
+        type: TransactionType.SUBSCRIPTION,
+        startDate: LessThanOrEqual(startDate),
+        endDate: MoreThan(startDate),
+      },
+      relations: ['member'],
+    });
+
+    const baselineMemberIds = Array.from(
+      new Set(
+        baselineSubs
+          .map((t) => t.memberId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    // If there is no baseline, report insufficient data
+    if (baselineMemberIds.length === 0) {
+      // Find the earliest subscription in the gym to estimate needed days
+      const earliestSub = await this.transactionModel.findOne({
+        where: {
+          gym: { id: gym.id },
+          status: PaymentStatus.PAID,
+          isInvalidated: false,
+          type: TransactionType.SUBSCRIPTION,
+        },
+        order: { startDate: 'ASC' },
+      });
+
+      const insufficient = {
+        neededDays: 0,
+        reason:
+          'No active members at the start of the selected period. Churn needs at least one active member at the beginning of the period.',
+      } as { neededDays: number; reason: string };
+
+      if (earliestSub?.startDate) {
+        const needed = differenceInCalendarDays(
+          earliestSub.startDate,
+          startDate,
+        );
+        insufficient.neededDays = needed > 0 ? needed : 0;
+      } else {
+        insufficient.neededDays = 0;
+      }
+
+      return {
+        data: Array.from(daysByDate.values()),
+        startDate,
+        endDate,
+        periodChurnRate: null,
+        previousPeriodChurnRate: null,
+        changePercentage: null,
+        insufficientData: insufficient,
+      };
+    }
+
+    // Fetch all subscription transactions for baseline members to determine their latest coverage
+    const subsForBaseline = await this.transactionModel.find({
+      where: {
+        gym: { id: gym.id },
+        status: PaymentStatus.PAID,
+        isInvalidated: false,
+        type: TransactionType.SUBSCRIPTION,
+        member: { id: In(baselineMemberIds) },
+      },
+      order: { endDate: 'ASC' },
+    });
+
+    const latestEndByMember = new Map<string, Date>();
+    subsForBaseline.forEach((tr) => {
+      if (!tr.memberId || !tr.endDate) return;
+      const current = latestEndByMember.get(tr.memberId);
+      if (!current || (tr.endDate && tr.endDate > current)) {
+        latestEndByMember.set(tr.memberId, tr.endDate);
+      }
+    });
+
+    // Count base and per-day lost members
+    const baseCount = baselineMemberIds.length;
+    let cumulativeLost = 0;
+    Array.from(daysByDate.values()).forEach((bucket) => {
+      bucket.baseMembers = baseCount;
+    });
+
+    baselineMemberIds.forEach((memberId) => {
+      const lastEnd = latestEndByMember.get(memberId);
+      if (!lastEnd) return;
+
+      // If the latest coverage ends within the window and on or before endDate, count as lost on that day
+      if (lastEnd >= startDate && lastEnd <= endDate) {
+        const key = lastEnd.toISOString().split('T')[0];
+        const b = daysByDate.get(key);
+        if (b) {
+          b.lostMembers += 1;
+        }
+      }
+    });
+
+    // Build cumulative churn rate per day
+    let lostSoFar = 0;
+    const orderedKeys = Array.from(daysByDate.keys()).sort();
+    orderedKeys.forEach((key) => {
+      const b = daysByDate.get(key)!;
+      lostSoFar += b.lostMembers;
+      // Members whose latest coverage extends beyond endDate are not considered lost within this window
+      const churnRate = baseCount > 0 ? (lostSoFar / baseCount) * 100 : 0;
+      b.churnRate = Number(churnRate.toFixed(4));
+    });
+
+    const totalLost = orderedKeys.reduce(
+      (sum, key) => sum + (daysByDate.get(key)?.lostMembers || 0),
+      0,
+    );
+    const periodChurnRate =
+      baseCount > 0 ? Number(((totalLost / baseCount) * 100).toFixed(4)) : null;
+
+    // Previous period comparison
+    const periodDays = differenceInCalendarDays(endDate, startDate) + 1;
+    const prevEnd = new Date(startDate);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = subDays(startDate, periodDays);
+
+    // Determine previous baseline
+    const prevBaselineSubs = await this.transactionModel.find({
+      where: {
+        gym: { id: gym.id },
+        status: PaymentStatus.PAID,
+        isInvalidated: false,
+        type: TransactionType.SUBSCRIPTION,
+        startDate: LessThanOrEqual(prevStart),
+        endDate: MoreThan(prevStart),
+      },
+    });
+    const prevBaselineMemberIds = Array.from(
+      new Set(
+        prevBaselineSubs
+          .map((t) => t.memberId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    let previousPeriodChurnRate: number | null = null;
+    if (prevBaselineMemberIds.length > 0) {
+      const prevSubsForBaseline = await this.transactionModel.find({
+        where: {
+          gym: { id: gym.id },
+          status: PaymentStatus.PAID,
+          isInvalidated: false,
+          type: TransactionType.SUBSCRIPTION,
+          member: { id: In(prevBaselineMemberIds) },
+        },
+        order: { endDate: 'ASC' },
+      });
+      const prevLatestEndByMember = new Map<string, Date>();
+      prevSubsForBaseline.forEach((tr) => {
+        if (!tr.memberId || !tr.endDate) return;
+        const current = prevLatestEndByMember.get(tr.memberId);
+        if (!current || (tr.endDate && tr.endDate > current)) {
+          prevLatestEndByMember.set(tr.memberId, tr.endDate);
+        }
+      });
+
+      let prevLost = 0;
+      prevBaselineMemberIds.forEach((memberId) => {
+        const lastEnd = prevLatestEndByMember.get(memberId);
+        if (!lastEnd) return;
+        if (lastEnd >= prevStart && lastEnd <= prevEnd) {
+          prevLost += 1;
+        }
+      });
+      previousPeriodChurnRate = prevBaselineMemberIds.length
+        ? Number(((prevLost / prevBaselineMemberIds.length) * 100).toFixed(4))
+        : null;
+    }
+
+    let changePercentage: number | null = null;
+    if (previousPeriodChurnRate !== null && periodChurnRate !== null) {
+      const base = previousPeriodChurnRate;
+      if (base === 0) {
+        changePercentage = periodChurnRate === 0 ? 0 : 100;
+      } else {
+        changePercentage = Number(
+          (((periodChurnRate - base) / base) * 100).toFixed(2),
+        );
+      }
+    }
+
+    return {
+      data: Array.from(daysByDate.values()),
+      startDate,
+      endDate,
+      periodChurnRate,
+      previousPeriodChurnRate,
+      changePercentage,
     };
   }
 

@@ -946,7 +946,7 @@ export class MemberService {
       paymentFor: checkSubscription.title,
       paymentDate: format(new Date(), 'dd/MM/yyyy'),
       activeSubscription:
-        getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        getLatestGymSubscription.activeSubscription?.ownerSubscriptionType,
     });
 
     return {
