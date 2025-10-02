@@ -5,12 +5,14 @@ import { MemberReservationEntity } from '../entities/member-reservation.entity';
 import { MemberTrainingProgramEntity } from '../entities/member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
+import { Gender } from '../entities/member.entity';
 
 export class ReturnUserDto {
   id: string;
   name: string;
   email: string;
   phone: string;
+  gender?: Gender;
   gym: any;
   subscription: SubscriptionEntity;
   subscriptionTransactions: any[];

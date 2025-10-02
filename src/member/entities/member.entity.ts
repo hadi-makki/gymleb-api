@@ -39,6 +39,11 @@ export enum TrainingPreferences {
   OUTDOORS = 'outdoors',
 }
 
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
+
 @Entity('members')
 export class MemberEntity extends PgMainEntity {
   @Column('text')
@@ -116,6 +121,9 @@ export class MemberEntity extends PgMainEntity {
     },
   )
   reservations: MemberReservationEntity[];
+
+  @Column('text', { default: Gender.MALE })
+  gender: Gender;
 
   @Column('text', { nullable: true })
   trainingLevel: string | null;

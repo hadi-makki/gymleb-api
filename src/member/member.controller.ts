@@ -46,7 +46,8 @@ import { SignupMemberDto } from './dto/signup-member.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
-import { MemberEntity } from './entities/member.entity';
+import { Gender, MemberEntity } from './entities/member.entity';
+import { UpdateGenderDto } from './dto/update-gender.dto';
 import { MemberService } from './member.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
@@ -136,6 +137,7 @@ export class MemberController {
     @Query('limit') limit = '5',
     @Param('gymId') gymId: string,
     @Query('expiringInDays') expiringInDays?: string,
+    @Query('gender') gender?: Gender,
   ) {
     console.log('reachint the controller');
     return await this.memberService.findAll(
@@ -145,6 +147,7 @@ export class MemberController {
       Number(page),
       gymId,
       expiringInDays ? Number(expiringInDays) : undefined,
+      gender,
     );
   }
 
@@ -171,6 +174,24 @@ export class MemberController {
     @Param('gymId') gymId: string,
   ) {
     return await this.memberService.update(memberId, updateMemberDto, gymId);
+  }
+
+  @Patch(':gymId/:memberId/gender')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({ summary: 'Update member gender' })
+  async toggleGender(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+    @Body() body: UpdateGenderDto,
+  ) {
+    return await this.memberService.updateMemberGender(
+      memberId,
+      gymId,
+      body.gender,
+    );
   }
 
   @Post(':gymId/:memberId/increase-reservations')
@@ -268,6 +289,7 @@ export class MemberController {
     @Query('limit') limit = '5',
     @Query('search') search: string,
     @Param('gymId') gymId: string,
+    @Query('gender') gender?: Gender,
   ) {
     return await this.memberService.getExpiredMembers(
       manager,
@@ -275,6 +297,8 @@ export class MemberController {
       Number(page),
       search,
       gymId,
+      false,
+      gender,
     );
   }
 

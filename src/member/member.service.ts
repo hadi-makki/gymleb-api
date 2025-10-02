@@ -31,7 +31,7 @@ import { LoginMemberDto } from './dto/login-member.dto';
 import { ReturnUserDto } from './dto/return-user.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { SignupMemberDto } from './dto/signup-member.dto';
-import { MemberEntity } from './entities/member.entity';
+import { Gender, MemberEntity } from './entities/member.entity';
 import {
   MemberAttendingDaysEntity,
   DayOfWeek,
@@ -329,6 +329,7 @@ export class MemberService {
       name: member.name,
       email: member.email,
       phone: member.phone,
+      gender: member.gender,
       gym: member.gym,
       subscription: member.subscription,
       subscriptionTransactions: member.transactions,
@@ -667,6 +668,7 @@ export class MemberService {
     page: number,
     gymId: string,
     expiringInDays?: number,
+    gender?: Gender,
   ) {
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -691,6 +693,11 @@ export class MemberService {
         '(member.name ILIKE :search OR member.phone ILIKE :search OR member.email ILIKE :search)',
         { search: `%${search}%` },
       );
+    }
+
+    // Add gender filter
+    if (gender) {
+      queryBuilder.andWhere('member.gender = :gender', { gender });
     }
 
     // Add expiration filter
@@ -1060,6 +1067,57 @@ export class MemberService {
     return await this.returnMember(member);
   }
 
+  async toggleGender(id: string, gymId: string) {
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const nextGender = (member as any).gender === 'female' ? 'male' : 'female';
+    (member as any).gender = nextGender;
+    await this.memberModel.save(member);
+    return await this.returnMember(member);
+  }
+
+  async updateMemberGender(id: string, gymId: string, gender: Gender) {
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const checkGym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    (member as any).gender = gender;
+    await this.memberModel.save(member);
+    return await this.returnMember(member);
+  }
+
   async remove(id: string, gymId: string, deleteTransactions: boolean = false) {
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid member id');
@@ -1113,6 +1171,7 @@ export class MemberService {
     search: string,
     gymId: string,
     onlyNotNotified: boolean = false,
+    gender?: Gender,
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -1130,6 +1189,7 @@ export class MemberService {
           type: TransactionType.SUBSCRIPTION,
         },
         isNotified: onlyNotNotified ? false : undefined,
+        ...(gender ? { gender: gender } : {}),
       },
       relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
     });
