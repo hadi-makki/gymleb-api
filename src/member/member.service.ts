@@ -677,19 +677,17 @@ export class MemberService {
       throw new NotFoundException('Gym not found');
     }
 
-    let queryBuilder = this.memberModel
+    // Build a base query that selects only member.id to avoid pagination issues with joins
+    let idsQuery = this.memberModel
       .createQueryBuilder('member')
-      .leftJoinAndSelect('member.gym', 'gym')
-      .leftJoinAndSelect('member.subscription', 'subscription')
-      .leftJoinAndSelect('member.transactions', 'transactions')
-      .leftJoinAndSelect('member.profileImage', 'profileImage')
-      .leftJoinAndSelect('member.attendingDays', 'attendingDays')
-      .leftJoinAndSelect('member.notificationSetting', 'notificationSetting')
+      .select('member.id', 'id')
+      .addSelect('member.createdAt', 'createdAt')
+      .leftJoin('member.gym', 'gym')
       .where('gym.id = :gymId', { gymId: checkGym.id });
 
     // Add search filter
     if (search) {
-      queryBuilder.andWhere(
+      idsQuery.andWhere(
         '(member.name ILIKE :search OR member.phone ILIKE :search OR member.email ILIKE :search)',
         { search: `%${search}%` },
       );
@@ -697,18 +695,18 @@ export class MemberService {
 
     // Add gender filter
     if (gender) {
-      queryBuilder.andWhere('member.gender = :gender', { gender });
+      idsQuery.andWhere('member.gender = :gender', { gender });
     }
 
     // Add expiration filter
     if (expiringInDays !== undefined) {
-      console.log('this is the expiring in days', expiringInDays);
       const today = new Date();
       const todayStr = format(startOfDay(today), 'yyyy-MM-dd');
       const endDate = addDays(today, expiringInDays);
       const endDateStr = format(endOfDay(endDate), 'yyyy-MM-dd');
 
-      queryBuilder
+      idsQuery
+        .leftJoin('member.transactions', 'transactions')
         .andWhere('transactions.type = :transactionType', {
           transactionType: 'subscription',
         })
@@ -723,17 +721,44 @@ export class MemberService {
         });
     }
 
-    // Add ordering
-    queryBuilder.orderBy('member.createdAt', 'DESC');
+    // Count distinct members to avoid duplicate counts due to joins
+    const totalItems = await idsQuery.distinct(true).getCount();
 
-    // Get total count
-    const totalItems = await queryBuilder.getCount();
-
-    // Add pagination
+    // Apply ordering and pagination on IDs query
     const offset = (page - 1) * limit;
-    queryBuilder.skip(offset).take(limit);
+    const pagedIdsRaw = await idsQuery
+      .orderBy('member.createdAt', 'DESC')
+      .offset(offset)
+      .limit(limit)
+      .getRawMany();
 
-    const members = await queryBuilder.getMany();
+    const pagedIds = pagedIdsRaw.map((r: any) => r.id);
+
+    if (pagedIds.length === 0) {
+      return {
+        data: [],
+        meta: {
+          itemsPerPage: limit,
+          totalItems,
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit) || 1,
+        },
+      };
+    }
+
+    // Fetch full entities for the paginated IDs with necessary relations
+    const members = await this.memberModel.find({
+      where: { id: In(pagedIds) },
+      relations: [
+        'gym',
+        'subscription',
+        'transactions',
+        'profileImage',
+        'attendingDays',
+        'notificationSetting',
+      ],
+      order: { createdAt: 'DESC' },
+    });
 
     const res = {
       data: members,
