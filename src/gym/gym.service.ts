@@ -160,45 +160,26 @@ export class GymService {
 
     // Fetch transactions for last month comparison
     const lastMonthTransactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: {
-            id: gym.id,
-          },
-          status: PaymentStatus.PAID,
-
-          createdAt: Between(lastMonthStart, lastMonthEnd),
+      where: {
+        gym: {
+          id: gym.id,
         },
-        {
-          gym: {
-            id: gym.id,
-          },
-          status: PaymentStatus.PAID,
+        status: PaymentStatus.PAID,
 
-          paidAt: Between(lastMonthStart, lastMonthEnd),
-        },
-      ],
+        paidAt: Between(lastMonthStart, lastMonthEnd),
+      },
       relations: ['subscription', 'revenue', 'expense'],
     });
 
     // Fetch transactions for current month comparison
     const currentMonthTransactions = await this.transactionModel.find({
-      where: [
-        {
-          gym: {
-            id: gym.id,
-          },
-          status: PaymentStatus.PAID,
-          createdAt: MoreThanOrEqual(currentMonthStart),
+      where: {
+        gym: {
+          id: gym.id,
         },
-        {
-          gym: {
-            id: gym.id,
-          },
-          status: PaymentStatus.PAID,
-          paidAt: MoreThanOrEqual(currentMonthStart),
-        },
-      ],
+        status: PaymentStatus.PAID,
+        paidAt: MoreThanOrEqual(currentMonthStart),
+      },
       relations: ['subscription', 'revenue', 'expense'],
     });
 

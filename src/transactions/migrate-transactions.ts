@@ -14,6 +14,25 @@ export class MigrateTransactions implements OnModuleInit {
     // await this.migrateTransactions();
     // await this.migrateTransactionAmounts();
     // await this.migrateIsNotified();
+    // await this.migratePaidAt();
+  }
+
+  async migratePaidAt() {
+    const transactions = await this.transactionRepository.find({
+      where: {
+        paidAt: IsNull(),
+        status: PaymentStatus.PAID,
+      },
+    });
+
+    console.log('this is the length', transactions.length);
+
+    Promise.all(
+      transactions.map(async (transaction) => {
+        transaction.paidAt = transaction.updatedAt;
+        await this.transactionRepository.save(transaction);
+      }),
+    );
   }
 
   async migrateIsNotified() {
