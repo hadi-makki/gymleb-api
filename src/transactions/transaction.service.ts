@@ -113,6 +113,7 @@ export class TransactionService {
       willPayLater: paymentDetails.willPayLater,
       forFree: forFree,
       isBirthdaySubscription: paymentDetails.isBirthdaySubscription,
+      paidAt: paymentDetails.willPayLater ? null : new Date(),
     });
     const createdTransaction = await this.transactionModel.save(newTransaction);
     return createdTransaction;
@@ -164,6 +165,7 @@ export class TransactionService {
         `(${params.gym.name})`,
       owner: params.gym.owner,
       whishTransactions: [params.whishTransaction],
+      paidAt: new Date(),
     });
     const trx = await this.transactionModel.save(trxModel);
 
@@ -386,6 +388,7 @@ export class TransactionService {
       revenue: dto.revenue,
       date: dto.date,
       offer: dto.offer,
+      paidAt: new Date(),
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);
@@ -406,6 +409,7 @@ export class TransactionService {
       gym: dto.gym,
       expense: dto.expense,
       date: dto.date,
+      paidAt: new Date(),
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);
@@ -484,6 +488,7 @@ export class TransactionService {
       // Use many-to-one relation so multiple transactions can link to the same session
       relatedPtSession: dto.ptSession,
       isTakingPtSessionsCut: dto.isTakingPtSessionsCut,
+      paidAt: new Date(),
     });
     const newTransaction =
       await this.transactionModel.save(newTransactionModel);
@@ -523,6 +528,7 @@ export class TransactionService {
     }
     console.log(transaction.status);
     console.log(transaction.willPayLater);
+    transaction.paidAt = new Date();
     await this.transactionModel.save(transaction);
 
     return {
@@ -682,6 +688,7 @@ export class TransactionService {
       transaction.status = PaymentStatus.PAID;
     }
 
+    transaction.paidAt = new Date();
     transaction.paidAmount = transaction.paidAmount + paidAmount;
     await this.transactionModel.save(transaction);
     return transaction;
@@ -696,6 +703,7 @@ export class TransactionService {
     }
     transaction.status = PaymentStatus.PAID;
     transaction.paidAmount = transaction.originalAmount;
+    transaction.paidAt = new Date();
     await this.transactionModel.save(transaction);
     return transaction;
   }

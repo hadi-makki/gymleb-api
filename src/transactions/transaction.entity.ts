@@ -182,6 +182,9 @@ export class TransactionEntity extends PgMainEntity {
   @Column('text', { default: PaymentStatus.PAID })
   status: PaymentStatus;
 
+  @Column('timestamp without time zone', { nullable: true, default: null })
+  paidAt: Date;
+
   @Column('boolean', { default: false })
   isSubscription: boolean;
 
