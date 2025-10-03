@@ -226,8 +226,14 @@ export class ManagerController {
   async getAdminAnalytics(
     @Query('start') start?: string,
     @Query('end') end?: string,
+    @Query('useLast30Days') useLast30Days?: string,
   ) {
-    return await this.ManagerService.getAdminAnalytics(start, end);
+    const useLast30DaysBool = useLast30Days === 'true';
+    return await this.ManagerService.getAdminAnalytics(
+      start,
+      end,
+      useLast30DaysBool,
+    );
   }
 
   @Get('get/extended-analytics')
@@ -235,8 +241,17 @@ export class ManagerController {
   @Roles(Permissions.SuperAdmin)
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Extended admin analytics', type: Object })
-  async getExtendedAdminAnalytics() {
-    return await this.ManagerService.getExtendedAdminAnalytics();
+  async getExtendedAdminAnalytics(
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('useLast30Days') useLast30Days?: string,
+  ) {
+    const useLast30DaysBool = useLast30Days === 'true';
+    return await this.ManagerService.getExtendedAdminAnalytics(
+      start,
+      end,
+      useLast30DaysBool,
+    );
   }
 
   @Get('get/revenue-chart')

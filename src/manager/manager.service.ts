@@ -6,7 +6,7 @@ import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
-import { Between, Raw, Repository } from 'typeorm';
+import { Between, MoreThanOrEqual, Raw, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { UserEntity } from 'src/user/user.entity';
@@ -262,22 +262,36 @@ export class ManagerService {
     };
   }
 
-  async getAdminAnalytics(start?: string, end?: string) {
+  async getAdminAnalytics(
+    start?: string,
+    end?: string,
+    useLast30Days?: boolean,
+  ) {
     const now = new Date();
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
     const currentMonthStart = startOfMonth(now);
+    const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const baseFilter: any = { isOwnerSubscriptionAssignment: true };
+
+    // Determine the date range based on parameters
+    let dateFilter = {};
+    if (start && end) {
+      // Custom date range provided
+      dateFilter = { createdAt: Between(start, end) };
+    } else if (useLast30Days) {
+      // Last 30 days
+      dateFilter = { createdAt: Between(last30DaysStart, now) };
+    } else {
+      // Default: from start of current month
+      dateFilter = { createdAt: MoreThanOrEqual(currentMonthStart) };
+    }
 
     const transactions = await this.transactionModel.find({
       where: {
         ...baseFilter,
-        ...(start || end
-          ? {
-              createdAt: Between(start, end),
-            }
-          : {}),
+        ...dateFilter,
       },
       relations: ['owner', 'ownerSubscriptionType'],
     });
@@ -297,12 +311,16 @@ export class ManagerService {
     const ownersCount = ownersSet.size;
 
     const lastMonthTransactions = await this.transactionModel.find({
-      ...baseFilter,
-      createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd },
+      where: {
+        ...baseFilter,
+        createdAt: Between(lastMonthStart, lastMonthEnd),
+      },
     });
     const currentMonthTransactions = await this.transactionModel.find({
-      ...baseFilter,
-      createdAt: { $gte: currentMonthStart },
+      where: {
+        ...baseFilter,
+        createdAt: MoreThanOrEqual(currentMonthStart),
+      },
     });
 
     const lastMonthRevenue = lastMonthTransactions.reduce(
@@ -327,9 +345,17 @@ export class ManagerService {
     };
   }
 
-  async getExtendedAdminAnalytics() {
-    // Get basic analytics
-    const basicAnalytics = await this.getAdminAnalytics();
+  async getExtendedAdminAnalytics(
+    start?: string,
+    end?: string,
+    useLast30Days?: boolean,
+  ) {
+    // Get basic analytics with date range
+    const basicAnalytics = await this.getAdminAnalytics(
+      start,
+      end,
+      useLast30Days,
+    );
 
     // Get all gyms with their subscription status
     const gyms = await this.gymModel.find({

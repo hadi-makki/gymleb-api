@@ -15,6 +15,7 @@ import { CreatePersonalTrainerDto } from './dto/create-personal-trainer.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { BulkUpdateSessionDatesDto } from './dto/bulk-update-session-dates.dto';
 import { PTSessionEntity } from './entities/pt-sessions.entity';
 import { isUUID } from 'class-validator';
 
@@ -548,6 +549,93 @@ export class PersonalTrainersService {
     return {
       message: 'Session updated successfully',
     };
+  }
+
+  private weekdayToIndex(weekday: string): number {
+    const map: Record<string, number> = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
+    };
+    return map[weekday.toLowerCase()];
+  }
+
+  private getNextOccurrence(weekdayIndex: number, timeHHmm: string): Date {
+    const now = new Date();
+    // Base date at today 00:00
+    const base = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const todayIndex = base.getDay();
+    let delta = weekdayIndex - todayIndex;
+    if (delta < 0) delta += 7;
+
+    // Tentative date
+    const [hh, mm] = timeHHmm.split(':').map((n) => parseInt(n, 10));
+    const candidate = new Date(base);
+    candidate.setDate(candidate.getDate() + delta);
+    candidate.setHours(hh, mm, 0, 0);
+
+    // If today is the same weekday but time already passed, move to next week
+    if (candidate.getTime() <= now.getTime()) {
+      candidate.setDate(candidate.getDate() + 7);
+    }
+    return candidate;
+  }
+
+  async bulkUpdateSessionDates(dto: BulkUpdateSessionDatesDto) {
+    const { sessionIds, weekday, time } = dto;
+    if (!sessionIds || sessionIds.length === 0) {
+      throw new BadRequestException('No session IDs provided');
+    }
+
+    const weekdayIndex = this.weekdayToIndex(weekday);
+    if (weekdayIndex === undefined || Number.isNaN(weekdayIndex)) {
+      throw new BadRequestException('Invalid weekday');
+    }
+
+    // Load sessions preserving input order
+    const sessions = await this.sessionEntity.find({
+      where: { id: In(sessionIds) },
+      relations: ['members', 'personalTrainer', 'gym'],
+    });
+    const byId = new Map(sessions.map((s) => [s.id, s] as const));
+    const orderedSessions = sessionIds
+      .map((id) => byId.get(id))
+      .filter((s): s is PTSessionEntity => !!s);
+
+    if (orderedSessions.length !== sessionIds.length) {
+      throw new NotFoundException('One or more sessions not found');
+    }
+
+    // Compute starting occurrence and then +1 week per session
+    let nextDate = this.getNextOccurrence(weekdayIndex, time);
+    for (const session of orderedSessions) {
+      session.sessionDate = new Date(nextDate);
+      // next week
+      nextDate = new Date(
+        nextDate.getFullYear(),
+        nextDate.getMonth(),
+        nextDate.getDate() + 7,
+        nextDate.getHours(),
+        nextDate.getMinutes(),
+        0,
+        0,
+      );
+    }
+
+    await this.sessionEntity.save(orderedSessions);
+    return { message: 'Sessions dates updated successfully' };
   }
 
   async getTrainerSessions(trainerId: string, gymId: string) {

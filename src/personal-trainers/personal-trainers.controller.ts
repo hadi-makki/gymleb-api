@@ -31,6 +31,7 @@ import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { PersonalTrainersService } from './personal-trainers.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { BulkUpdateSessionDatesDto } from './dto/bulk-update-session-dates.dto';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidatePersonalTrainerRelatedToGym } from 'src/decorators/validate-personal-trainer-related-to-gym.decorator';
@@ -337,6 +338,24 @@ export class PersonalTrainersController {
       sessionId,
       updateSessionDto,
     );
+  }
+
+  @Post('sessions/bulk-update-dates')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.personalTrainers,
+  )
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bulk update PT session dates weekly by weekday+time' })
+  @ApiBody({ type: BulkUpdateSessionDatesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'The sessions dates have been successfully updated.',
+  })
+  bulkUpdateSessionDates(@Body() dto: BulkUpdateSessionDatesDto) {
+    return this.personalTrainersService.bulkUpdateSessionDates(dto);
   }
 
   @Delete('sessions/:sessionId/:gymId')
