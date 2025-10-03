@@ -484,7 +484,10 @@ export class MemberService {
     const getLatestGymSubscription =
       await this.gymService.getGymActiveSubscription(gym.id);
 
-    if (createMemberDto.sendWelcomeMessage) {
+    if (
+      createMemberDto.sendWelcomeMessage &&
+      getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
+    ) {
       await this.twilioService.sendWelcomeMessage(
         newMember.name,
         newMember.phone,
@@ -494,7 +497,10 @@ export class MemberService {
       );
     }
 
-    if (createMemberDto.sendInvoiceMessage) {
+    if (
+      createMemberDto.sendInvoiceMessage &&
+      getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
+    ) {
       await this.twilioService.sendPaymentConfirmationMessage({
         memberName: member.name,
         activeSubscription:

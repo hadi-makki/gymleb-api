@@ -141,15 +141,15 @@ export class GymService {
     const dateFilter: any = {};
     if (start || end) {
       if (start && end) {
-        dateFilter.createdAt = Between(new Date(start), new Date(end));
+        dateFilter.paidAt = Between(new Date(start), new Date(end));
       } else if (start) {
-        dateFilter.createdAt = MoreThanOrEqual(new Date(start));
+        dateFilter.paidAt = MoreThanOrEqual(new Date(start));
       } else if (end) {
-        dateFilter.createdAt = LessThanOrEqual(new Date(end));
+        dateFilter.paidAt = LessThanOrEqual(new Date(end));
       }
     } else {
       // Default to current month when no custom dates provided
-      dateFilter.createdAt = MoreThanOrEqual(currentMonthStart);
+      dateFilter.paidAt = MoreThanOrEqual(currentMonthStart);
     }
 
     // Fetch all transactions for the gym in the specified range (defaults to current month)
