@@ -570,7 +570,7 @@ export class PersonalTrainersService {
     let setDateDone = false;
 
     // Convert the date to UTC if timezone is provided
-    let sessionDate = createSessionDto.date;
+    let sessionDate: string | Date = createSessionDto.date;
     if (timezone && createSessionDto.date) {
       // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
       // We need to treat it as local time in the provided timezone and convert to UTC
@@ -586,7 +586,7 @@ export class PersonalTrainersService {
       const offsetMs = targetDate.getTime() - utcDate.getTime();
 
       // Apply the offset to get the correct UTC timestamp
-      sessionDate = new Date(naiveDate.getTime() - offsetMs).toISOString();
+      sessionDate = new Date(naiveDate.getTime() - offsetMs);
     }
 
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
@@ -748,7 +748,11 @@ export class PersonalTrainersService {
     };
   }
 
-  async updateSession(sessionId: string, updateSessionDto: UpdateSessionDto) {
+  async updateSession(
+    sessionId: string,
+    updateSessionDto: UpdateSessionDto,
+    timezone?: string,
+  ) {
     const session = await this.sessionEntity.findOne({
       where: { id: sessionId },
       relations: ['members'],
@@ -781,7 +785,28 @@ export class PersonalTrainersService {
 
     // Update session date if provided
     if (updateSessionDto.date) {
-      updateData.sessionDate = updateSessionDto.date;
+      let sessionDate: string | Date = updateSessionDto.date;
+
+      // Convert the date to UTC if timezone is provided
+      if (timezone) {
+        // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
+        // We need to treat it as local time in the provided timezone and convert to UTC
+        const naiveDate = new Date(updateSessionDto.date);
+
+        // Get the timezone offset for this date
+        const utcDate = new Date(
+          naiveDate.toLocaleString('en-US', { timeZone: 'UTC' }),
+        );
+        const targetDate = new Date(
+          naiveDate.toLocaleString('en-US', { timeZone: timezone }),
+        );
+        const offsetMs = targetDate.getTime() - utcDate.getTime();
+
+        // Apply the offset to get the correct UTC timestamp
+        sessionDate = new Date(naiveDate.getTime() - offsetMs);
+      }
+
+      updateData.sessionDate = sessionDate;
     }
 
     // Update session price if provided

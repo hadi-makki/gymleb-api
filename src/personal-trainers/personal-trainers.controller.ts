@@ -336,10 +336,12 @@ export class PersonalTrainersController {
   updateSession(
     @Param('sessionId') sessionId: string,
     @Body() updateSessionDto: UpdateSessionDto,
+    @Headers('timezone') timezone?: string,
   ) {
     return this.personalTrainersService.updateSession(
       sessionId,
       updateSessionDto,
+      timezone,
     );
   }
 
