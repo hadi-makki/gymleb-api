@@ -1084,6 +1084,88 @@ export class PersonalTrainersService {
     return this.attachTimezoneDate(sortedSessions, timezone);
   }
 
+  async debugGetTrainerClientSessions(
+    trainerId: string,
+    gymId: string,
+    memberId: string,
+    timezone?: string,
+  ) {
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
+    if (!trainer) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+
+    const member = await this.memberEntity.findOne({
+      where: { id: memberId },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+        members: { id: memberId },
+      },
+      relations: {
+        members: true,
+        personalTrainer: true,
+        gym: true,
+        transactions: true,
+      },
+    });
+
+    const currentDate = new Date();
+    const currentDateInTz = timezone
+      ? this.formatDateInTimeZone(currentDate, timezone)
+      : currentDate.toISOString();
+
+    return sessions.map((session) => {
+      const sessionDateInTz = this.formatDateInTimeZone(
+        session.sessionDate,
+        timezone,
+      );
+      const isCompleted = this.isSessionCompletedByNow(session, timezone);
+      const isUpcoming = this.isSessionInFuture(session, timezone);
+      const isUnscheduled = !session.sessionDate;
+      const isDateSet = !!session.sessionDate;
+      const isDateNotSet = !session.sessionDate;
+
+      return {
+        sessionId: session.id,
+        sessionName: `Session ${session.id.slice(0, 8)}`,
+        sessionDate: session.sessionDate,
+        sessionDateInTz,
+        currentDate: currentDate,
+        currentRawDate: new Date().toISOString(),
+        currentDateInTz,
+        timezone,
+        type: isCompleted
+          ? 'completed'
+          : session.isCancelled
+            ? 'cancelled'
+            : isUpcoming
+              ? 'upcoming'
+              : isUnscheduled
+                ? 'unscheduled'
+                : 'date-not-set',
+        isDateSet,
+        isDateNotSet,
+        sessionPrice: session.sessionPrice,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+      };
+    });
+  }
+
   async getTrainerGroupSessions(
     trainerId: string,
     gymId: string,

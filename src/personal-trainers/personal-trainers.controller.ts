@@ -454,6 +454,34 @@ export class PersonalTrainersController {
     );
   }
 
+  @Get('debug/trainer/:gymId/:personalTrainerId/client/:memberId/sessions')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Debug sessions for a specific client with timezone comparison data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Debug session data with timezone comparisons.',
+  })
+  debugGetTrainerClientSessions(
+    @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
+    @Param('memberId') memberId: string,
+    @Headers('timezone') timezone?: string,
+  ) {
+    return this.personalTrainersService.debugGetTrainerClientSessions(
+      personalTrainerId,
+      gymId,
+      memberId,
+      timezone,
+    );
+  }
+
   @Get('trainer/:gymId/:personalTrainerId/group-sessions')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
