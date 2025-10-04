@@ -357,8 +357,11 @@ export class PersonalTrainersController {
     status: 200,
     description: 'The sessions dates have been successfully updated.',
   })
-  bulkUpdateSessionDates(@Body() dto: BulkUpdateSessionDatesDto) {
-    return this.personalTrainersService.bulkUpdateSessionDates(dto);
+  bulkUpdateSessionDates(
+    @Body() dto: BulkUpdateSessionDatesDto,
+    @Headers('timezone') timezone?: string,
+  ) {
+    return this.personalTrainersService.bulkUpdateSessionDates(dto, timezone);
   }
 
   @Delete('sessions/:sessionId/:gymId')
@@ -392,10 +395,12 @@ export class PersonalTrainersController {
   getTrainerSessions(
     @Param('gymId') gymId: string,
     @Param('personalTrainerId') personalTrainerId: string,
+    @Headers('timezone') timezone?: string,
   ) {
     return this.personalTrainersService.getTrainerSessions(
       personalTrainerId,
       gymId,
+      timezone,
     );
   }
 
@@ -576,11 +581,13 @@ export class PersonalTrainersController {
     @Param('gymId') gymId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Headers('timezone') timezone?: string,
   ) {
     return await this.personalTrainersService.getCalendarSessions(
       gymId,
       startDate,
       endDate,
+      timezone,
     );
   }
 
@@ -606,12 +613,14 @@ export class PersonalTrainersController {
     @Query('date') date: string,
     @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
     @Query('trainerId') trainerId: string,
+    @Headers('timezone') timezone?: string,
   ) {
     return await this.personalTrainersService.getSessionsByDate(
       gymId,
       date,
       filterBy,
       trainerId,
+      timezone,
     );
   }
 
@@ -632,11 +641,13 @@ export class PersonalTrainersController {
     @Query('date') date: string,
     @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
     @Query('trainerId') trainerId: string,
+    @Headers('timezone') timezone?: string,
   ) {
     return await this.personalTrainersService.getAllSessionsByDate(
       date,
       filterBy,
       trainerId,
+      timezone,
     );
   }
 
@@ -658,12 +669,14 @@ export class PersonalTrainersController {
     @Param('gymId') gymId: string,
     @Query('date') date: string,
     @Query('filterBy') filterBy: 'time' | 'owner' = 'time',
+    @Headers('timezone') timezone?: string,
   ) {
     return await this.personalTrainersService.getMySessionsByDate(
       user.id,
       gymId,
       date,
       filterBy,
+      timezone,
     );
   }
 }

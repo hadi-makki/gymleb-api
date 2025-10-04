@@ -77,25 +77,40 @@ export class PersonalTrainersService {
   private compareBySessionDateAsc(
     a: PTSessionEntity,
     b: PTSessionEntity,
+    timeZone?: string,
   ): number {
-    const ta = this.getUtcEpoch(a.sessionDate as unknown);
-    const tb = this.getUtcEpoch(b.sessionDate as unknown);
+    const ta = this.getComparableInTimeZone(a.sessionDate as unknown, timeZone);
+    const tb = this.getComparableInTimeZone(b.sessionDate as unknown, timeZone);
     if (ta !== null && tb !== null) return ta - tb;
     if (ta !== null) return -1;
     if (tb !== null) return 1;
     return 0;
   }
 
-  private isSessionCompletedByNow(session: PTSessionEntity): boolean {
-    const t = this.getUtcEpoch(session.sessionDate as unknown);
+  private isSessionCompletedByNow(
+    session: PTSessionEntity,
+    timeZone?: string,
+  ): boolean {
+    const t = this.getComparableInTimeZone(
+      session.sessionDate as unknown,
+      timeZone,
+    );
     if (t === null) return false;
-    return t <= Date.now();
+    const nowCmp = this.getComparableInTimeZone(new Date(), timeZone)!;
+    return t <= nowCmp;
   }
 
-  private isSessionInFuture(session: PTSessionEntity): boolean {
-    const t = this.getUtcEpoch(session.sessionDate as unknown);
+  private isSessionInFuture(
+    session: PTSessionEntity,
+    timeZone?: string,
+  ): boolean {
+    const t = this.getComparableInTimeZone(
+      session.sessionDate as unknown,
+      timeZone,
+    );
     if (t === null) return false;
-    return t > Date.now();
+    const nowCmp = this.getComparableInTimeZone(new Date(), timeZone)!;
+    return t > nowCmp;
   }
 
   private getUtcDayRange(dateInput: string): { start: Date; end: Date } {
@@ -134,6 +149,39 @@ export class PersonalTrainersService {
       ),
     );
     return { start, end };
+  }
+
+  private getComparableInTimeZone(
+    input: unknown,
+    timeZone?: string,
+  ): number | null {
+    if (!input) return null;
+    const date = input instanceof Date ? input : new Date(String(input));
+    try {
+      if (!timeZone) return date.getTime();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      } as any);
+      const parts = formatter.formatToParts(date);
+      const by = (t: string) => parts.find((p) => p.type === t)?.value || '00';
+      const y = Number(by('year'));
+      const m = Number(by('month'));
+      const d = Number(by('day'));
+      const hh = Number(by('hour'));
+      const mm = Number(by('minute'));
+      const ss = Number(by('second'));
+      // Comparable value in UTC coordinate space built from local wall time components
+      return Date.UTC(y, m - 1, d, hh, mm, ss, 0);
+    } catch {
+      return date.getTime();
+    }
   }
 
   // Format a UTC moment into the provided IANA timezone without static offsets.
@@ -713,36 +761,67 @@ export class PersonalTrainersService {
     return map[weekday.toLowerCase()];
   }
 
-  private getNextOccurrence(weekdayIndex: number, timeHHmm: string): Date {
+  private getNextOccurrence(
+    weekdayIndex: number,
+    timeHHmm: string,
+    timeZone?: string,
+  ): Date {
+    // Compute today's date at 00:00 in the target timezone
     const now = new Date();
-    // Base date at today 00:00
-    const base = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0,
-      0,
-      0,
-      0,
+    let baseUtcMidnight = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
     );
-    const todayIndex = base.getDay();
+    if (timeZone) {
+      try {
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+          timeZone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        } as any);
+        const parts = fmt.formatToParts(now);
+        const get = (t: string) =>
+          parts.find((p) => p.type === t)?.value || '00';
+        const y = Number(get('year'));
+        const m = Number(get('month')) - 1;
+        const d = Number(get('day'));
+        baseUtcMidnight = new Date(Date.UTC(y, m, d, 0, 0, 0, 0));
+      } catch {
+        // fallback keeps baseUtcMidnight as UTC today
+      }
+    }
+
+    // Day index in the target timezone (using UTC midnight of that local day)
+    const todayIndex = baseUtcMidnight.getUTCDay();
     let delta = weekdayIndex - todayIndex;
     if (delta < 0) delta += 7;
 
-    // Tentative date
+    // Tentative date (keep time as specified in the target timezone by composing at local midnight UTC)
     const [hh, mm] = timeHHmm.split(':').map((n) => parseInt(n, 10));
-    const candidate = new Date(base);
-    candidate.setDate(candidate.getDate() + delta);
-    candidate.setHours(hh, mm, 0, 0);
+    const candidate = new Date(
+      baseUtcMidnight.getTime() + delta * 24 * 60 * 60 * 1000,
+    );
+    candidate.setUTCHours(hh, mm, 0, 0);
 
-    // If today is the same weekday but time already passed, move to next week
+    // If today is the same weekday but time already passed (compare instants), move to next week
     if (candidate.getTime() <= now.getTime()) {
       candidate.setDate(candidate.getDate() + 7);
     }
     return candidate;
   }
 
-  async bulkUpdateSessionDates(dto: BulkUpdateSessionDatesDto) {
+  async bulkUpdateSessionDates(
+    dto: BulkUpdateSessionDatesDto,
+    timezone?: string,
+  ) {
     const { sessionIds, weekday, time } = dto;
     if (!sessionIds || sessionIds.length === 0) {
       throw new BadRequestException('No session IDs provided');
@@ -767,27 +846,23 @@ export class PersonalTrainersService {
       throw new NotFoundException('One or more sessions not found');
     }
 
-    // Compute starting occurrence and then +1 week per session
-    let nextDate = this.getNextOccurrence(weekdayIndex, time);
+    // Compute starting occurrence and then +1 week per session (respect timezone for the base day/time)
+    let nextDate = this.getNextOccurrence(weekdayIndex, time, timezone);
     for (const session of orderedSessions) {
       session.sessionDate = new Date(nextDate);
       // next week
-      nextDate = new Date(
-        nextDate.getFullYear(),
-        nextDate.getMonth(),
-        nextDate.getDate() + 7,
-        nextDate.getHours(),
-        nextDate.getMinutes(),
-        0,
-        0,
-      );
+      nextDate = new Date(nextDate.getTime() + 7 * 24 * 60 * 60 * 1000);
     }
 
     await this.sessionEntity.save(orderedSessions);
     return { message: 'Sessions dates updated successfully' };
   }
 
-  async getTrainerSessions(trainerId: string, gymId: string) {
+  async getTrainerSessions(
+    trainerId: string,
+    gymId: string,
+    timezone?: string,
+  ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -809,7 +884,9 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
+    return sessions.sort((a, b) =>
+      this.compareBySessionDateAsc(a, b, timezone),
+    );
   }
 
   async getTrainerClients(trainerId: string, gymId: string) {
@@ -947,13 +1024,13 @@ export class PersonalTrainersService {
       });
 
       const sortedSessions = sessions.sort((a, b) =>
-        this.compareBySessionDateAsc(a, b),
+        this.compareBySessionDateAsc(a, b, timezone),
       );
 
       // Apply status filtering if provided
       if (status) {
         const filtered = sortedSessions.filter((session) => {
-          const isCompleted = this.isSessionCompletedByNow(session);
+          const isCompleted = this.isSessionCompletedByNow(session, timezone);
           const isCancelled = session.isCancelled;
           if (status === 'active') return !isCompleted && !isCancelled;
           if (status === 'inactive') return isCompleted || isCancelled;
@@ -989,13 +1066,13 @@ export class PersonalTrainersService {
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
     const sortedSessions = sessions.sort((a, b) =>
-      this.compareBySessionDateAsc(a, b),
+      this.compareBySessionDateAsc(a, b, timezone),
     );
 
     // Apply status filtering if provided
     if (status) {
       const filtered = sortedSessions.filter((session) => {
-        const isCompleted = this.isSessionCompletedByNow(session);
+        const isCompleted = this.isSessionCompletedByNow(session, timezone);
         const isCancelled = session.isCancelled;
         if (status === 'active') return !isCompleted && !isCancelled;
         if (status === 'inactive') return isCompleted || isCancelled;
@@ -1049,7 +1126,7 @@ export class PersonalTrainersService {
     // Apply status filtering if provided
     if (status) {
       const filtered = sortedSessions.filter((session) => {
-        const isCompleted = this.isSessionCompletedByNow(session);
+        const isCompleted = this.isSessionCompletedByNow(session, timezone);
         const isCancelled = session.isCancelled;
         if (status === 'active') return !isCompleted && !isCancelled;
         if (status === 'inactive') return isCompleted || isCancelled;
@@ -1188,7 +1265,7 @@ export class PersonalTrainersService {
         relations: ['members', 'personalTrainer', 'gym'],
       });
       return this.attachTimezoneDate(
-        sessions.sort((a, b) => this.compareBySessionDateAsc(a, b)),
+        sessions.sort((a, b) => this.compareBySessionDateAsc(a, b, timezone)),
         timezone,
       );
     }
@@ -1212,7 +1289,7 @@ export class PersonalTrainersService {
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
     return this.attachTimezoneDate(
-      sessions.sort((a, b) => this.compareBySessionDateAsc(a, b)),
+      sessions.sort((a, b) => this.compareBySessionDateAsc(a, b, timezone)),
       timezone,
     );
   }
@@ -1261,6 +1338,7 @@ export class PersonalTrainersService {
     gymId: string,
     startDate?: string,
     endDate?: string,
+    timezone?: string,
   ) {
     const checkGym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!checkGym) {
@@ -1313,6 +1391,7 @@ export class PersonalTrainersService {
           email: member.email,
         })) || [],
       sessionDate: session.sessionDate,
+      sessionDateTz: this.formatDateInTimeZone(session.sessionDate, timezone),
       isCancelled: session.isCancelled,
       cancelledReason: session.cancelledReason,
       cancelledAt: session.cancelledAt,
@@ -1333,6 +1412,7 @@ export class PersonalTrainersService {
     date: string,
     filterBy: 'time' | 'owner' = 'time',
     trainerId: string,
+    timezone?: string,
   ) {
     const { start: startDate, end: endDate } = this.getUtcDayRange(date);
 
@@ -1354,7 +1434,7 @@ export class PersonalTrainersService {
     });
 
     if (filterBy === 'time') {
-      return this.groupSessionsByTime(sessions);
+      return this.groupSessionsByTime(sessions, timezone);
     } else {
       return this.groupSessionsByOwner(sessions);
     }
@@ -1364,6 +1444,7 @@ export class PersonalTrainersService {
     date: string,
     filterBy: 'time' | 'owner' = 'time',
     trainerId: string,
+    timezone?: string,
   ) {
     const { start: startDate, end: endDate } = this.getUtcDayRange(date);
 
@@ -1384,7 +1465,7 @@ export class PersonalTrainersService {
     });
 
     if (filterBy === 'time') {
-      return this.groupSessionsByTime(sessions);
+      return this.groupSessionsByTime(sessions, timezone);
     } else {
       return this.groupSessionsByOwner(sessions);
     }
@@ -1395,6 +1476,7 @@ export class PersonalTrainersService {
     gymId: string,
     date: string,
     filterBy: 'time' | 'owner' = 'time',
+    timezone?: string,
   ) {
     const { start: startDate, end: endDate } = this.getUtcDayRange(date);
 
@@ -1416,19 +1498,24 @@ export class PersonalTrainersService {
     });
 
     if (filterBy === 'time') {
-      return this.groupSessionsByTime(sessions);
+      return this.groupSessionsByTime(sessions, timezone);
     } else {
       return this.groupSessionsByOwner(sessions);
     }
   }
 
-  private groupSessionsByTime(sessions: PTSessionEntity[]) {
+  private groupSessionsByTime(sessions: PTSessionEntity[], timezone?: string) {
     const timeGroups = new Map<string, PTSessionEntity[]>();
 
     sessions.forEach((session) => {
-      const timeKey = session.sessionDate
-        ? session.sessionDate.toTimeString().slice(0, 5)
-        : 'No Time';
+      let timeKey = 'No Time';
+      if (session.sessionDate) {
+        const formatted = this.formatDateInTimeZone(
+          session.sessionDate,
+          timezone,
+        );
+        timeKey = formatted ? formatted.slice(11, 16) : 'No Time';
+      }
 
       if (!timeGroups.has(timeKey)) {
         timeGroups.set(timeKey, []);
