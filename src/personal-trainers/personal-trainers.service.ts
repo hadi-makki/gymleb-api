@@ -136,6 +136,56 @@ export class PersonalTrainersService {
     return { start, end };
   }
 
+  // Format a UTC moment into the provided IANA timezone without static offsets.
+  // Returns an ISO-like string (YYYY-MM-DDTHH:mm:ss) in that timezone.
+  private formatDateInTimeZone(
+    input: unknown,
+    timeZone?: string,
+  ): string | null {
+    const epoch = this.getUtcEpoch(input as unknown);
+    if (epoch === null) return null;
+    const date = new Date(epoch);
+    if (!timeZone) return date.toISOString();
+    try {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      } as any);
+      const parts = formatter.formatToParts(date);
+      const byType = (t: string) =>
+        parts.find((p) => p.type === t)?.value || '00';
+      const y = byType('year');
+      const m = byType('month');
+      const d = byType('day');
+      const h = byType('hour');
+      const min = byType('minute');
+      const s = byType('second');
+      return `${y}-${m}-${d}T${h}:${min}:${s}`;
+    } catch {
+      return date.toISOString();
+    }
+  }
+
+  private attachTimezoneDate<T extends { sessionDate?: unknown }>(
+    sessions: T[],
+    timeZone?: string,
+  ): (T & { sessionDateTz?: string | null })[] {
+    if (!sessions || !Array.isArray(sessions)) return sessions as any;
+    return sessions.map((s) => {
+      (s as any).sessionDateTz = this.formatDateInTimeZone(
+        s.sessionDate,
+        timeZone,
+      );
+      return s as any;
+    });
+  }
+
   async removeClientFromTrainer(memberId: string, gymId: string) {
     const member = await this.memberEntity.findOne({ where: { id: memberId } });
     console.log(
@@ -855,6 +905,7 @@ export class PersonalTrainersService {
     memberId: string,
     gymId: string,
     status?: 'active' | 'inactive',
+    timezone?: string,
   ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
@@ -901,16 +952,17 @@ export class PersonalTrainersService {
 
       // Apply status filtering if provided
       if (status) {
-        return sortedSessions.filter((session) => {
+        const filtered = sortedSessions.filter((session) => {
           const isCompleted = this.isSessionCompletedByNow(session);
           const isCancelled = session.isCancelled;
           if (status === 'active') return !isCompleted && !isCancelled;
           if (status === 'inactive') return isCompleted || isCancelled;
           return true;
         });
+        return this.attachTimezoneDate(filtered, timezone);
       }
 
-      return sortedSessions;
+      return this.attachTimezoneDate(sortedSessions, timezone);
     }
 
     // Multi-member: require sessions whose members set exactly matches targetIds
@@ -942,16 +994,17 @@ export class PersonalTrainersService {
 
     // Apply status filtering if provided
     if (status) {
-      return sortedSessions.filter((session) => {
+      const filtered = sortedSessions.filter((session) => {
         const isCompleted = this.isSessionCompletedByNow(session);
         const isCancelled = session.isCancelled;
         if (status === 'active') return !isCompleted && !isCancelled;
         if (status === 'inactive') return isCompleted || isCancelled;
         return true;
       });
+      return this.attachTimezoneDate(filtered, timezone);
     }
 
-    return sortedSessions;
+    return this.attachTimezoneDate(sortedSessions, timezone);
   }
 
   async getTrainerGroupSessions(
@@ -959,6 +1012,7 @@ export class PersonalTrainersService {
     gymId: string,
     memberIds: string[],
     status?: 'active' | 'inactive',
+    timezone?: string,
   ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
@@ -994,16 +1048,17 @@ export class PersonalTrainersService {
 
     // Apply status filtering if provided
     if (status) {
-      return sortedSessions.filter((session) => {
+      const filtered = sortedSessions.filter((session) => {
         const isCompleted = this.isSessionCompletedByNow(session);
         const isCancelled = session.isCancelled;
         if (status === 'active') return !isCompleted && !isCancelled;
         if (status === 'inactive') return isCompleted || isCancelled;
         return true;
       });
+      return this.attachTimezoneDate(filtered, timezone);
     }
 
-    return sortedSessions;
+    return this.attachTimezoneDate(sortedSessions, timezone);
   }
 
   async mySessions(gymId: string, personalTrainer: ManagerEntity) {
@@ -1110,6 +1165,7 @@ export class PersonalTrainersService {
     memberId: string,
     gymId: string,
     personalTrainer: ManagerEntity,
+    timezone?: string,
   ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
@@ -1131,7 +1187,10 @@ export class PersonalTrainersService {
         },
         relations: ['members', 'personalTrainer', 'gym'],
       });
-      return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
+      return this.attachTimezoneDate(
+        sessions.sort((a, b) => this.compareBySessionDateAsc(a, b)),
+        timezone,
+      );
     }
 
     // Multi-member: require sessions whose members set exactly matches targetIds
@@ -1152,7 +1211,10 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
+    return this.attachTimezoneDate(
+      sessions.sort((a, b) => this.compareBySessionDateAsc(a, b)),
+      timezone,
+    );
   }
 
   async deleteSession(sessionId: string) {

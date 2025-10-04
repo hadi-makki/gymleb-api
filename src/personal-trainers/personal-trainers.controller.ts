@@ -10,6 +10,7 @@ import {
   UseGuards,
   Query,
   UseInterceptors,
+  Headers,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -348,7 +349,9 @@ export class PersonalTrainersController {
     Permissions.personalTrainers,
   )
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Bulk update PT session dates weekly by weekday+time' })
+  @ApiOperation({
+    summary: 'Bulk update PT session dates weekly by weekday+time',
+  })
   @ApiBody({ type: BulkUpdateSessionDatesDto })
   @ApiResponse({
     status: 200,
@@ -435,12 +438,14 @@ export class PersonalTrainersController {
     @Param('personalTrainerId') personalTrainerId: string,
     @Param('memberId') memberId: string,
     @Query('status') status?: 'active' | 'inactive',
+    @Headers('timezone') timezone?: string,
   ) {
     return this.personalTrainersService.getTrainerClientSessions(
       personalTrainerId,
       memberId,
       gymId,
       status,
+      timezone,
     );
   }
 
@@ -462,6 +467,7 @@ export class PersonalTrainersController {
     @Param('personalTrainerId') personalTrainerId: string,
     @Query('memberIds') memberIds: string,
     @Query('status') status?: 'active' | 'inactive',
+    @Headers('timezone') timezone?: string,
   ) {
     const ids = (memberIds || '')
       .split(',')
@@ -472,6 +478,7 @@ export class PersonalTrainersController {
       gymId,
       ids,
       status,
+      timezone,
     );
   }
 
@@ -542,11 +549,13 @@ export class PersonalTrainersController {
     @Param('memberId') memberId: string,
     @Param('gymId') gymId: string,
     @User() personalTrainer: ManagerEntity,
+    @Headers('timezone') timezone?: string,
   ) {
     return await this.personalTrainersService.getClientSessions(
       memberId,
       gymId,
       personalTrainer,
+      timezone,
     );
   }
 
