@@ -37,6 +37,105 @@ export class PersonalTrainersService {
     private readonly mediaService: MediaService,
   ) {}
 
+  // Date helpers to ensure UTC-safe comparisons without static offsets
+  private getUtcEpoch(input: unknown): number | null {
+    if (!input) return null;
+    if (input instanceof Date) {
+      return input.getTime();
+    }
+    if (typeof input === 'string') {
+      const raw = input.trim();
+      if (!raw) return null;
+      // If timezone info exists, rely on native parsing
+      if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+        const t = Date.parse(raw);
+        return Number.isNaN(t) ? null : t;
+      }
+      // Parse common forms without timezone and treat as UTC
+      const m = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/,
+      );
+      if (m) {
+        const year = Number(m[1]);
+        const monthIndex = Number(m[2]) - 1;
+        const day = Number(m[3]);
+        const hour = m[4] ? Number(m[4]) : 0;
+        const minute = m[5] ? Number(m[5]) : 0;
+        const second = m[6] ? Number(m[6]) : 0;
+        const ms = m[7] ? Number((m[7] + '00').slice(0, 3)) : 0;
+        return Date.UTC(year, monthIndex, day, hour, minute, second, ms);
+      }
+      // Fallback: try interpreting as UTC by appending Z, then native
+      const tzForced = Date.parse(raw + 'Z');
+      if (!Number.isNaN(tzForced)) return tzForced;
+      const native = Date.parse(raw);
+      return Number.isNaN(native) ? null : native;
+    }
+    return null;
+  }
+
+  private compareBySessionDateAsc(
+    a: PTSessionEntity,
+    b: PTSessionEntity,
+  ): number {
+    const ta = this.getUtcEpoch(a.sessionDate as unknown);
+    const tb = this.getUtcEpoch(b.sessionDate as unknown);
+    if (ta !== null && tb !== null) return ta - tb;
+    if (ta !== null) return -1;
+    if (tb !== null) return 1;
+    return 0;
+  }
+
+  private isSessionCompletedByNow(session: PTSessionEntity): boolean {
+    const t = this.getUtcEpoch(session.sessionDate as unknown);
+    if (t === null) return false;
+    return t <= Date.now();
+  }
+
+  private isSessionInFuture(session: PTSessionEntity): boolean {
+    const t = this.getUtcEpoch(session.sessionDate as unknown);
+    if (t === null) return false;
+    return t > Date.now();
+  }
+
+  private getUtcDayRange(dateInput: string): { start: Date; end: Date } {
+    const onlyDate = (dateInput || '').trim().split('T')[0].split(' ')[0];
+    const m = onlyDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mon = Number(m[2]) - 1;
+      const d = Number(m[3]);
+      const start = new Date(Date.UTC(y, mon, d, 0, 0, 0, 0));
+      const end = new Date(Date.UTC(y, mon, d, 23, 59, 59, 999));
+      return { start, end };
+    }
+    // Fallback: use native parsing but normalize to that day's UTC bounds
+    const parsed = new Date(dateInput);
+    const start = new Date(
+      Date.UTC(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth(),
+        parsed.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+    const end = new Date(
+      Date.UTC(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth(),
+        parsed.getUTCDate(),
+        23,
+        59,
+        59,
+        999,
+      ),
+    );
+    return { start, end };
+  }
+
   async removeClientFromTrainer(memberId: string, gymId: string) {
     const member = await this.memberEntity.findOne({ where: { id: memberId } });
     console.log(
@@ -660,24 +759,7 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    return sessions.sort((a, b) => {
-      // If both have dates, sort by date
-      if (a.sessionDate && b.sessionDate) {
-        return (
-          new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
-        );
-      }
-      // If only a has date, a comes first
-      if (a.sessionDate && !b.sessionDate) {
-        return -1;
-      }
-      // If only b has date, b comes first
-      if (!a.sessionDate && b.sessionDate) {
-        return 1;
-      }
-      // If neither has date, maintain original order
-      return 0;
-    });
+    return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
   }
 
   async getTrainerClients(trainerId: string, gymId: string) {
@@ -751,10 +833,7 @@ export class PersonalTrainersService {
 
       if (session.isCancelled) {
         groupData.cancelledSessions++;
-      } else if (
-        session.sessionDate &&
-        new Date(session.sessionDate) > new Date()
-      ) {
+      } else if (this.isSessionInFuture(session)) {
         groupData.upcomingSessions++;
       } else if (!session.sessionDate) {
         // sessions not scheduled yet
@@ -816,33 +895,17 @@ export class PersonalTrainersService {
         },
       });
 
-      const sortedSessions = sessions.sort((a, b) => {
-        if (a.sessionDate && b.sessionDate) {
-          return (
-            new Date(a.sessionDate).getTime() -
-            new Date(b.sessionDate).getTime()
-          );
-        }
-        if (a.sessionDate && !b.sessionDate) return -1;
-        if (!a.sessionDate && b.sessionDate) return 1;
-        return 0;
-      });
+      const sortedSessions = sessions.sort((a, b) =>
+        this.compareBySessionDateAsc(a, b),
+      );
 
       // Apply status filtering if provided
       if (status) {
         return sortedSessions.filter((session) => {
-          const isCompleted =
-            session.sessionDate && new Date(session.sessionDate) <= new Date();
+          const isCompleted = this.isSessionCompletedByNow(session);
           const isCancelled = session.isCancelled;
-
-          if (status === 'active') {
-            // Active: not completed and not cancelled
-            return !isCompleted && !isCancelled;
-          } else if (status === 'inactive') {
-            // Inactive: completed or cancelled
-            return isCompleted || isCancelled;
-          }
-
+          if (status === 'active') return !isCompleted && !isCancelled;
+          if (status === 'inactive') return isCompleted || isCancelled;
           return true;
         });
       }
@@ -873,40 +936,17 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    const sortedSessions = sessions.sort((a, b) => {
-      // If both have dates, sort by date
-      if (a.sessionDate && b.sessionDate) {
-        return (
-          new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
-        );
-      }
-      // If only a has date, a comes first
-      if (a.sessionDate && !b.sessionDate) {
-        return -1;
-      }
-      // If only b has date, b comes first
-      if (!a.sessionDate && b.sessionDate) {
-        return 1;
-      }
-      // If neither has date, maintain original order
-      return 0;
-    });
+    const sortedSessions = sessions.sort((a, b) =>
+      this.compareBySessionDateAsc(a, b),
+    );
 
     // Apply status filtering if provided
     if (status) {
       return sortedSessions.filter((session) => {
-        const isCompleted =
-          session.sessionDate && new Date(session.sessionDate) <= new Date();
+        const isCompleted = this.isSessionCompletedByNow(session);
         const isCancelled = session.isCancelled;
-
-        if (status === 'active') {
-          // Active: not completed and not cancelled
-          return !isCompleted && !isCancelled;
-        } else if (status === 'inactive') {
-          // Inactive: completed or cancelled
-          return isCompleted || isCancelled;
-        }
-
+        if (status === 'active') return !isCompleted && !isCancelled;
+        if (status === 'inactive') return isCompleted || isCancelled;
         return true;
       });
     }
@@ -948,36 +988,17 @@ export class PersonalTrainersService {
       return key === targetKey;
     });
 
-    const sortedSessions = filtered.sort((a, b) => {
-      if (a.sessionDate && b.sessionDate) {
-        return (
-          new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
-        );
-      }
-      if (a.sessionDate && !b.sessionDate) {
-        return -1;
-      }
-      if (!a.sessionDate && b.sessionDate) {
-        return 1;
-      }
-      return 0;
-    });
+    const sortedSessions = filtered.sort((a, b) =>
+      this.compareBySessionDateAsc(a, b),
+    );
 
     // Apply status filtering if provided
     if (status) {
       return sortedSessions.filter((session) => {
-        const isCompleted =
-          session.sessionDate && new Date(session.sessionDate) <= new Date();
+        const isCompleted = this.isSessionCompletedByNow(session);
         const isCancelled = session.isCancelled;
-
-        if (status === 'active') {
-          // Active: not completed and not cancelled
-          return !isCompleted && !isCancelled;
-        } else if (status === 'inactive') {
-          // Inactive: completed or cancelled
-          return isCompleted || isCancelled;
-        }
-
+        if (status === 'active') return !isCompleted && !isCancelled;
+        if (status === 'inactive') return isCompleted || isCancelled;
         return true;
       });
     }
@@ -1001,24 +1022,7 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    return sessions.sort((a, b) => {
-      // If both have dates, sort by date
-      if (a.sessionDate && b.sessionDate) {
-        return (
-          new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
-        );
-      }
-      // If only a has date, a comes first
-      if (a.sessionDate && !b.sessionDate) {
-        return -1;
-      }
-      // If only b has date, b comes first
-      if (!a.sessionDate && b.sessionDate) {
-        return 1;
-      }
-      // If neither has date, maintain original order
-      return 0;
-    });
+    return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
   }
 
   async myClients(gymId: string, personalTrainer: ManagerEntity) {
@@ -1085,10 +1089,7 @@ export class PersonalTrainersService {
 
       if (session.isCancelled) {
         groupData.cancelledSessions++;
-      } else if (
-        session.sessionDate &&
-        new Date(session.sessionDate) > new Date()
-      ) {
+      } else if (this.isSessionInFuture(session)) {
         groupData.upcomingSessions++;
       } else if (!session.sessionDate) {
         // sessions not scheduled yet
@@ -1130,17 +1131,7 @@ export class PersonalTrainersService {
         },
         relations: ['members', 'personalTrainer', 'gym'],
       });
-      return sessions.sort((a, b) => {
-        if (a.sessionDate && b.sessionDate) {
-          return (
-            new Date(a.sessionDate).getTime() -
-            new Date(b.sessionDate).getTime()
-          );
-        }
-        if (a.sessionDate && !b.sessionDate) return -1;
-        if (!a.sessionDate && b.sessionDate) return 1;
-        return 0;
-      });
+      return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
     }
 
     // Multi-member: require sessions whose members set exactly matches targetIds
@@ -1161,24 +1152,7 @@ export class PersonalTrainersService {
     });
 
     // Sort sessions: sessions with dates first (by date), then sessions without dates
-    return sessions.sort((a, b) => {
-      // If both have dates, sort by date
-      if (a.sessionDate && b.sessionDate) {
-        return (
-          new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
-        );
-      }
-      // If only a has date, a comes first
-      if (a.sessionDate && !b.sessionDate) {
-        return -1;
-      }
-      // If only b has date, b comes first
-      if (!a.sessionDate && b.sessionDate) {
-        return 1;
-      }
-      // If neither has date, maintain original order
-      return 0;
-    });
+    return sessions.sort((a, b) => this.compareBySessionDateAsc(a, b));
   }
 
   async deleteSession(sessionId: string) {
@@ -1235,12 +1209,20 @@ export class PersonalTrainersService {
       gym: { id: gymId },
     };
 
-    // Add date filtering if provided
+    // Add date filtering if provided (use UTC day bounds when only dates provided)
     if (startDate && endDate) {
-      whereCondition.sessionDate = Between(
-        new Date(startDate),
-        new Date(endDate),
-      );
+      const hasTime =
+        /[T ]\d{2}:\d{2}/.test(startDate) || /[T ]\d{2}:\d{2}/.test(endDate);
+      if (hasTime) {
+        whereCondition.sessionDate = Between(
+          new Date(startDate),
+          new Date(endDate),
+        );
+      } else {
+        const rangeStart = this.getUtcDayRange(startDate).start;
+        const rangeEnd = this.getUtcDayRange(endDate).end;
+        whereCondition.sessionDate = Between(rangeStart, rangeEnd);
+      }
     }
 
     const sessions = await this.sessionEntity.find({
@@ -1290,9 +1272,7 @@ export class PersonalTrainersService {
     filterBy: 'time' | 'owner' = 'time',
     trainerId: string,
   ) {
-    const startDate = new Date(date);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    const { start: startDate, end: endDate } = this.getUtcDayRange(date);
 
     const sessions = await this.sessionEntity.find({
       where: {
@@ -1323,9 +1303,7 @@ export class PersonalTrainersService {
     filterBy: 'time' | 'owner' = 'time',
     trainerId: string,
   ) {
-    const startDate = new Date(date);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    const { start: startDate, end: endDate } = this.getUtcDayRange(date);
 
     const sessions = await this.sessionEntity.find({
       where: {
@@ -1356,9 +1334,7 @@ export class PersonalTrainersService {
     date: string,
     filterBy: 'time' | 'owner' = 'time',
   ) {
-    const startDate = new Date(date);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    const { start: startDate, end: endDate } = this.getUtcDayRange(date);
 
     const sessions = await this.sessionEntity.find({
       where: {
