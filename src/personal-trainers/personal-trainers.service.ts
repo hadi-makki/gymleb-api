@@ -733,7 +733,7 @@ export class PersonalTrainersService {
 
     // Update session date if provided
     if (updateSessionDto.date) {
-      updateData.sessionDate = new Date(updateSessionDto.date);
+      updateData.sessionDate = updateSessionDto.date;
     }
 
     // Update session price if provided
