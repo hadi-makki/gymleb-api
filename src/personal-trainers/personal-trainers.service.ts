@@ -184,22 +184,26 @@ export class PersonalTrainersService {
       const mm = Number(by('minute'));
       const ss = Number(by('second'));
 
-      // Create a naive date with these components and convert back to UTC
-      // This represents the same moment in time but comparable
-      const naiveDate = new Date(y, m - 1, d, hh, mm, ss, 0);
+      // Create a date string in the target timezone and parse it
+      const localTimeString = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 
-      // Get the timezone offset for this specific date
+      // Use a more direct approach: create a date in the target timezone
+      // by using the timezone offset
+      const tempDate = new Date(localTimeString);
+
+      // Get the timezone offset for this date
       const utcDate = new Date(
-        naiveDate.toLocaleString('en-US', { timeZone: 'UTC' }),
+        tempDate.toLocaleString('en-US', { timeZone: 'UTC' }),
       );
       const targetDate = new Date(
-        naiveDate.toLocaleString('en-US', { timeZone }),
+        tempDate.toLocaleString('en-US', { timeZone }),
       );
-      const offsetMinutes = (targetDate.getTime() - utcDate.getTime()) / 60000;
+      const offsetMs = targetDate.getTime() - utcDate.getTime();
 
       // Apply the offset to get the correct UTC timestamp
-      return naiveDate.getTime() - offsetMinutes * 60000;
-    } catch {
+      return tempDate.getTime() - offsetMs;
+    } catch (error) {
+      console.error('Error in getComparableInTimeZone:', error);
       return date.getTime();
     }
   }
