@@ -515,7 +515,11 @@ export class PersonalTrainersService {
     };
   }
 
-  async createSession(gymId: string, createSessionDto: CreateSessionDto) {
+  async createSession(
+    gymId: string,
+    createSessionDto: CreateSessionDto,
+    timezone?: string,
+  ) {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -565,13 +569,33 @@ export class PersonalTrainersService {
 
     let setDateDone = false;
 
+    // Convert the date to UTC if timezone is provided
+    let sessionDate = createSessionDto.date;
+    if (timezone && createSessionDto.date) {
+      // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
+      // We need to treat it as local time in the provided timezone and convert to UTC
+      const naiveDate = new Date(createSessionDto.date);
+
+      // Get the timezone offset for this date
+      const utcDate = new Date(
+        naiveDate.toLocaleString('en-US', { timeZone: 'UTC' }),
+      );
+      const targetDate = new Date(
+        naiveDate.toLocaleString('en-US', { timeZone: timezone }),
+      );
+      const offsetMs = targetDate.getTime() - utcDate.getTime();
+
+      // Apply the offset to get the correct UTC timestamp
+      sessionDate = new Date(naiveDate.getTime() - offsetMs).toISOString();
+    }
+
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
       const createSessionModel = this.sessionEntity.create({
         members,
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
         sessionPrice: createSessionDto.sessionPrice,
-        sessionDate: !setDateDone ? createSessionDto.date : null,
+        sessionDate: !setDateDone ? sessionDate : null,
       });
       const createdSession = await this.sessionEntity.save(createSessionModel);
       // Create a separate transaction per member for this session

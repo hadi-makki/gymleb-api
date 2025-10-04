@@ -270,10 +270,12 @@ export class PersonalTrainersController {
   async createSession(
     @Param('gymId') gymId: string,
     @Body() createSessionDto: CreateSessionDto,
+    @Headers('timezone') timezone?: string,
   ) {
     return await this.personalTrainersService.createSession(
       gymId,
       createSessionDto,
+      timezone,
     );
   }
 
