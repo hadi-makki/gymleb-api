@@ -575,18 +575,7 @@ export class PersonalTrainersService {
       // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
       // We need to treat it as local time in the provided timezone and convert to UTC
       const naiveDate = new Date(createSessionDto.date);
-
-      // Get the timezone offset for this date
-      const utcDate = new Date(
-        naiveDate.toLocaleString('en-US', { timeZone: 'UTC' }),
-      );
-      const targetDate = new Date(
-        naiveDate.toLocaleString('en-US', { timeZone: timezone }),
-      );
-      const offsetMs = targetDate.getTime() - utcDate.getTime();
-
-      // Apply the offset to get the correct UTC timestamp
-      sessionDate = new Date(naiveDate.getTime() - offsetMs);
+      sessionDate = this.convertLocalToUTC(naiveDate, timezone);
     }
 
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
@@ -792,18 +781,7 @@ export class PersonalTrainersService {
         // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
         // We need to treat it as local time in the provided timezone and convert to UTC
         const naiveDate = new Date(updateSessionDto.date);
-
-        // Get the timezone offset for this date
-        const utcDate = new Date(
-          naiveDate.toLocaleString('en-US', { timeZone: 'UTC' }),
-        );
-        const targetDate = new Date(
-          naiveDate.toLocaleString('en-US', { timeZone: timezone }),
-        );
-        const offsetMs = targetDate.getTime() - utcDate.getTime();
-
-        // Apply the offset to get the correct UTC timestamp
-        sessionDate = new Date(naiveDate.getTime() - offsetMs);
+        sessionDate = this.convertLocalToUTC(naiveDate, timezone);
       }
 
       updateData.sessionDate = sessionDate;
@@ -891,6 +869,28 @@ export class PersonalTrainersService {
     return candidate;
   }
 
+  /**
+   * Convert a local date/time to UTC using timezone offset calculation
+   * This follows the same pattern as the DateTimePicker component and createSession method
+   */
+  private convertLocalToUTC(localDate: Date, timezone?: string): Date {
+    if (!timezone) {
+      return localDate;
+    }
+
+    // Get the timezone offset for this date
+    const utcDate = new Date(
+      localDate.toLocaleString('en-US', { timeZone: 'UTC' }),
+    );
+    const targetDate = new Date(
+      localDate.toLocaleString('en-US', { timeZone: timezone }),
+    );
+    const offsetMs = targetDate.getTime() - utcDate.getTime();
+
+    // Apply the offset to get the correct UTC timestamp
+    return new Date(localDate.getTime() - offsetMs);
+  }
+
   async bulkUpdateSessionDates(
     dto: BulkUpdateSessionDatesDto,
     timezone?: string,
@@ -921,8 +921,12 @@ export class PersonalTrainersService {
 
     // Compute starting occurrence and then +1 week per session (respect timezone for the base day/time)
     let nextDate = this.getNextOccurrence(weekdayIndex, time, timezone);
+
     for (const session of orderedSessions) {
-      session.sessionDate = new Date(nextDate);
+      // Apply UTC conversion using the helper method
+      const sessionDate = this.convertLocalToUTC(nextDate, timezone);
+      session.sessionDate = sessionDate;
+
       // next week
       nextDate = new Date(nextDate.getTime() + 7 * 24 * 60 * 60 * 1000);
     }
