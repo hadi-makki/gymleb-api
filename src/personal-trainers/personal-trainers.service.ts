@@ -157,8 +157,12 @@ export class PersonalTrainersService {
   ): number | null {
     if (!input) return null;
     const date = input instanceof Date ? input : new Date(String(input));
+
+    // If no timezone provided, use the date as-is (UTC)
+    if (!timeZone) return date.getTime();
+
     try {
-      if (!timeZone) return date.getTime();
+      // Get the local time components in the target timezone
       const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone,
         year: 'numeric',
@@ -169,16 +173,32 @@ export class PersonalTrainersService {
         second: '2-digit',
         hour12: false,
       } as any);
+
       const parts = formatter.formatToParts(date);
       const by = (t: string) => parts.find((p) => p.type === t)?.value || '00';
+
       const y = Number(by('year'));
       const m = Number(by('month'));
       const d = Number(by('day'));
       const hh = Number(by('hour'));
       const mm = Number(by('minute'));
       const ss = Number(by('second'));
-      // Comparable value in UTC coordinate space built from local wall time components
-      return Date.UTC(y, m - 1, d, hh, mm, ss, 0);
+
+      // Create a naive date with these components and convert back to UTC
+      // This represents the same moment in time but comparable
+      const naiveDate = new Date(y, m - 1, d, hh, mm, ss, 0);
+
+      // Get the timezone offset for this specific date
+      const utcDate = new Date(
+        naiveDate.toLocaleString('en-US', { timeZone: 'UTC' }),
+      );
+      const targetDate = new Date(
+        naiveDate.toLocaleString('en-US', { timeZone }),
+      );
+      const offsetMinutes = (targetDate.getTime() - utcDate.getTime()) / 60000;
+
+      // Apply the offset to get the correct UTC timestamp
+      return naiveDate.getTime() - offsetMinutes * 60000;
     } catch {
       return date.getTime();
     }
@@ -1139,6 +1159,16 @@ export class PersonalTrainersService {
       const isDateSet = !!session.sessionDate;
       const isDateNotSet = !session.sessionDate;
 
+      // Debug: Get the comparable timestamps
+      const sessionComparable = this.getComparableInTimeZone(
+        session.sessionDate,
+        timezone,
+      );
+      const currentComparable = this.getComparableInTimeZone(
+        currentDate,
+        timezone,
+      );
+
       return {
         sessionId: session.id,
         sessionName: `Session ${session.id.slice(0, 8)}`,
@@ -1148,6 +1178,13 @@ export class PersonalTrainersService {
         currentRawDate: new Date().toISOString(),
         currentDateInTz,
         timezone,
+        // Debug info
+        sessionComparable,
+        currentComparable,
+        comparison:
+          sessionComparable && currentComparable
+            ? sessionComparable - currentComparable
+            : null,
         type: isCompleted
           ? 'completed'
           : session.isCancelled
