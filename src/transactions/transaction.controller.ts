@@ -87,6 +87,21 @@ export class TransactionController {
     );
   }
 
+  @Patch(':gymId/:id/toggle-payment')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  async togglePayment(
+    @Param('id') id: string,
+    @User() manager: ManagerEntity,
+    @Param('gymId') gymId: string,
+  ) {
+    return this.service.toggleTransactionPaymentStatus(id, manager, gymId);
+  }
+
   @Patch(':gymId/pt-session/:sessionId/payment-status')
   @UseGuards(ManagerAuthGuard)
   @ApiBearerAuth()

@@ -659,14 +659,26 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
-    // First get member IDs that match the search
-    let memberIds = [];
-    if (search) {
-      const matchingMembers = await this.memberModel.find({
-        where: { gym: { id: gym.id }, name: ILike(`%${search}%`) },
-      });
-      memberIds = matchingMembers.map((m) => m.id);
-    }
+    // Build where clause supporting search across title, member name, and personal trainer name
+    const baseWhere: any = {
+      gym: { id: gym.id },
+      ...(type ? { type: type as TransactionType } : {}),
+      ...(status ? { status: status as PaymentStatus } : {}),
+    };
+
+    // OR conditions for search
+    const whereConditions = search
+      ? [
+          { ...baseWhere, title: ILike(`%${search}%`) },
+          { ...baseWhere, paidBy: ILike(`%${search}%`) },
+          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
+          {
+            ...baseWhere,
+            personalTrainer: { firstName: ILike(`%${search}%`) },
+          },
+          { ...baseWhere, personalTrainer: { lastName: ILike(`%${search}%`) } },
+        ]
+      : baseWhere;
 
     return paginate(
       {
@@ -687,16 +699,12 @@ export class GymService {
           'relatedPtSession',
           'transferedFrom',
           'transferedTo',
+          'personalTrainer',
         ],
         sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
         searchableColumns: ['title', 'paidBy'],
         defaultSortBy: [['createdAt', 'DESC']],
-        where: {
-          gym: { id: gym.id },
-          ...(search ? { member: { id: In(memberIds) } } : {}),
-          ...(type ? { type: type as TransactionType } : {}),
-          ...(status ? { status: status as PaymentStatus } : {}),
-        },
+        where: whereConditions,
         filterableColumns: { type: [FilterOperator.EQ] },
         maxLimit: 100,
       },

@@ -532,7 +532,48 @@ export class TransactionService {
     await this.transactionModel.save(transaction);
 
     return {
-      message: `Transaction payment status updated to ${status}`,
+      message: `Transaction payment status updated to ${transaction.status}`,
+      transaction,
+    };
+  }
+
+  async toggleTransactionPaymentStatus(
+    transactionId: string,
+    manager: ManagerEntity,
+    gymId: string,
+  ) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+      relations: { gym: true },
+    });
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    const getManagerGym = await this.gymRepository.findOne({
+      where: { id: gymId },
+    });
+    if (!getManagerGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    transaction.status =
+      transaction.status === PaymentStatus.PAID
+        ? PaymentStatus.UNPAID
+        : PaymentStatus.PAID;
+    if (
+      typeof transaction.originalAmount === 'number' &&
+      typeof transaction.paidAmount === 'number' &&
+      transaction.status === PaymentStatus.PAID &&
+      transaction.paidAmount !== transaction.originalAmount
+    ) {
+      transaction.paidAmount = transaction.originalAmount;
+    }
+    transaction.paidAt = new Date();
+    await this.transactionModel.save(transaction);
+
+    return {
+      message: `Transaction payment status updated to ${transaction.status}`,
       transaction,
     };
   }
@@ -551,8 +592,10 @@ export class TransactionService {
     }
 
     const transactions = ptSession.transactions || [];
+    console.log('this is the transactions', transactions);
     for (const trx of transactions) {
       trx.status = status;
+      console.log('this is the trx', trx);
       await this.transactionModel.save(trx);
     }
 
