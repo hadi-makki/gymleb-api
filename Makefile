@@ -25,10 +25,14 @@ deploy:
 	yarn install
 	@echo "🔨 Building the project..."
 	yarn build
-	@echo "🔄 Managing PM2 process..."
+	@echo "🔄 Managing PM2 process (zero-downtime)..."
 	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
-		echo "🔄 Restarting existing PM2 process..."; \
-		pm2 restart gymleb-api; \
+		echo "📈 Temporarily scaling to 2 instances..."; \
+		pm2 scale gymleb-api 2 || true; \
+		echo "🔄 Reloading PM2 process..."; \
+		pm2 reload gymleb-api --update-env; \
+		echo "📉 Scaling back to 1 instance..."; \
+		pm2 scale gymleb-api 1; \
 	else \
 		echo "🚀 Starting new PM2 process..."; \
 		pm2 start ecosystem.config.js; \
@@ -54,10 +58,14 @@ deploy-advanced:
 	fi
 	@echo "🔨 Building the project..."
 	yarn build
-	@echo "🔄 Managing PM2 process..."
+	@echo "🔄 Managing PM2 process (zero-downtime)..."
 	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
-		echo "🔄 Restarting existing PM2 process..."; \
-		pm2 restart gymleb-api; \
+		echo "📈 Temporarily scaling to 2 instances..."; \
+		pm2 scale gymleb-api 2 || true; \
+		echo "🔄 Reloading PM2 process..."; \
+		pm2 reload gymleb-api --update-env; \
+		echo "📉 Scaling back to 1 instance..."; \
+		pm2 scale gymleb-api 1; \
 	else \
 		echo "🚀 Starting new PM2 process..."; \
 		pm2 start ecosystem.config.js; \
@@ -84,7 +92,7 @@ rollback:
 		echo "📦 Restoring from backup..."; \
 		rm -rf dist/; \
 		tar -xzf ./backups/last_working_backup.tar.gz; \
-		pm2 restart gymleb-api; \
+		pm2 reload gymleb-api --update-env || pm2 start ecosystem.config.js; \
 		echo "✅ Rollback completed successfully!"; \
 	else \
 		echo "❌ No backup found for rollback!"; \
