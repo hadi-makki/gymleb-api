@@ -22,6 +22,7 @@ export const imageTypes =
   /^image\/(jpeg|png|gif|bmp|webp|jpg|heic|heif|avif|tiff|svg|ico)$/;
 
 export enum CookieNames {
-  MemberToken = 'memberToken',
-  ManagerToken = 'token',
+  MemberToken = 'memberToken_v1',
+  ManagerToken = 'token_v1',
+  DeviceId = 'deviceId_v1',
 }
