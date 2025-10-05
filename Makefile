@@ -25,8 +25,14 @@ deploy:
 	yarn install
 	@echo "🔨 Building the project..."
 	yarn build
-	@echo "🔄 Restarting PM2 process..."
-	pm2 restart gymleb-api
+	@echo "🔄 Managing PM2 process..."
+	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
+		echo "🔄 Restarting existing PM2 process..."; \
+		pm2 restart gymleb-api; \
+	else \
+		echo "🚀 Starting new PM2 process..."; \
+		pm2 start ecosystem.config.js; \
+	fi
 	@echo "✅ Deployment completed successfully!"
 	@echo "📊 PM2 status:"
 	pm2 status gymleb-api
@@ -48,8 +54,14 @@ deploy-advanced:
 	fi
 	@echo "🔨 Building the project..."
 	yarn build
-	@echo "🔄 Restarting PM2 process..."
-	pm2 restart gymleb-api
+	@echo "🔄 Managing PM2 process..."
+	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
+		echo "🔄 Restarting existing PM2 process..."; \
+		pm2 restart gymleb-api; \
+	else \
+		echo "🚀 Starting new PM2 process..."; \
+		pm2 start ecosystem.config.js; \
+	fi
 	@echo "⏱️  Waiting for process to start..."
 	@sleep 2
 	@if pm2 describe gymleb-api | grep -q "online"; then \
