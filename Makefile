@@ -1,162 +1,172 @@
 # Makefile for Gymleb API Deployment
 # Usage: make deploy, make deploy-advanced, make rollback, etc.
 
-.PHONY: help deploy deploy-advanced rollback status logs clean-backup install-deps build
+.PHONY: help deploy deploy-advanced rollback status logs clean-backup install-deps build dev start stop delete start-pm2 monitor
 
-# Default target
+# ===============================
+# Help
+# ===============================
 help:
-	@echo "Available commands:"
-	@echo "  make deploy          - Simple deployment (git pull, yarn install, build, pm2 restart)"
-	@echo "  make deploy-advanced - Advanced deployment with backup and rollback"
-	@echo "  make rollback        - Rollback to previous working version"
-	@echo "  make status          - Show PM2 process status"
-	@echo "  make logs            - Show recent application logs"
-	@echo "  make build           - Build the project only"
-	@echo "  make install-deps    - Install dependencies only"
-	@echo "  make clean-backup    - Remove backup files"
-	@echo "  make help            - Show this help message"
+	@echo "\n================ Gymleb API - Make Commands ================\n"
+	@echo "Targets:"
+	@echo "  • make deploy           - Simple deployment (pull, install, build, zero-downtime reload)"
+	@echo "  • make deploy-advanced  - Deployment with backup + rollback"
+	@echo "  • make rollback         - Rollback to previous working build"
+	@echo "  • make status           - Show PM2 process status"
+	@echo "  • make logs             - Show recent application logs"
+	@echo "  • make build            - Build the project only"
+	@echo "  • make install-deps     - Install dependencies only"
+	@echo "  • make clean-backup     - Remove backup files"
+	@echo "  • make dev              - Start dev server"
+	@echo "  • make start            - Start production server (Nest)"
+	@echo "  • make stop             - Stop PM2 process"
+	@echo "  • make delete           - Delete PM2 process"
+	@echo "  • make start-pm2        - Start PM2 using ecosystem file"
+	@echo "  • make monitor          - PM2 monitor"
+	@echo "\n===========================================================\n"
 
-# Simple deployment
+# ===============================
+# Simple deployment (zero-downtime)
+# ===============================
 deploy:
-	@echo "🚀 Starting simple deployment for gymleb-api..."
-	@echo "📥 Pulling latest changes from git..."
-	git pull
-	@echo "📦 Installing dependencies..."
-	yarn install
-	@echo "🔨 Building the project..."
-	yarn build
-	@echo "🔄 Managing PM2 process (zero-downtime)..."
+	@echo "\n🚀 Starting simple deployment for gymleb-api"
+	@echo "-----------------------------------------------------------"
+	@echo "📥 Pulling latest changes from git..." && git pull && echo ""
+	@echo "📦 Installing dependencies..." && yarn install && echo ""
+	@echo "🔨 Building the project..." && yarn build && echo ""
+	@echo "🔄 Zero-downtime reload via PM2..."
 	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
-		echo "📈 Temporarily scaling to 2 instances..."; \
+		echo "  ↪️  Scaling temporarily to 2 instances..."; \
 		pm2 scale gymleb-api 2 || true; \
-		echo "🔄 Reloading PM2 process..."; \
+		echo "  ↪️  Reloading with updated env..."; \
 		pm2 reload gymleb-api --update-env; \
-		echo "📉 Scaling back to 1 instance..."; \
+		echo "  ↪️  Scaling back to 1 instance..."; \
 		pm2 scale gymleb-api 1; \
 	else \
-		echo "🚀 Starting new PM2 process..."; \
+		echo "  ➕ Starting new PM2 process from ecosystem file..."; \
 		pm2 start ecosystem.config.js; \
 	fi
-	@echo "✅ Deployment completed successfully!"
-	@echo "📊 PM2 status:"
-	pm2 status gymleb-api
+	@echo ""
+	@echo "✅ Deployment completed successfully!\n"
+	@echo "📊 PM2 status:" && pm2 status gymleb-api && echo ""
 
-# Advanced deployment with backup and rollback
+# ===============================
+# Advanced deployment (backup + rollback + zero-downtime)
+# ===============================
 deploy-advanced:
-	@echo "🚀 Starting advanced deployment for gymleb-api..."
-	@echo "📥 Pulling latest changes from git..."
-	git pull
-	@echo "📦 Installing dependencies..."
-	yarn install
+	@echo "\n🚀 Starting advanced deployment for gymleb-api"
+	@echo "-----------------------------------------------------------"
+	@echo "📥 Pulling latest changes from git..." && git pull && echo ""
+	@echo "📦 Installing dependencies..." && yarn install && echo ""
 	@echo "💾 Creating backup of current working version..."
 	@mkdir -p ./backups
 	@if [ -d "dist" ]; then \
-		tar -czf ./backups/last_working_backup.tar.gz dist/; \
-		echo "✅ Backup created: ./backups/last_working_backup.tar.gz"; \
+		tar -czf ./backups/last_working_backup.tar.gz dist/ && \
+		echo "  ✅ Backup created: ./backups/last_working_backup.tar.gz"; \
 	else \
-		echo "⚠️  No dist folder found to backup"; \
+		echo "  ⚠️  No dist folder found to backup"; \
 	fi
-	@echo "🔨 Building the project..."
-	yarn build
-	@echo "🔄 Managing PM2 process (zero-downtime)..."
+	@echo ""
+	@echo "🔨 Building the project..." && yarn build && echo ""
+	@echo "🔄 Zero-downtime reload via PM2..."
 	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
-		echo "📈 Temporarily scaling to 2 instances..."; \
+		echo "  ↪️  Scaling temporarily to 2 instances..."; \
 		pm2 scale gymleb-api 2 || true; \
-		echo "🔄 Reloading PM2 process..."; \
+		echo "  ↪️  Reloading with updated env..."; \
 		pm2 reload gymleb-api --update-env; \
-		echo "📉 Scaling back to 1 instance..."; \
+		echo "  ↪️  Scaling back to 1 instance..."; \
 		pm2 scale gymleb-api 1; \
 	else \
-		echo "🚀 Starting new PM2 process..."; \
+		echo "  ➕ Starting new PM2 process from ecosystem file..."; \
 		pm2 start ecosystem.config.js; \
 	fi
-	@echo "⏱️  Waiting for process to start..."
-	@sleep 2
+	@echo ""
+	@echo "⏱️  Waiting for process to stabilize..." && sleep 2 && echo ""
 	@if pm2 describe gymleb-api | grep -q "online"; then \
 		echo "✅ Deployment completed successfully!"; \
-		echo "📊 PM2 status:"; \
+		echo "\n📊 PM2 status:"; \
 		pm2 status gymleb-api; \
-		echo "💾 Updating backup with new working version..."; \
-		tar -czf ./backups/last_working_backup.tar.gz dist/; \
-		echo "✅ Backup updated successfully!"; \
+		echo "\n💾 Updating backup with new working version..."; \
+		tar -czf ./backups/last_working_backup.tar.gz dist/ && \
+		echo "  ✅ Backup updated successfully!"; \
 	else \
-		echo "❌ PM2 process failed to start! Attempting rollback..."; \
+		echo "❌ PM2 failed to start! Attempting rollback..."; \
 		$(MAKE) rollback; \
 		exit 1; \
 	fi
+	@echo ""
 
-# Rollback to previous working version
+# ===============================
+# Rollback
+# ===============================
 rollback:
-	@echo "🔄 Rolling back to previous working version..."
+	@echo "\n🔄 Rolling back to previous working version"
+	@echo "-----------------------------------------------------------"
 	@if [ -f "./backups/last_working_backup.tar.gz" ]; then \
 		echo "📦 Restoring from backup..."; \
 		rm -rf dist/; \
 		tar -xzf ./backups/last_working_backup.tar.gz; \
+		echo "🔄 Reloading PM2 (or starting if missing)..."; \
 		pm2 reload gymleb-api --update-env || pm2 start ecosystem.config.js; \
 		echo "✅ Rollback completed successfully!"; \
 	else \
 		echo "❌ No backup found for rollback!"; \
 		exit 1; \
 	fi
+	@echo ""
 
-# Show PM2 status
+# ===============================
+# Utilities
+# ===============================
 status:
-	@echo "📊 PM2 Status:"
-	pm2 status gymleb-api
+	@echo "\n📊 PM2 Status" && echo "-----------------------------------------------------------"
+	@pm2 status gymleb-api && echo ""
 
-# Show recent logs
 logs:
-	@echo "📋 Recent logs:"
-	pm2 logs gymleb-api --lines 50
+	@echo "\n📋 Recent logs" && echo "-----------------------------------------------------------"
+	@pm2 logs gymleb-api --lines 50
 
-# Build the project only
 build:
-	@echo "🔨 Building the project..."
-	yarn build
-	@echo "✅ Build completed!"
+	@echo "\n🔨 Building the project" && echo "-----------------------------------------------------------"
+	@yarn build && echo "✅ Build completed!\n"
 
-# Install dependencies only
 install-deps:
-	@echo "📦 Installing dependencies..."
-	yarn install
-	@echo "✅ Dependencies installed!"
+	@echo "\n📦 Installing dependencies" && echo "-----------------------------------------------------------"
+	@yarn install && echo "✅ Dependencies installed!\n"
 
-# Clean backup files
 clean-backup:
-	@echo "🧹 Cleaning backup files..."
+	@echo "\n🧹 Cleaning backup files" && echo "-----------------------------------------------------------"
 	@if [ -f "./backups/last_working_backup.tar.gz" ]; then \
-		rm ./backups/last_working_backup.tar.gz; \
+		rm ./backups/last_working_backup.tar.gz && \
 		echo "✅ Backup file removed!"; \
 	else \
 		echo "ℹ️  No backup file found to remove"; \
 	fi
+	@echo ""
 
-# Development commands
+# ===============================
+# Dev / PM2 helpers
+# ===============================
 dev:
-	@echo "🚀 Starting development server..."
-	yarn start:dev
+	@echo "\n🚀 Starting development server" && echo "-----------------------------------------------------------"
+	@yarn start:dev
 
-# Production start
 start:
-	@echo "🚀 Starting production server..."
-	yarn start:prod
+	@echo "\n🚀 Starting production server (Nest)" && echo "-----------------------------------------------------------"
+	@yarn start:prod
 
-# Stop PM2 process
 stop:
-	@echo "🛑 Stopping PM2 process..."
-	pm2 stop gymleb-api
+	@echo "\n🛑 Stopping PM2 process" && echo "-----------------------------------------------------------"
+	@pm2 stop gymleb-api
 
-# Delete PM2 process
 delete:
-	@echo "🗑️  Deleting PM2 process..."
-	pm2 delete gymleb-api
+	@echo "\n🗑️  Deleting PM2 process" && echo "-----------------------------------------------------------"
+	@pm2 delete gymleb-api
 
-# Start PM2 process
 start-pm2:
-	@echo "🚀 Starting PM2 process..."
-	pm2 start ecosystem.config.js
+	@echo "\n🚀 Starting PM2 process from ecosystem file" && echo "-----------------------------------------------------------"
+	@pm2 start ecosystem.config.js
 
-# Monitor PM2 processes
 monitor:
-	@echo "📊 Opening PM2 monitor..."
-	pm2 monit
+	@echo "\n📊 Opening PM2 monitor" && echo "-----------------------------------------------------------"
+	@pm2 monit
