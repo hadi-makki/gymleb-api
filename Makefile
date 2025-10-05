@@ -34,14 +34,10 @@ deploy:
 	@echo "📥 Pulling latest changes from git..." && git pull && echo ""
 	@echo "📦 Installing dependencies..." && yarn install && echo ""
 	@echo "🔨 Building the project..." && yarn build && echo ""
-	@echo "🔄 Zero-downtime reload via PM2..."
+	@echo "🔄 Zero-downtime reload via PM2 (wait-ready)..."
 	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
-		echo "  ↪️  Scaling temporarily to 2 instances..."; \
-		pm2 scale gymleb-api 2 || true; \
-		echo "  ↪️  Reloading with updated env..."; \
-		pm2 reload gymleb-api --update-env; \
-		echo "  ↪️  Scaling back to 1 instance..."; \
-		pm2 scale gymleb-api 1; \
+		echo "  ↪️  Reloading with updated env (wait-ready)..."; \
+		pm2 reload gymleb-api --update-env --wait-ready; \
 	else \
 		echo "  ➕ Starting new PM2 process from ecosystem file..."; \
 		pm2 start ecosystem.config.js; \
@@ -68,14 +64,10 @@ deploy-advanced:
 	fi
 	@echo ""
 	@echo "🔨 Building the project..." && yarn build && echo ""
-	@echo "🔄 Zero-downtime reload via PM2..."
+	@echo "🔄 Zero-downtime reload via PM2 (wait-ready)..."
 	@if pm2 describe gymleb-api > /dev/null 2>&1; then \
-		echo "  ↪️  Scaling temporarily to 2 instances..."; \
-		pm2 scale gymleb-api 2 || true; \
-		echo "  ↪️  Reloading with updated env..."; \
-		pm2 reload gymleb-api --update-env; \
-		echo "  ↪️  Scaling back to 1 instance..."; \
-		pm2 scale gymleb-api 1; \
+		echo "  ↪️  Reloading with updated env (wait-ready)..."; \
+		pm2 reload gymleb-api --update-env --wait-ready; \
 	else \
 		echo "  ➕ Starting new PM2 process from ecosystem file..."; \
 		pm2 start ecosystem.config.js; \
@@ -107,7 +99,7 @@ rollback:
 		rm -rf dist/; \
 		tar -xzf ./backups/last_working_backup.tar.gz; \
 		echo "🔄 Reloading PM2 (or starting if missing)..."; \
-		pm2 reload gymleb-api --update-env || pm2 start ecosystem.config.js; \
+		pm2 reload gymleb-api --update-env --wait-ready || pm2 start ecosystem.config.js; \
 		echo "✅ Rollback completed successfully!"; \
 	else \
 		echo "❌ No backup found for rollback!"; \
