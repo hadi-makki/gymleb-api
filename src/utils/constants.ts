@@ -11,12 +11,11 @@ const cookieDomain = isProduction
   : process.env.LOCAL_COOKIE_DOMAIN;
 
 export const cookieOptions: CookieOptions = {
-  httpOnly: true, // not accessible from JS
-  secure: true, // requires HTTPS
-  sameSite: 'lax', // prevent CSRF attacks
+  httpOnly: true,
+  maxAge: 1000 * 60 * 60 * 24 * 30,
   path: '/',
-  maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
-  domain: cookieDomain,
+  sameSite: 'none',
+  secure: true,
 };
 
 export const imageTypes =
