@@ -127,6 +127,9 @@ export class GymService {
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
+      select: {
+        id: true,
+      },
     });
     if (!gym) {
       throw new NotFoundException('Gym not found');
@@ -152,36 +155,90 @@ export class GymService {
       dateFilter.paidAt = MoreThanOrEqual(currentMonthStart);
     }
 
-    // Fetch all transactions for the gym in the specified range (defaults to current month)
-    const allTransactions = await this.transactionModel.find({
-      where: { gym: { id: gym.id }, status: PaymentStatus.PAID, ...dateFilter },
-      relations: ['subscription', 'revenue', 'expense', 'ptSession'],
-    });
-
-    // Fetch transactions for last month comparison
-    const lastMonthTransactions = await this.transactionModel.find({
-      where: {
-        gym: {
-          id: gym.id,
+    // Fetch heavy lists in parallel with minimal columns
+    const [
+      allTransactions,
+      lastMonthTransactions,
+      currentMonthTransactions,
+      lastMonthMembers,
+      currentMonthMembers,
+      totalMembers,
+      members,
+    ] = await Promise.all([
+      this.transactionModel.find({
+        where: {
+          gym: { id: gym.id },
+          status: PaymentStatus.PAID,
+          ...dateFilter,
         },
-        status: PaymentStatus.PAID,
-
-        paidAt: Between(lastMonthStart, lastMonthEnd),
-      },
-      relations: ['subscription', 'revenue', 'expense'],
-    });
-
-    // Fetch transactions for current month comparison
-    const currentMonthTransactions = await this.transactionModel.find({
-      where: {
-        gym: {
-          id: gym.id,
+        select: {
+          id: true,
+          type: true,
+          paidAmount: true,
+          isTakingPtSessionsCut: true,
+          gymsPTSessionPercentage: true,
+          paidAt: true,
         },
-        status: PaymentStatus.PAID,
-        paidAt: MoreThanOrEqual(currentMonthStart),
-      },
-      relations: ['subscription', 'revenue', 'expense'],
-    });
+        order: { paidAt: 'DESC' },
+      }),
+      this.transactionModel.find({
+        where: {
+          gym: { id: gym.id },
+          status: PaymentStatus.PAID,
+          paidAt: Between(lastMonthStart, lastMonthEnd),
+        },
+        select: { id: true, type: true, paidAmount: true, paidAt: true },
+        order: { paidAt: 'DESC' },
+      }),
+      this.transactionModel.find({
+        where: {
+          gym: { id: gym.id },
+          status: PaymentStatus.PAID,
+          paidAt: MoreThanOrEqual(currentMonthStart),
+        },
+        select: {
+          id: true,
+          type: true,
+          paidAmount: true,
+          isTakingPtSessionsCut: true,
+          gymsPTSessionPercentage: true,
+          paidAt: true,
+        },
+        order: { paidAt: 'DESC' },
+      }),
+      this.memberModel.count({
+        where: {
+          gym: { id: gym.id },
+          createdAt: Between(lastMonthStart, lastMonthEnd),
+        },
+      }),
+      this.memberModel.count({
+        where: {
+          gym: { id: gym.id },
+          createdAt: MoreThanOrEqual(currentMonthStart),
+        },
+      }),
+      this.memberModel.count({
+        where: { gym: { id: gym.id } },
+      }),
+      this.memberModel.find({
+        where: { gym: { id: gym.id } },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        relations: {
+          subscription: true,
+          transactions: true,
+        },
+        relationLoadStrategy: 'join',
+        order: { createdAt: 'DESC' },
+      }),
+    ]);
 
     // Calculate subscription revenue for both periods
     const lastMonthSubscriptionRevenue = lastMonthTransactions
@@ -211,29 +268,6 @@ export class GymService {
       ? ((currentMonthSubscriptionRevenue - lastMonthSubscriptionRevenue) /
           lastMonthSubscriptionRevenue) *
         100
-      : 0;
-
-    // Fetch member count for both periods
-    const lastMonthMembers = await this.memberModel.count({
-      where: {
-        gym: {
-          id: gym.id,
-        },
-        createdAt: Between(lastMonthStart, lastMonthEnd),
-      },
-    });
-    const currentMonthMembers = await this.memberModel.count({
-      where: {
-        gym: {
-          id: gym.id,
-        },
-        createdAt: MoreThanOrEqual(currentMonthStart),
-      },
-    });
-
-    // Calculate percentage change in members
-    const memberChange = lastMonthMembers
-      ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
       : 0;
 
     // Calculate totals from all transactions (current range or current month by default)
@@ -276,29 +310,17 @@ export class GymService {
       currentMonthOwnerSubscrptionTransactions;
     const netRevenue = totalRevenue - totalExpenses;
 
-    const totalMembers = await this.memberModel.count({
-      where: {
-        gym: {
-          id: gym.id,
-        },
-      },
-    });
-    const members = await this.memberModel.find({
-      where: { gym: { id: gym.id } },
-      relations: ['subscription', 'transactions', 'gym'],
-      order: { createdAt: 'DESC' },
-    });
-
+    // Prepare members with minimal related data already loaded
     const membersWithActiveSubscription = members.map((member) => {
-      const checkActiveSubscription = member.transactions.some(
-        (transaction) => {
-          return new Date(transaction.endDate) > new Date();
-        },
+      const checkActiveSubscription = (member.transactions || []).some(
+        (transaction) => new Date(transaction.endDate) > new Date(),
       );
-      const latestSubscriptionInstance = member.transactions.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )[0];
+      const latestSubscriptionInstance = (member.transactions || [])
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
       return {
         id: member.id,
         name: member.name,
@@ -308,7 +330,7 @@ export class GymService {
         updatedAt: member.updatedAt,
         subscription: member.subscription,
         subscriptionTransactions: member.transactions,
-        gym: member.gym,
+        gym: { id: gym.id },
         hasActiveSubscription: checkActiveSubscription,
         currentActiveSubscription: latestSubscriptionInstance || null,
       };
@@ -329,7 +351,9 @@ export class GymService {
       members: membersWithActiveSubscription,
       totalTransactions: allTransactions.length,
       revenueChange,
-      memberChange,
+      memberChange: lastMonthMembers
+        ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
+        : 0,
       currentMonthMembers,
       currentMonthRevenue:
         currentMonthSubscriptionRevenue + currentMonthPTSessionRevenue,
