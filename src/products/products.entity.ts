@@ -19,6 +19,9 @@ export class ProductEntity extends PgMainEntity {
   @Column('text')
   name: string;
 
+  @Column('text', { nullable: true, unique: true })
+  code: string | null;
+
   @Column('text', { nullable: true })
   stripeProductId: string;
 

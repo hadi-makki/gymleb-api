@@ -36,6 +36,15 @@ export class CreateProductDto {
   description?: string;
 
   @ApiProperty({
+    description: 'Barcode/Scan code for the product',
+    example: 'EAN-13-1234567890123',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  @ApiProperty({
     description: 'Product stock quantity',
     example: 100,
     required: true,
@@ -74,6 +83,15 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    description: 'Barcode/Scan code for the product',
+    example: 'EAN-13-1234567890123',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
 
   @ApiProperty({
     description: 'Product stock quantity',

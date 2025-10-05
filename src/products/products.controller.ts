@@ -93,6 +93,49 @@ export class ProductsController {
     return await this.productsService.getProductById(id);
   }
 
+  @Post('scan/:gymId')
+  @ApiOperation({
+    summary: 'Scan product by code',
+    description: 'Check if a product exists by its barcode/code for a gym',
+  })
+  @ApiOkResponse({ description: 'Scan result returned' })
+  async scanProductByCode(
+    @Param('gymId') gymId: string,
+    @Body() body: { code: string },
+  ) {
+    const product = await this.productsService.getProductByCode(
+      body.code,
+      gymId,
+    );
+    return {
+      found: !!product,
+      data: product || null,
+    };
+  }
+
+  @Put('assign-code/:gymId/:productId')
+  @ApiOperation({
+    summary: 'Assign code to product',
+    description: 'Assign or update a barcode/code for a product in a gym',
+  })
+  @ApiOkResponse({
+    type: SuccessMessageReturn,
+    description: 'Product code assigned successfully',
+  })
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.products)
+  async assignCodeToProduct(
+    @Param('gymId') gymId: string,
+    @Param('productId') productId: string,
+    @Body() body: { code: string },
+  ) {
+    return await this.productsService.assignCodeToProduct(
+      gymId,
+      productId,
+      body.code,
+    );
+  }
+
   @Post('create/:gymId')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({

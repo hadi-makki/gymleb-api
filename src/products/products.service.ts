@@ -73,6 +73,21 @@ export class ProductsService {
     return res;
   }
 
+  async getProductByCode(code: string, gymId?: string) {
+    if (!code) {
+      throw new BadRequestException('Code is required');
+    }
+    const where: any = { code };
+    if (gymId) {
+      where.gym = { id: gymId };
+    }
+    const product = await this.productRepository.findOne({
+      where,
+      relations: { images: true },
+    });
+    return product || null;
+  }
+
   async getProductById(id: string) {
     const product = await this.productRepository.findOne({
       where: { id },
@@ -102,6 +117,16 @@ export class ProductsService {
     if (file) {
       const uploadResult = await this.mediaService.upload(file, user.id);
       image = uploadResult;
+    }
+
+    // Ensure code is unique if provided
+    if (createProductDto.code) {
+      const exists = await this.productRepository.findOne({
+        where: { code: createProductDto.code },
+      });
+      if (exists) {
+        throw new BadRequestException('Product code already in use');
+      }
     }
 
     const createProductModel = this.productRepository.create({
@@ -152,16 +177,56 @@ export class ProductsService {
     }
 
     product.images = [image];
-    product.name = updateProductDto.name;
-    product.price = updateProductDto.price;
-    product.description = updateProductDto.description;
-    product.stock = updateProductDto.stock;
+    if (updateProductDto.name !== undefined)
+      product.name = updateProductDto.name;
+    if (updateProductDto.price !== undefined)
+      product.price = updateProductDto.price;
+    if (updateProductDto.description !== undefined)
+      product.description = updateProductDto.description;
+    if (updateProductDto.stock !== undefined)
+      product.stock = updateProductDto.stock;
+    if (updateProductDto.code !== undefined) {
+      if (updateProductDto.code) {
+        const exists = await this.productRepository.findOne({
+          where: { code: updateProductDto.code },
+        });
+        if (exists && exists.id !== product.id) {
+          throw new BadRequestException('Product code already in use');
+        }
+        product.code = updateProductDto.code;
+      } else {
+        // allow clearing code
+        product.code = null as any;
+      }
+    }
 
     const updatedProduct = await this.productRepository.save(product);
 
     return {
       message: 'Product updated successfully',
       data: updatedProduct,
+    };
+  }
+
+  async assignCodeToProduct(gymId: string, productId: string, code: string) {
+    if (!code) {
+      throw new BadRequestException('Code is required');
+    }
+    const product = await this.productRepository.findOne({
+      where: { id: productId, gym: { id: gymId } },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    const exists = await this.productRepository.findOne({ where: { code } });
+    if (exists && exists.id !== product.id) {
+      throw new BadRequestException('Product code already in use');
+    }
+    product.code = code;
+    const updated = await this.productRepository.save(product);
+    return {
+      message: 'Product code assigned successfully',
+      data: updated,
     };
   }
 
