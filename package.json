@@ -18,7 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate:training-programs": "ts-node -r tsconfig-paths/register src/member/scripts/migrate-training-programs.ts"
+    "migrate:training-programs": "ts-node -r tsconfig-paths/register src/member/scripts/migrate-training-programs.ts",
+    "deploy": "./deploy.sh",
+    "deploy:advanced": "./deploy-advanced.sh",
+    "deploy:rollback": "./deploy-advanced.sh rollback",
+    "deploy:status": "./deploy-advanced.sh status",
+    "deploy:logs": "./deploy-advanced.sh logs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.772.0",
