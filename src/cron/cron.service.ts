@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -10,7 +10,7 @@ import { TwilioService } from '../twilio/twilio.service';
 import { addDays } from 'date-fns';
 
 @Injectable()
-export class CronService {
+export class CronService implements OnApplicationBootstrap {
   private readonly logger = new Logger(CronService.name);
 
   constructor(
@@ -22,7 +22,99 @@ export class CronService {
     private readonly gymModel: Repository<GymEntity>,
     private readonly twilioService: TwilioService,
     private readonly memberService: MemberService,
+    private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
+
+  onApplicationBootstrap() {
+    const logCrons = () => {
+      const crons = this.schedulerRegistry.getCronJobs();
+      if (!crons || crons.size === 0) {
+        this.logger.log('No cron jobs registered.');
+        return false;
+      }
+      this.logger.log(
+        `Registered cron jobs: ${Array.from(crons.keys()).join(', ')}`,
+      );
+      crons.forEach((job, name) => {
+        try {
+          const anyJob = job as any;
+          let nextDate: Date | undefined;
+
+          // 1) Prefer nextDate()/nextDates() if available
+          if (typeof anyJob.nextDate === 'function') {
+            const nd = anyJob.nextDate();
+            nextDate =
+              nd instanceof Date
+                ? nd
+                : typeof nd?.toDate === 'function'
+                  ? nd.toDate()
+                  : undefined;
+          }
+          if (!nextDate && typeof anyJob.nextDates === 'function') {
+            const nd = anyJob.nextDates(1);
+            nextDate =
+              nd instanceof Date
+                ? nd
+                : typeof nd?.toDate === 'function'
+                  ? nd.toDate()
+                  : undefined;
+          }
+
+          // 2) Try cronTime.sendAt() from cron library
+          if (
+            !nextDate &&
+            anyJob.cronTime &&
+            typeof anyJob.cronTime.sendAt === 'function'
+          ) {
+            const sent = anyJob.cronTime.sendAt();
+            nextDate =
+              sent instanceof Date
+                ? sent
+                : typeof sent?.toDate === 'function'
+                  ? sent.toDate()
+                  : undefined;
+          }
+
+          // 3) Fallback: internal timer's remaining timeout
+          if (
+            !nextDate &&
+            anyJob._timeout &&
+            typeof anyJob._timeout._idleTimeout === 'number' &&
+            anyJob._timeout._idleTimeout > 0
+          ) {
+            nextDate = new Date(Date.now() + anyJob._timeout._idleTimeout);
+          }
+
+          const iso = nextDate ? nextDate.toISOString() : 'unknown';
+          const beirut = nextDate
+            ? new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Beirut',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+              }).format(nextDate)
+            : 'unknown';
+          this.logger.log(
+            `Cron '${name}' next run at: ${iso} (Beirut: ${beirut})`,
+          );
+        } catch {
+          this.logger.log(`Cron '${name}' next run time unavailable.`);
+        }
+      });
+      return true;
+    };
+
+    // Try immediately, then retry shortly after bootstrap if empty
+    if (!logCrons()) {
+      setTimeout(() => {
+        logCrons();
+      }, 1000);
+    }
+  }
 
   @Cron('0 7-23/4 * * *', {
     // @Cron(CronExpression.EVERY_10_SECONDS, {
