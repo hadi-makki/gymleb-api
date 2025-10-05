@@ -963,26 +963,57 @@ export class GymService {
   }
 
   async getGymsByOwner(ownerId: string) {
+    // Optimized query with only necessary relations
     const gyms = await this.gymModel.find({
       where: { owner: { id: ownerId } },
       relations: {
-        owner: true,
         transactions: {
           ownerSubscriptionType: true,
         },
-        members: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        email: true,
+        phone: true,
+        finishedPageSetup: true,
+        isDeactivated: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
-    let returnData = [];
-    for (const gym of gyms) {
-      returnData.push({
+
+    // Get member counts in a single query
+    const memberCounts = await this.gymModel
+      .createQueryBuilder('gym')
+      .leftJoin('gym.members', 'member')
+      .select('gym.id', 'gymId')
+      .addSelect('COUNT(member.id)', 'memberCount')
+      .where('gym.ownerId = :ownerId', { ownerId })
+      .groupBy('gym.id')
+      .getRawMany();
+
+    // Create a map for quick member count lookup
+    const memberCountMap = new Map(
+      memberCounts.map((item) => [item.gymId, parseInt(item.memberCount)]),
+    );
+
+    // Process gyms without individual database calls
+    return gyms.map((gym) => {
+      // Find active subscription directly from loaded transactions
+      const activeSubscription = gym.transactions?.find(
+        (transaction) =>
+          transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT &&
+          new Date(transaction.endDate) > new Date(),
+      );
+
+      return {
         ...gym,
-        totalMembers: gym.members ? gym.members.length : 0,
-        activeSubscription: (await this.getGymActiveSubscription(gym))
-          .activeSubscription,
-      });
-    }
-    return returnData;
+        totalMembers: memberCountMap.get(gym.id) || 0,
+        activeSubscription,
+      };
+    });
   }
 
   async getGymAnalyticsByOwnerIdAndGymId(
