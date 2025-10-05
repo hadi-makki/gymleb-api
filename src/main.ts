@@ -88,7 +88,6 @@ async function bootstrap() {
       configService.get('SWAGGER_SERVER_URL'),
       configService.get('SWAGGER_SERVER_ENVIRONMENT'),
     )
-
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, options);
@@ -100,6 +99,21 @@ async function bootstrap() {
     customfavIcon: '/favicon.ico',
     customCss: '.swagger-ui .topbar { display: none }',
   });
+
+  // Graceful shutdown (PM2 will send 'shutdown' message when reloads)
+  process.on('message', (msg) => {
+    if (msg === 'shutdown') {
+      app.close().finally(() => {
+        process.exit(0);
+      });
+    }
+  });
+
   await app.listen(process.env.PORT);
+
+  // Signal readiness to PM2 for zero-downtime reloads
+  if (process.send) {
+    process.send('ready');
+  }
 }
 bootstrap();

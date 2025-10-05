@@ -7,8 +7,10 @@ module.exports = {
       exec_mode: 'cluster', // Keep cluster mode to support reloads when scaled
       autorestart: true,
       watch: false, // In production, no need to watch file changes
-      listen_timeout: 8000, // Allow time for app to bind ports before killing old worker
-      kill_timeout: 8000, // Graceful shutdown window on reload
+      wait_ready: true, // PM2 waits for "ready" signal from app before swapping
+      listen_timeout: 15000, // Time to wait for ready
+      kill_timeout: 15000, // Graceful shutdown window on reload
+      shutdown_with_message: true, // Send "shutdown" message for graceful close
       env: {
         NODE_ENV: 'production',
       },
