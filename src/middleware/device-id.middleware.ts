@@ -17,6 +17,10 @@ export class DeviceIdMiddleware implements NestMiddleware {
     if (!deviceId) {
       const newDeviceId = uuidv4();
       res.cookie(CookieNames.DeviceId, newDeviceId, cookieOptions);
+      // we need to remove the old device id
+      res.clearCookie('deviceId', cookieOptions);
+      res.clearCookie('memberToken', cookieOptions);
+      res.clearCookie('token', cookieOptions);
       // Also set it on the request for immediate access in this request
       req.cookies[CookieNames.DeviceId] = newDeviceId;
     }
