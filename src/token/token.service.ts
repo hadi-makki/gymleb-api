@@ -252,21 +252,21 @@ export class TokenService {
     } catch (error) {
       // Token is invalid or expired
       this.logger.warn(
-        `Access token verification failed. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'} error=${(error as Error)?.message}`,
+        `Access token verification failed. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'} error=${(error as Error)?.message}`,
       );
       isTokenExpired = true;
     }
 
     // Check if token exists in database and is not expired
     const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
-      req.cookies.deviceId,
+      req.cookies[CookieNames.DeviceId],
       tokenToUse,
     );
 
     if (!checkToken) {
       // Token not found in database
       this.logger.warn(
-        `Access token not found in DB. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+        `Access token not found in DB. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
       );
       isTokenExpired = true;
     } else if (
@@ -274,7 +274,7 @@ export class TokenService {
     ) {
       // Check if token is expired by date
       this.logger.warn(
-        `Access token expired by date. deviceId=${req.cookies?.deviceId || 'unknown'} accessExpirationDate=${checkToken.accessExpirationDate.toISOString()}`,
+        `Access token expired by date. deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'} accessExpirationDate=${checkToken.accessExpirationDate.toISOString()}`,
       );
       isTokenExpired = true;
     }
@@ -282,11 +282,11 @@ export class TokenService {
     // If token is expired, try to refresh it
     if (isTokenExpired) {
       this.logger.log(
-        `Attempting to refresh access token. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+        `Attempting to refresh access token. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
       );
       const newToken = await this.refreshToken(
         tokenToUse,
-        req.cookies.deviceId,
+        req.cookies[CookieNames.DeviceId],
         res,
       );
       if (newToken) {
@@ -304,7 +304,7 @@ export class TokenService {
         return refreshed;
       } else {
         this.logger.warn(
-          `Access token refresh failed. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+          `Access token refresh failed. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
         );
         throw new UnauthorizedException('Unable to refresh token');
       }

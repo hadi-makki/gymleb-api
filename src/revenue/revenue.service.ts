@@ -28,7 +28,12 @@ export class RevenueService {
     private managerModel: Repository<ManagerEntity>,
   ) {}
 
-  async create(manager: ManagerEntity, dto: CreateRevenueDto, gymId: string) {
+  async create(
+    manager: ManagerEntity,
+    dto: CreateRevenueDto,
+    gymId: string,
+    isScanned?: boolean,
+  ) {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
@@ -46,7 +51,7 @@ export class RevenueService {
       });
     }
 
-    if (product && product.stock < dto.numberSold) {
+    if (product && product.stock < dto.numberSold && !isScanned) {
       throw new BadRequestException('Product stock is not enough');
     }
 
@@ -92,6 +97,9 @@ export class RevenueService {
     revenue.transaction = transaction;
 
     if (product) {
+      if (product.stock === 0 && !isScanned) {
+        return revenue;
+      }
       product.stock -= dto.numberSold;
       await this.productModel.save(product);
     }

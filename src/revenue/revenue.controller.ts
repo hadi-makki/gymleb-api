@@ -33,8 +33,9 @@ export class RevenueController {
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Body() dto: CreateRevenueDto,
+    @Query('isScanned') isScanned?: boolean,
   ) {
-    return this.revenueService.create(user, dto, gymId);
+    return this.revenueService.create(user, dto, gymId, isScanned);
   }
 
   @Get('/gym/:gymId')
