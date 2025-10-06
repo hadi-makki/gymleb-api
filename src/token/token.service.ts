@@ -30,6 +30,27 @@ export class TokenService {
 
   private readonly logger = new Logger(TokenService.name);
 
+  private formatToBeirut(date: Date): string {
+    try {
+      return new Date(date).toLocaleString('en-GB', {
+        timeZone: 'Asia/Beirut',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+    } catch {
+      return date.toISOString();
+    }
+  }
+
+  private formatEpochSecondsToBeirut(epochSeconds: number): string {
+    return this.formatToBeirut(new Date(epochSeconds * 1000));
+  }
+
   async generateAccessToken(
     userId: string,
   ): Promise<{ accessToken: string; accessExpirationDate: Date }> {
@@ -260,7 +281,7 @@ export class TokenService {
         exp: number;
       };
       this.logger.debug(
-        `Access token verified. sub=${decodedJwt.sub} exp=${decodedJwt.exp}`,
+        `Access token verified. sub=${decodedJwt.sub} exp=${this.formatEpochSecondsToBeirut(decodedJwt.exp)}`,
       );
     } catch (error) {
       // Token is invalid or expired
@@ -287,7 +308,7 @@ export class TokenService {
     ) {
       // Check if token is expired by date
       this.logger.warn(
-        `Access token expired by date. deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'} accessExpirationDate=${checkToken.accessExpirationDate.toISOString()}`,
+        `Access token expired by date. deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'} accessExpirationDate=${this.formatToBeirut(checkToken.accessExpirationDate)}`,
       );
       isTokenExpired = true;
     }
@@ -329,6 +350,9 @@ export class TokenService {
                 secret: this.configService.get('JWT_ACCESS_SECRET'),
               },
             )) as { sub: string; iat: number; exp: number };
+            this.logger.log(
+              `Recovered token verified. sub=${refreshed.sub} exp=${this.formatEpochSecondsToBeirut(refreshed.exp)}`,
+            );
             return refreshed;
           }
         }
@@ -348,7 +372,7 @@ export class TokenService {
           secret: this.configService.get('JWT_ACCESS_SECRET'),
         })) as { sub: string; iat: number; exp: number };
         this.logger.log(
-          `Access token refreshed successfully. sub=${refreshed.sub} exp=${refreshed.exp}`,
+          `Access token refreshed successfully. sub=${refreshed.sub} exp=${this.formatEpochSecondsToBeirut(refreshed.exp)}`,
         );
         return refreshed;
       }
@@ -408,7 +432,7 @@ export class TokenService {
         const { accessToken, accessExpirationDate } =
           await this.generateAccessToken(decodedJwt.sub);
         this.logger.debug(
-          `Generated new access token from refresh. sub=${decodedJwt.sub} exp=${accessExpirationDate.getTime() / 1000}`,
+          `Generated new access token from refresh. sub=${decodedJwt.sub} exp=${this.formatToBeirut(accessExpirationDate)}`,
         );
         checkToken.accessToken = accessToken;
         checkToken.accessExpirationDate = accessExpirationDate;
