@@ -176,6 +176,19 @@ export class TokenService {
     return getToken;
   }
 
+  async getTokenByDeviceId(deviceId: string): Promise<TokenEntity | null> {
+    const getToken = await this.tokenRepository.findOne({
+      where: {
+        deviceId: deviceId,
+      },
+      relations: {
+        member: true,
+        manager: true,
+      },
+    });
+    return getToken;
+  }
+
   async deleteTokensByUserId(
     userId: string,
     deviceId?: string,
@@ -279,8 +292,49 @@ export class TokenService {
       isTokenExpired = true;
     }
 
-    // If token is expired, try to refresh it
+    // If token is expired (or rotated), try to recover gracefully
     if (isTokenExpired) {
+      // Concurrency-safe fallback: if another request already rotated the token,
+      // accept the latest token for this device when it matches the same subject
+      if (decodedJwt) {
+        const latestTokenDoc = await this.getTokenByDeviceId(
+          req.cookies[CookieNames.DeviceId],
+        );
+        if (latestTokenDoc) {
+          const ownerId =
+            latestTokenDoc.member?.id || latestTokenDoc.manager?.id;
+          const isSameOwner = ownerId === decodedJwt.sub;
+          const isLatestNotExpired =
+            differenceInHours(
+              new Date(),
+              latestTokenDoc.accessExpirationDate,
+            ) <= 0;
+
+          if (
+            isSameOwner &&
+            isLatestNotExpired &&
+            latestTokenDoc.accessToken &&
+            latestTokenDoc.accessToken !== tokenToUse
+          ) {
+            const cookieName = latestTokenDoc.member
+              ? CookieNames.MemberToken
+              : CookieNames.ManagerToken;
+            res.cookie(cookieName, latestTokenDoc.accessToken, cookieOptions);
+            this.logger.log(
+              `Recovered from concurrent refresh. Using latest access token for device. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
+            );
+            const refreshed = (await this.jwtService.verifyAsync(
+              latestTokenDoc.accessToken,
+              {
+                secret: this.configService.get('JWT_ACCESS_SECRET'),
+              },
+            )) as { sub: string; iat: number; exp: number };
+            return refreshed;
+          }
+        }
+      }
+
+      // Fall back to normal refresh flow
       this.logger.log(
         `Attempting to refresh access token. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
       );
@@ -290,24 +344,19 @@ export class TokenService {
         res,
       );
       if (newToken) {
-        // Return the new decoded JWT
         const refreshed = (await this.jwtService.verifyAsync(newToken, {
           secret: this.configService.get('JWT_ACCESS_SECRET'),
-        })) as {
-          sub: string;
-          iat: number;
-          exp: number;
-        };
+        })) as { sub: string; iat: number; exp: number };
         this.logger.log(
           `Access token refreshed successfully. sub=${refreshed.sub} exp=${refreshed.exp}`,
         );
         return refreshed;
-      } else {
-        this.logger.warn(
-          `Access token refresh failed. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
-        );
-        throw new UnauthorizedException('Unable to refresh token');
       }
+
+      this.logger.warn(
+        `Access token refresh failed. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
+      );
+      throw new UnauthorizedException('Unable to refresh token');
     }
 
     return decodedJwt;
@@ -366,7 +415,9 @@ export class TokenService {
         await this.tokenRepository.save(checkToken);
 
         // Set the new token in cookies
-        const cookieName = checkToken.member ? 'memberToken' : 'token';
+        const cookieName = checkToken.member
+          ? CookieNames.MemberToken
+          : CookieNames.ManagerToken;
         res.cookie(cookieName, accessToken, cookieOptions);
         this.logger.debug(
           `Set refreshed access token cookie. cookieName=${cookieName} deviceId=${deviceId || 'unknown'}`,
