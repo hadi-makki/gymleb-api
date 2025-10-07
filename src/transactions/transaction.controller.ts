@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Convert } from 'easy-currencies';
@@ -30,6 +31,31 @@ import { TransactionService } from './transaction.service';
 @ApiTags('Transactions')
 export class TransactionController {
   constructor(private readonly service: TransactionService) {}
+
+  @Get(':gymId/today/paginated')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  async getTodayTransactionsPaginated(
+    @Param('gymId') gymId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const pageNum = Math.max(1, parseInt(page as any, 10) || 1);
+    const limitNum = Math.max(
+      1,
+      Math.min(100, parseInt(limit as any, 10) || 10),
+    );
+    return this.service.getTodayPaidTransactionsForGymPaginated(
+      gymId,
+      pageNum,
+      limitNum,
+    );
+  }
 
   @Delete(':gymId/:id')
   @UseGuards(ManagerAuthGuard)

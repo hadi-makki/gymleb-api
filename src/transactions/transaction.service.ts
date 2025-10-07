@@ -4,7 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { addDays, addHours, endOfDay, isAfter } from 'date-fns';
+import { addDays, addHours, endOfDay, isAfter, startOfDay } from 'date-fns';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
@@ -18,7 +18,8 @@ import {
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
 import { UserEntity } from 'src/user/user.entity';
-import { In, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
+import { paginate } from 'nestjs-paginate';
 import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
 import {
@@ -213,6 +214,47 @@ export class TransactionService {
       throw new NotFoundException('Subscription instance not found');
     }
     return subscriptionInstance;
+  }
+
+  async getTodayPaidTransactionsForGym(gymId: string) {
+    const start = startOfDay(new Date());
+    const end = addDays(start, 1);
+
+    const transactions = await this.transactionModel.find({
+      where: {
+        gym: { id: gymId },
+        paidAt: Between(start, end),
+      },
+      relations: {
+        member: true,
+        gym: true,
+      },
+      order: { paidAt: 'DESC' },
+    });
+
+    return transactions;
+  }
+
+  async getTodayPaidTransactionsForGymPaginated(
+    gymId: string,
+    page: number,
+    limit: number,
+  ) {
+    const start = startOfDay(new Date());
+    const end = addDays(start, 1);
+
+    const res = await paginate(
+      { limit, page, search: '', path: 'title' },
+      this.transactionModel,
+      {
+        relations: ['member', 'gym'],
+        sortableColumns: ['paidAt', 'createdAt', 'title'],
+        defaultSortBy: [['paidAt', 'DESC']],
+        where: { gym: { id: gymId }, paidAt: Between(start, end) },
+      },
+    );
+
+    return res;
   }
 
   async invalidateSubscriptionInstance(
