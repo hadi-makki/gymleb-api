@@ -254,7 +254,34 @@ export class TransactionService {
       },
     );
 
-    return res;
+    // Compute totals for the day (all matching rows, not just this page)
+    const qb = this.transactionModel.createQueryBuilder('t');
+    const totalsRaw = await qb
+      .select(
+        'COALESCE(SUM(CASE WHEN t.type = :expense THEN t.paidAmount ELSE 0 END), 0)',
+        'expenses',
+      )
+      .addSelect(
+        'COALESCE(SUM(CASE WHEN t.type <> :expense THEN t.paidAmount ELSE 0 END), 0)',
+        'revenue',
+      )
+      .where('t.gymId = :gymId', { gymId })
+      .andWhere('t.paidAt BETWEEN :start AND :end', { start, end })
+      .setParameters({ expense: TransactionType.EXPENSE })
+      .getRawOne<{ expenses: string; revenue: string }>();
+
+    const totalExpenses = parseFloat(totalsRaw?.expenses || '0') || 0;
+    const totalRevenue = parseFloat(totalsRaw?.revenue || '0') || 0;
+    const netRevenue = totalRevenue - totalExpenses;
+
+    return {
+      ...res,
+      totals: {
+        revenue: totalRevenue,
+        expenses: totalExpenses,
+        net: netRevenue,
+      },
+    } as any;
   }
 
   async invalidateSubscriptionInstance(
