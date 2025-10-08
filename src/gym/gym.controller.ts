@@ -788,6 +788,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym social media links' })
   @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
   async updateSocialMediaLinks(
     @Param('gymId') gymId: string,
     @Body() body: UpdateSocialMediaDto,
