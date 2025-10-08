@@ -22,7 +22,12 @@ import { ValidateRevenueRelatedToGym } from 'src/decorators/validate-revenue-rel
 
 @Controller('revenue')
 @UseGuards(ManagerAuthGuard)
-@Roles(Permissions.GymOwner, Permissions.revenue, Permissions.personalTrainers)
+@Roles(
+  Permissions.GymOwner,
+  Permissions.revenue,
+  Permissions.personalTrainers,
+  Permissions.products,
+)
 export class RevenueController {
   constructor(private readonly revenueService: RevenueService) {}
 
