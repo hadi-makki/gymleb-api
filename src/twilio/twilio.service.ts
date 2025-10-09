@@ -38,15 +38,11 @@ export const TwilioWhatsappTemplates = {
   },
   // English templates
   welcomeMessage: {
-    en: 'HX33a3ef241f8933d43327e397663b1347',
-    ar: 'HXedcdbb7d853851787db0eaa6297ce98e',
-    numberOfVariables: 4,
+    en: 'HX2c4b7c323210f4e99fcac533e67c9fe8',
+    ar: 'HX42d68746728d6931cc1caf8f9e41184b',
+    numberOfVariables: 5,
   },
-  welcomeMessageCalisthenics: {
-    en: 'HX67b2797d8b8bae74e5dd066c4db608d0',
-    ar: 'HX5cb01d1d696087de6aef652cfd10ff15',
-    numberOfVariables: 4,
-  },
+
   gymPaymentConfirmation: {
     en: 'HXf72f4d4997fc3a2d1f579e3406520f1b',
     ar: 'HXb1c5bb824a6cd79d86257128a746511f',
@@ -232,6 +228,7 @@ export class TwilioService {
         notificationSetting: true,
       },
     });
+
     if (
       member.notificationSetting &&
       !member.notificationSetting.welcomeMessage
@@ -248,18 +245,15 @@ export class TwilioService {
     const data = {
       1: memberName,
       2: gym.name,
-      3: `https://gym-leb.com/${gym.gymDashedName}/overview`,
-      4: gym.phone,
+      3: gym.gymType.charAt(0).toUpperCase() + gym.gymType.slice(1),
+      4: `https://gym-leb.com/${gym.gymDashedName}/overview`,
+      5: gym.phone,
     };
 
     const res = await this.sendWhatsappMessage({
       phoneNumber: memberPhone,
       twilioTemplate:
-        gym.gymType === GymTypeEnum.CALISTHENICS
-          ? TwilioWhatsappTemplates.welcomeMessageCalisthenics[
-              gym.messagesLanguage
-            ]
-          : TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
+        TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
       contentVariables: data,
       phoneNumberISOCode: memberPhoneISOCode,
       gym,
@@ -274,11 +268,7 @@ export class TwilioService {
         messageType: TwilioMessageType.welcomeMessage,
         messageSid: res.sid,
         twilioTemplate:
-          gym.gymType === GymTypeEnum.CALISTHENICS
-            ? TwilioWhatsappTemplates.welcomeMessageCalisthenics[
-                gym.messagesLanguage
-              ]
-            : TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
+          TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
       });
       await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
 
@@ -286,11 +276,9 @@ export class TwilioService {
       await this.memberModel.save(member);
     }
 
-    if (!checkNodeEnv('local')) {
-      await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
-      member.isWelcomeMessageSent = true;
-      await this.memberModel.save(member);
-    }
+    await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
+    member.isWelcomeMessageSent = true;
+    await this.memberModel.save(member);
     return {
       message: 'Welcome message sent successfully',
     };
