@@ -1460,35 +1460,44 @@ export class MemberService {
     }
 
     // OPTIMIZATION: Use SQL subquery to find expired member IDs directly
-    const expiredMemberIds = await this.memberModel
+    let queryBuilder = this.memberModel
       .createQueryBuilder('member')
       .select('member.id')
       .innerJoin('member.transactions', 'tx', 'tx.type = :subscriptionType', {
         subscriptionType: TransactionType.SUBSCRIPTION,
       })
-      .where('member.gymId = :gymId', { gymId })
-      .andWhere('member.isNotified = :isNotified', {
-        isNotified: onlyNotNotified ? false : undefined,
-      })
-      .andWhere(
-        gender ? 'member.gender = :gender' : '1=1',
-        gender ? { gender } : {},
-      )
+      .where('member.gymId = :gymId', { gymId });
+
+    // Add isNotified condition only if onlyNotNotified is true
+    if (onlyNotNotified) {
+      queryBuilder = queryBuilder.andWhere('member.isNotified = :isNotified', {
+        isNotified: false,
+      });
+    }
+
+    // Add gender condition only if gender is specified
+    if (gender) {
+      queryBuilder = queryBuilder.andWhere('member.gender = :gender', {
+        gender,
+      });
+    }
+
+    const expiredMemberIds = await queryBuilder
       .andWhere(
         `member.id IN (
           SELECT DISTINCT m.id 
-          FROM member m
-          INNER JOIN transaction t ON t.memberId = m.id 
+          FROM members m
+          INNER JOIN transactions t ON t."memberId" = m.id 
           WHERE t.type = :subscriptionType
             AND t.id = (
               SELECT t2.id 
-              FROM transaction t2 
-              WHERE t2.memberId = m.id 
+              FROM transactions t2 
+              WHERE t2."memberId" = m.id 
                 AND t2.type = :subscriptionType 
-              ORDER BY t2.createdAt DESC 
+              ORDER BY t2."createdAt" DESC 
               LIMIT 1
             )
-            AND (t.endDate < NOW() OR t.isInvalidated = true)
+            AND (t."endDate" < NOW() OR t."isInvalidated" = true)
         )`,
         { subscriptionType: TransactionType.SUBSCRIPTION },
       )
