@@ -125,16 +125,6 @@ export class GymService {
     end?: string,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-      select: {
-        id: true,
-      },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-
     const now = new Date();
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
@@ -155,74 +145,180 @@ export class GymService {
       dateFilter.paidAt = MoreThanOrEqual(currentMonthStart);
     }
 
-    // Fetch heavy lists in parallel with minimal columns
+    // Compute aggregates via SQL (avoid loading large transaction lists)
+    const filterFrom = start ? new Date(start) : currentMonthStart;
+    const filterTo = end ? new Date(end) : now;
+    // OPTIMIZATION: Organize queries with template literals for better readability
     const [
-      allTransactions,
-      lastMonthTransactions,
-      currentMonthTransactions,
+      subscriptionRevenueRow,
+      ptSessionRevenueRow,
+      additionalRevenueRow,
+      totalExpensesRow,
+      totalTransactions,
+      lastMonthSubscriptionRevenueRow,
+      currentMonthSubscriptionRevenueRow,
+      currentMonthPTSessionRevenueRow,
+      currentMonthOwnerSubAmountRow,
+      currentMonthSubTxCount,
       lastMonthMembers,
       currentMonthMembers,
       totalMembers,
       members,
     ] = await Promise.all([
-      this.transactionModel.find({
+      // Total subscription revenue for selected period (or current month by default)
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
+        .andWhere('t.paidAt BETWEEN :from AND :to', {
+          from: filterFrom,
+          to: filterTo,
+        })
+        .getRawOne<{ sum: string }>(),
+
+      // Personal trainer session revenue for selected period (gym share logic)
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(
+          `COALESCE(SUM(
+            CASE WHEN t."type" = :pt THEN 
+              CASE WHEN t."isTakingPtSessionsCut" = true THEN 
+                (t."gymsPTSessionPercentage"/100.0) * t."paidAmount" 
+              ELSE t."paidAmount" 
+              END 
+            ELSE 0 
+            END
+          ), 0)`,
+          'sum',
+        )
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.paidAt BETWEEN :from AND :to', {
+          from: filterFrom,
+          to: filterTo,
+        })
+        .setParameters({ pt: TransactionType.PERSONAL_TRAINER_SESSION })
+        .getRawOne<{ sum: string }>(),
+
+      // Additional revenue (explicit REVENUE type only; PT share handled above)
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.type = :type', { type: TransactionType.REVENUE })
+        .andWhere('t.paidAt BETWEEN :from AND :to', {
+          from: filterFrom,
+          to: filterTo,
+        })
+        .getRawOne<{ sum: string }>(),
+
+      // Total expenses in selected period
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.type = :type', { type: TransactionType.EXPENSE })
+        .andWhere('t.paidAt BETWEEN :from AND :to', {
+          from: filterFrom,
+          to: filterTo,
+        })
+        .getRawOne<{ sum: string }>(),
+
+      // Total transactions count in selected period
+      this.transactionModel.count({
         where: {
-          gym: { id: gym.id },
+          gym: { id: gymId },
           status: PaymentStatus.PAID,
-          ...dateFilter,
+          paidAt: Between(filterFrom, filterTo),
         },
-        select: {
-          id: true,
-          type: true,
-          paidAmount: true,
-          isTakingPtSessionsCut: true,
-          gymsPTSessionPercentage: true,
-          paidAt: true,
-        },
-        order: { paidAt: 'DESC' },
       }),
-      this.transactionModel.find({
+
+      // Last month subscription revenue
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
+        .andWhere('t.paidAt BETWEEN :from AND :to', {
+          from: lastMonthStart,
+          to: lastMonthEnd,
+        })
+        .getRawOne<{ sum: string }>(),
+
+      // Current month subscription revenue
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
+        .andWhere('t.paidAt >= :from', { from: currentMonthStart })
+        .getRawOne<{ sum: string }>(),
+
+      // Current month PT session revenue (gym share)
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(
+          `COALESCE(SUM(
+            CASE WHEN t."type" = :pt THEN 
+              CASE WHEN t."isTakingPtSessionsCut" = true THEN 
+                (t."gymsPTSessionPercentage"/100.0) * t."paidAmount" 
+              ELSE t."paidAmount" 
+              END 
+            ELSE 0 
+            END
+          ), 0)`,
+          'sum',
+        )
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.paidAt >= :from', { from: currentMonthStart })
+        .setParameters({ pt: TransactionType.PERSONAL_TRAINER_SESSION })
+        .getRawOne<{ sum: string }>(),
+
+      // Current month owner subscription assignment total
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
+        .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.type = :type', {
+          type: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
+        })
+        .andWhere('t.paidAt >= :from', { from: currentMonthStart })
+        .getRawOne<{ sum: string }>(),
+
+      // Current month subscription transactions count
+      this.transactionModel.count({
         where: {
-          gym: { id: gym.id },
+          gym: { id: gymId },
           status: PaymentStatus.PAID,
-          paidAt: Between(lastMonthStart, lastMonthEnd),
-        },
-        select: { id: true, type: true, paidAmount: true, paidAt: true },
-        order: { paidAt: 'DESC' },
-      }),
-      this.transactionModel.find({
-        where: {
-          gym: { id: gym.id },
-          status: PaymentStatus.PAID,
+          type: TransactionType.SUBSCRIPTION,
           paidAt: MoreThanOrEqual(currentMonthStart),
         },
-        select: {
-          id: true,
-          type: true,
-          paidAmount: true,
-          isTakingPtSessionsCut: true,
-          gymsPTSessionPercentage: true,
-          paidAt: true,
-        },
-        order: { paidAt: 'DESC' },
       }),
+
+      // Members counts and list
       this.memberModel.count({
         where: {
-          gym: { id: gym.id },
+          gym: { id: gymId },
           createdAt: Between(lastMonthStart, lastMonthEnd),
         },
       }),
       this.memberModel.count({
         where: {
-          gym: { id: gym.id },
+          gym: { id: gymId },
           createdAt: MoreThanOrEqual(currentMonthStart),
         },
       }),
-      this.memberModel.count({
-        where: { gym: { id: gym.id } },
-      }),
+      this.memberModel.count({ where: { gym: { id: gymId } } }),
       this.memberModel.find({
-        where: { gym: { id: gym.id } },
+        where: { gym: { id: gymId } },
         select: {
           id: true,
           name: true,
@@ -240,28 +336,18 @@ export class GymService {
       }),
     ]);
 
-    // Calculate subscription revenue for both periods
-    const lastMonthSubscriptionRevenue = lastMonthTransactions
-      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
-      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
-
-    const currentMonthSubscriptionRevenue = currentMonthTransactions
-      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
-      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
-
-    // Calculate personal trainer session revenue for current month
-    const currentMonthPTSessionRevenue = currentMonthTransactions
-      .filter(
-        (t) =>
-          t.type === TransactionType.PERSONAL_TRAINER_SESSION &&
-          t.isTakingPtSessionsCut,
-      )
-      .reduce((total, transaction) => {
-        const sessionAmount = transaction.paidAmount || 0;
-        const gymPercentage = transaction.gymsPTSessionPercentage || 0;
-        const gymShare = (gymPercentage / 100) * sessionAmount;
-        return total + gymShare;
-      }, 0);
+    // Parse aggregate rows
+    const parseSum = (row?: { sum?: string }) =>
+      row && row.sum ? Number(row.sum) : 0;
+    const lastMonthSubscriptionRevenue = parseSum(
+      lastMonthSubscriptionRevenueRow,
+    );
+    const currentMonthSubscriptionRevenue = parseSum(
+      currentMonthSubscriptionRevenueRow,
+    );
+    const currentMonthPTSessionRevenue = parseSum(
+      currentMonthPTSessionRevenueRow,
+    );
 
     // Calculate percentage change in subscription revenue
     const revenueChange = lastMonthSubscriptionRevenue
@@ -270,39 +356,17 @@ export class GymService {
         100
       : 0;
 
-    // Calculate totals from all transactions (current range or current month by default)
-    const subscriptionRevenue = allTransactions
-      .filter((t) => t.type === TransactionType.SUBSCRIPTION)
-      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+    const subscriptionRevenue = parseSum(subscriptionRevenueRow);
+    const personalTrainerSessionRevenue = parseSum(ptSessionRevenueRow);
 
-    // Calculate personal trainer session revenue based on gym percentage
-    const personalTrainerSessionRevenue = allTransactions
-      .filter((t) => t.type === TransactionType.PERSONAL_TRAINER_SESSION)
-      .reduce((total, transaction) => {
-        const sessionAmount = transaction.paidAmount || 0;
-        const gymPercentage = transaction.gymsPTSessionPercentage || 0;
-        // Calculate gym's share: (percentage / 100) * session amount
-        const gymShare = transaction.isTakingPtSessionsCut
-          ? (gymPercentage / 100) * sessionAmount
-          : sessionAmount;
+    const currentMonthOwnerSubscrptionTransactions = parseSum(
+      currentMonthOwnerSubAmountRow,
+    );
 
-        return total + gymShare;
-      }, 0);
+    const additionalRevenue =
+      parseSum(additionalRevenueRow) + personalTrainerSessionRevenue;
 
-    const currentMonthOwnerSubscrptionTransactions = currentMonthTransactions
-      .filter((t) => t.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT)
-      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
-
-    const additionalRevenue = allTransactions
-      .filter((t) => t.type === TransactionType.REVENUE)
-      .reduce(
-        (total, transaction) => total + (transaction.paidAmount || 0),
-        personalTrainerSessionRevenue,
-      );
-
-    const totalExpenses = allTransactions
-      .filter((t) => t.type === TransactionType.EXPENSE)
-      .reduce((total, transaction) => total + (transaction.paidAmount || 0), 0);
+    const totalExpenses = parseSum(totalExpensesRow);
 
     const totalRevenue =
       subscriptionRevenue +
@@ -330,7 +394,7 @@ export class GymService {
         updatedAt: member.updatedAt,
         subscription: member.subscription,
         subscriptionTransactions: member.transactions,
-        gym: { id: gym.id },
+        gym: { id: gymId },
         hasActiveSubscription: checkActiveSubscription,
         currentActiveSubscription: latestSubscriptionInstance || null,
       };
@@ -349,7 +413,7 @@ export class GymService {
       netRevenue,
       totalMembers,
       members: membersWithActiveSubscription,
-      totalTransactions: allTransactions.length,
+      totalTransactions,
       revenueChange,
       memberChange: lastMonthMembers
         ? ((currentMonthMembers - lastMonthMembers) / lastMonthMembers) * 100
@@ -359,9 +423,7 @@ export class GymService {
         currentMonthSubscriptionRevenue + currentMonthPTSessionRevenue,
       currentMonthSubscriptionRevenue,
       currentMonthPTSessionRevenue,
-      currentMonthTransactions: currentMonthTransactions.filter(
-        (t) => t.type === TransactionType.SUBSCRIPTION,
-      ).length,
+      currentMonthTransactions: currentMonthSubTxCount,
       dateRange: {
         startDate: analyticsStartDate,
         endDate: analyticsEndDate,

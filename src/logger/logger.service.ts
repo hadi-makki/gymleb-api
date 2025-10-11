@@ -40,7 +40,7 @@ export class LoggerMiddleware implements NestMiddleware {
     };
 
     const slowThresholdMs = parseInt(
-      process.env.REQUEST_LOG_SLOW_THRESHOLD_MS || '1000',
+      process.env.REQUEST_LOG_SLOW_THRESHOLD_MS || '600',
       10,
     );
 
