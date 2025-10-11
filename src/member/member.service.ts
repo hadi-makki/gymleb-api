@@ -1451,105 +1451,67 @@ export class MemberService {
     onlyNotNotified: boolean = false,
     gender?: Gender,
   ) {
-    // OPTIMIZATION: Page results directly in SQL to avoid building huge IN() lists
     const offset = Math.max(0, (page - 1) * limit);
 
-    // Build COUNT query with same filters
-    const countQb = this.memberModel
+    // Single CTE-based query to find expired members efficiently
+    // This replaces the correlated subquery with a window function
+    let baseQuery = this.memberModel
       .createQueryBuilder('m')
-      .where('m."gymId" = :gymId', { gymId })
-      .andWhere(
-        `EXISTS (
-          SELECT 1 FROM transactions t
-          WHERE t."memberId" = m.id
-            AND t.type = :subscriptionType
-            AND t.id = (
-              SELECT t2.id FROM transactions t2
-              WHERE t2."memberId" = m.id AND t2.type = :subscriptionType
-              ORDER BY t2."createdAt" DESC
-              LIMIT 1
-            )
-            AND (t."endDate" < NOW() OR t."isInvalidated" = true)
-        )`,
+      .innerJoin(
+        (qb) => {
+          return qb
+            .select('t."memberId"', 'memberId')
+            .addSelect('MAX(t."createdAt")', 'lastCreatedAt')
+            .from('transactions', 't')
+            .where('t.type = :subscriptionType', {
+              subscriptionType: TransactionType.SUBSCRIPTION,
+            })
+            .groupBy('t."memberId"');
+        },
+        'latest',
+        'latest."memberId" = m.id',
+      )
+      .innerJoin(
+        'transactions',
+        't',
+        't."memberId" = m.id AND t.type = :subscriptionType AND t."createdAt" = latest."lastCreatedAt"',
         { subscriptionType: TransactionType.SUBSCRIPTION },
-      );
+      )
+      .where('m."gymId" = :gymId', { gymId })
+      .andWhere('(t."endDate" < NOW() OR t."isInvalidated" = true)');
 
+    // Apply filters
     if (onlyNotNotified) {
-      countQb.andWhere('m."isNotified" = false');
+      baseQuery.andWhere('m."isNotified" = false');
     }
     if (gender) {
-      countQb.andWhere('m."gender" = :gender', { gender });
+      baseQuery.andWhere('m."gender" = :gender', { gender });
     }
     if (search) {
-      countQb.andWhere(
+      baseQuery.andWhere(
         '(m.name ILIKE :q OR m.phone ILIKE :q OR m.email ILIKE :q)',
         { q: `%${search}%` },
       );
     }
 
-    const countRaw = await countQb
-      .select('COUNT(*)', 'count')
-      .getRawOne<{ count: string }>();
-    const totalItems = parseInt(countRaw?.count || '0', 10);
+    // Get count and IDs in parallel for better performance
+    const [countResult, idRows] = await Promise.all([
+      baseQuery
+        .clone()
+        .select('COUNT(DISTINCT m.id)', 'count')
+        .getRawOne<{ count: string }>(),
+      baseQuery
+        .clone()
+        .select('m.id', 'id')
+        .addSelect('m."createdAt"', 'createdAt')
+        .distinct(true)
+        .orderBy('m."createdAt"', 'DESC')
+        .offset(offset)
+        .limit(limit)
+        .getRawMany<{ id: string }>(),
+    ]);
 
-    if (totalItems === 0) {
-      return {
-        data: [],
-        meta: {
-          currentPage: page,
-          totalPages: 0,
-          totalItems: 0,
-          itemsPerPage: limit,
-        },
-        links: {
-          first: '',
-          previous: '',
-          next: '',
-          last: '',
-        },
-      };
-    }
-
-    // Build IDs page query with same filters and ORDER + LIMIT/OFFSET
-    const idsQb = this.memberModel
-      .createQueryBuilder('m')
-      .select('m.id', 'id')
-      .where('m."gymId" = :gymId', { gymId })
-      .andWhere(
-        `EXISTS (
-          SELECT 1 FROM transactions t
-          WHERE t."memberId" = m.id
-            AND t.type = :subscriptionType
-            AND t.id = (
-              SELECT t2.id FROM transactions t2
-              WHERE t2."memberId" = m.id AND t2.type = :subscriptionType
-              ORDER BY t2."createdAt" DESC
-              LIMIT 1
-            )
-            AND (t."endDate" < NOW() OR t."isInvalidated" = true)
-        )`,
-        { subscriptionType: TransactionType.SUBSCRIPTION },
-      )
-      .orderBy('m."createdAt"', 'DESC')
-      .offset(offset)
-      .limit(limit);
-
-    if (onlyNotNotified) {
-      idsQb.andWhere('m."isNotified" = false');
-    }
-    if (gender) {
-      idsQb.andWhere('m."gender" = :gender', { gender });
-    }
-    if (search) {
-      idsQb.andWhere(
-        '(m.name ILIKE :q OR m.phone ILIKE :q OR m.email ILIKE :q)',
-        {
-          q: `%${search}%`,
-        },
-      );
-    }
-
-    const idRows = await idsQb.getRawMany<{ id: string }>();
+    const totalItems = parseInt(countResult?.count || '0', 10);
     const expiredIds = idRows.map((r) => r.id);
 
     if (expiredIds.length === 0) {
@@ -1557,25 +1519,34 @@ export class MemberService {
         data: [],
         meta: {
           currentPage: page,
-          totalPages: Math.ceil(totalItems / limit),
+          totalPages: Math.ceil(totalItems / limit) || 0,
           totalItems,
           itemsPerPage: limit,
         },
-        links: {
-          first: '',
-          previous: '',
-          next: '',
-          last: '',
-        },
+        links: { first: '', previous: '', next: '', last: '' },
       };
     }
 
-    // Fetch page members with relations (only for current page IDs)
-    const pageMembers = await this.memberModel.find({
-      where: { id: In(expiredIds) },
-      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
-      order: { createdAt: 'DESC' },
-    });
+    // Fetch only necessary relations - avoid loading ALL transactions
+    // Load only the latest subscription transaction per member
+    const pageMembers = await this.memberModel
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.gym', 'gym')
+      .leftJoinAndSelect('m.subscription', 'subscription')
+      .leftJoinAndSelect('m.attendingDays', 'attendingDays')
+      .leftJoinAndSelect(
+        'm.transactions',
+        'transactions',
+        'transactions.type = :subscriptionType AND transactions.id = (' +
+          'SELECT t2.id FROM transactions t2 ' +
+          'WHERE t2."memberId" = m.id AND t2.type = :subscriptionType ' +
+          'ORDER BY t2."createdAt" DESC LIMIT 1' +
+          ')',
+        { subscriptionType: TransactionType.SUBSCRIPTION },
+      )
+      .where('m.id IN (:...ids)', { ids: expiredIds })
+      .orderBy('m."createdAt"', 'DESC')
+      .getMany();
 
     // Build DTOs in batch
     const items = await this.buildMembersDtoBatch(pageMembers);
@@ -1588,12 +1559,7 @@ export class MemberService {
         totalItems,
         itemsPerPage: limit,
       },
-      links: {
-        first: '',
-        previous: '',
-        next: '',
-        last: '',
-      },
+      links: { first: '', previous: '', next: '', last: '' },
     };
   }
 
