@@ -85,10 +85,6 @@ export class TransactionService {
       }
     }
 
-    console.log(
-      'this is the member in createSubscriptionInstance',
-      paymentDetails.member,
-    );
     const forFree =
       paymentDetails.forFree || paymentDetails.isBirthdaySubscription;
     const newTransaction = this.transactionModel.create({
