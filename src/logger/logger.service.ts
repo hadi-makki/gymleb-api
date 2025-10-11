@@ -12,7 +12,7 @@ export class LoggerMiddleware implements NestMiddleware {
   ) {}
 
   use(req: Request, res: Response, next: NextFunction) {
-    const { method, url } = req;
+    const { method, baseUrl } = req;
     const start = Date.now();
 
     const getColor = (statusCode: number) => {
@@ -52,7 +52,7 @@ export class LoggerMiddleware implements NestMiddleware {
         const ip = getClientIp();
 
         Logger.log(
-          `${color}${method} ${url} ${statusCode} - ${duration}ms - IP: ${ip}\x1b[0m`,
+          `${color}${method} ${baseUrl} ${statusCode} - ${duration}ms - IP: ${ip}\x1b[0m`,
         );
 
         const isError = statusCode >= 500;
@@ -71,7 +71,7 @@ export class LoggerMiddleware implements NestMiddleware {
 
           const log = this.logsRepo.create({
             method,
-            url,
+            url: baseUrl,
             statusCode,
             durationMs: duration,
             deviceId,

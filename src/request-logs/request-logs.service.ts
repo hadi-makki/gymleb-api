@@ -40,7 +40,6 @@ export class RequestLogsService {
 
       ...(where && { where }),
     });
-    console.log('this is the result', result);
     return result;
   }
 
