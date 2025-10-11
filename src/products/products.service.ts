@@ -42,10 +42,6 @@ export class ProductsService {
     limit: number = 10,
     search?: string,
   ) {
-    const gym = !isUUID(gymId)
-      ? await this.gymService.getGymByGymName(gymId)
-      : null;
-
     const res = await paginate(
       {
         limit,
@@ -61,7 +57,9 @@ export class ProductsService {
         sortableColumns: ['createdAt', 'updatedAt', 'name', 'price'],
         searchableColumns: ['name', 'description'],
         defaultSortBy: [['createdAt', 'DESC']],
-        where: { gym: gym ? { id: gym.id } : { id: gymId } },
+        where: {
+          gym: isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId },
+        },
         filterableColumns: {
           name: [FilterOperator.ILIKE],
           description: [FilterOperator.ILIKE],
