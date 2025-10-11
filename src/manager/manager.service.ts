@@ -387,8 +387,6 @@ export class ManagerService {
       this.memberModel.count(),
     ]);
 
-    console.log('this is the total users', totalUsers);
-
     // OPTIMIZATION: Process gym data in memory instead of making individual queries
     let gymsWithActiveSubscriptions = 0;
     let totalMessagesSent = 0;
