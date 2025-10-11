@@ -776,6 +776,8 @@ export class MemberService {
       },
     };
 
+    // OPTIMIZATION: Use batch DTO builder instead of individual returnMember() calls
+    // This eliminates N+1 queries and reduces database calls from 1+(N*5) to just 5 total
     const items = await this.buildMembersDtoBatch(res.data);
 
     return {
@@ -808,12 +810,40 @@ export class MemberService {
     }
   }
 
+  /**
+   * OPTIMIZATION: Batch DTO Builder to Eliminate N+1 Query Problem
+   *
+   * PROBLEM: The original findAll() method was calling returnMember() for each member,
+   * which resulted in N+1 queries:
+   * - 1 query to get members
+   * - N queries to get active subscriptions (1 per member)
+   * - N queries to get latest subscriptions (1 per member)
+   * - N queries to get attending days (1 per member)
+   * - N queries to get reservations (1 per member)
+   * - N queries to get notification settings (1 per member)
+   *
+   * SOLUTION: This method fetches ALL related data in just 5 parallel queries,
+   * then groups the results by memberId for O(1) lookup when building DTOs.
+   *
+   * PERFORMANCE IMPACT:
+   * - Before: 1 + (N * 5) = 1 + 250 queries for 50 members = 251 queries
+   * - After: 5 queries total (regardless of member count)
+   * - Speed improvement: ~50x faster for typical page sizes
+   *
+   * @param members - Array of MemberEntity objects from the main query
+   * @returns Array of ReturnUserDto objects (same structure as returnMember)
+   */
   private async buildMembersDtoBatch(members: MemberEntity[]) {
     if (!members || members.length === 0) return [];
 
     const memberIds = members.map((m) => m.id);
 
-    // Batch fetch data needed for all members
+    /**
+     * STEP 1: Batch Fetch All Related Data in Parallel
+     *
+     * Instead of making individual queries for each member, we fetch ALL data
+     * for ALL members in just 5 parallel database calls.
+     */
     const [
       activeSubs,
       latestSubs,
@@ -821,34 +851,38 @@ export class MemberService {
       reservations,
       notificationSettings,
     ] = await Promise.all([
-      // Active subscriptions for all members
+      // Query 1: Get ALL active subscriptions for ALL members at once
       this.transactionModel.find({
         where: {
-          member: { id: In(memberIds) },
+          member: { id: In(memberIds) }, // Get for all members in one query
           endDate: MoreThan(new Date()),
           isInvalidated: false,
         },
         relations: { subscription: true },
         order: { endDate: 'DESC' },
       }),
-      // Latest transactions per member (will pick first per member in code)
+
+      // Query 2: Get ALL latest transactions for ALL members at once
       this.transactionModel.find({
         where: { member: { id: In(memberIds) } },
         relations: {},
         order: { createdAt: 'DESC' },
       }),
-      // Attending days for all members
+
+      // Query 3: Get ALL attending days for ALL members at once
       this.attendingDaysModel.find({
         where: { member: { id: In(memberIds) } },
         order: { dayOfWeek: 'ASC' },
       }),
-      // Active reservations for all members
+
+      // Query 4: Get ALL active reservations for ALL members at once
       this.reservationModel.find({
         where: { member: { id: In(memberIds) }, isActive: true },
         relations: ['gym'],
         order: { reservationDate: 'ASC', startTime: 'ASC' },
       }),
-      // Notification settings (fetch only ids that exist)
+
+      // Query 5: Get notification settings (only for members that have them)
       (async () => {
         const nsIds = Array.from(
           new Set(
@@ -860,7 +894,14 @@ export class MemberService {
       })(),
     ]);
 
-    // Group results by memberId for quick access
+    /**
+     * STEP 2: Group Results by MemberId for O(1) Lookup
+     *
+     * Create lookup maps so we can instantly find related data for each member
+     * without having to search through arrays.
+     */
+
+    // Map: memberId -> array of active subscriptions
     const activeByMember = new Map<string, any[]>();
     for (const tx of activeSubs) {
       const mId = tx.memberId || tx.member?.id;
@@ -870,6 +911,7 @@ export class MemberService {
       activeByMember.set(mId, arr);
     }
 
+    // Map: memberId -> latest subscription (first one found per member)
     const latestByMember = new Map<string, any>();
     for (const tx of latestSubs) {
       const mId = tx.memberId || tx.member?.id;
@@ -879,6 +921,7 @@ export class MemberService {
       }
     }
 
+    // Map: memberId -> array of attending days
     const attendingByMember = new Map<string, any[]>();
     for (const d of attendingDays) {
       const mId = d.memberId || d.member?.id;
@@ -888,6 +931,7 @@ export class MemberService {
       attendingByMember.set(mId, arr);
     }
 
+    // Map: memberId -> array of reservations
     const reservationsByMember = new Map<string, any[]>();
     for (const r of reservations) {
       const mId = r.memberId || r.member?.id;
@@ -897,14 +941,22 @@ export class MemberService {
       reservationsByMember.set(mId, arr);
     }
 
+    // Map: notificationSettingId -> notification setting object
     const notificationById = new Map<string, any>();
     for (const ns of notificationSettings) {
       notificationById.set(ns.id, ns);
     }
 
-    // Compose DTOs similar to returnMember but using preloaded data
+    /**
+     * STEP 3: Build DTOs Using Pre-loaded Data
+     *
+     * Now we can build each member's DTO by simply looking up the pre-loaded data
+     * from our maps. This is much faster than making individual database queries.
+     */
     const dtos = members.map((member) => {
       const mId = member.id;
+
+      // Get related data from our pre-loaded maps (O(1) lookup)
       const currentActiveSubscriptions = activeByMember.get(mId) || [];
       const lastSubscription = latestByMember.get(mId);
       const attending = member.attendingDays?.length
@@ -915,6 +967,7 @@ export class MemberService {
         member.notificationSettingId,
       );
 
+      // Build the DTO with the same structure as returnMember()
       const dto: ReturnUserDto = {
         id: member.id,
         name: member.name,

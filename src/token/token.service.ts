@@ -280,9 +280,6 @@ export class TokenService {
         iat: number;
         exp: number;
       };
-      this.logger.debug(
-        `Access token verified. sub=${decodedJwt.sub} exp=${this.formatEpochSecondsToBeirut(decodedJwt.exp)}`,
-      );
     } catch (error) {
       // Token is invalid or expired
       this.logger.warn(
@@ -341,27 +338,19 @@ export class TokenService {
               ? CookieNames.MemberToken
               : CookieNames.ManagerToken;
             res.cookie(cookieName, latestTokenDoc.accessToken, cookieOptions);
-            this.logger.log(
-              `Recovered from concurrent refresh. Using latest access token for device. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
-            );
+
             const refreshed = (await this.jwtService.verifyAsync(
               latestTokenDoc.accessToken,
               {
                 secret: this.configService.get('JWT_ACCESS_SECRET'),
               },
             )) as { sub: string; iat: number; exp: number };
-            this.logger.log(
-              `Recovered token verified. sub=${refreshed.sub} exp=${this.formatEpochSecondsToBeirut(refreshed.exp)}`,
-            );
+
             return refreshed;
           }
         }
       }
 
-      // Fall back to normal refresh flow
-      this.logger.log(
-        `Attempting to refresh access token. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
-      );
       const newToken = await this.refreshToken(
         tokenToUse,
         req.cookies[CookieNames.DeviceId],
@@ -371,9 +360,7 @@ export class TokenService {
         const refreshed = (await this.jwtService.verifyAsync(newToken, {
           secret: this.configService.get('JWT_ACCESS_SECRET'),
         })) as { sub: string; iat: number; exp: number };
-        this.logger.log(
-          `Access token refreshed successfully. sub=${refreshed.sub} exp=${this.formatEpochSecondsToBeirut(refreshed.exp)}`,
-        );
+
         return refreshed;
       }
 
@@ -392,9 +379,6 @@ export class TokenService {
     res: Response,
   ): Promise<string | null> {
     try {
-      this.logger.debug(
-        `Refresh flow started. deviceId=${deviceId || 'unknown'}`,
-      );
       const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
         deviceId,
         token,
@@ -431,9 +415,7 @@ export class TokenService {
         }
         const { accessToken, accessExpirationDate } =
           await this.generateAccessToken(decodedJwt.sub);
-        this.logger.debug(
-          `Generated new access token from refresh. sub=${decodedJwt.sub} exp=${this.formatToBeirut(accessExpirationDate)}`,
-        );
+
         checkToken.accessToken = accessToken;
         checkToken.accessExpirationDate = accessExpirationDate;
         await this.tokenRepository.save(checkToken);
@@ -443,9 +425,6 @@ export class TokenService {
           ? CookieNames.MemberToken
           : CookieNames.ManagerToken;
         res.cookie(cookieName, accessToken, cookieOptions);
-        this.logger.debug(
-          `Set refreshed access token cookie. cookieName=${cookieName} deviceId=${deviceId || 'unknown'}`,
-        );
 
         return accessToken;
       }
