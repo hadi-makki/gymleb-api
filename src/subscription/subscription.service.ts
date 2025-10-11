@@ -55,12 +55,8 @@ export class SubscriptionService {
   }
 
   async findAll(gymId: string) {
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
     const subscriptions = await this.subscriptionModel.find({
-      where: { gym: { id: gym.id } },
+      where: { gym: { id: gymId } },
     });
     return subscriptions;
   }
