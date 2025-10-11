@@ -16,6 +16,7 @@ import {
 import { OwnerSubscriptionTypeEntity } from './owner-subscription-type.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class OwnerSubscriptionsService {
@@ -48,6 +49,9 @@ export class OwnerSubscriptionsService {
   async assign(dto: AssignOwnerSubscriptionDto) {}
 
   async getOwnerSubscription(gymId: string) {
+    if (!isUUID(gymId)) {
+      return;
+    }
     // Get the gym with its transactions
     const gym = await this.gymModel.findOne({
       where: { id: gymId },

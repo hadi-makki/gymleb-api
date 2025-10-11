@@ -13,7 +13,9 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { GymOwnerModule } from './gym-owner/gym-owner.module';
 import { GymEntity } from './gym/entities/gym.entity';
 import { GymModule } from './gym/gym.module';
-import { loggerMiddleware } from './logger/logger.service';
+import { LoggerMiddleware } from './logger/logger.service';
+import { RequestLogEntity } from './request-logs/request-log.entity';
+import { RequestLogsModule } from './request-logs/request-logs.module';
 import { ManagerEntity } from './manager/manager.entity';
 import { ManagerModule } from './manager/manager.module';
 import { MediaEntity } from './media/media.entity';
@@ -73,6 +75,7 @@ import { DatabaseMigration } from './database.migration';
       TransactionEntity,
       PTSessionEntity,
       AiChatEntity,
+      RequestLogEntity,
     ]),
     ConfigModule,
     DatabaseModule,
@@ -100,6 +103,7 @@ import { DatabaseMigration } from './database.migration';
     NotificationSettingsModule,
     ManagerNotificationSettingsModule,
     WhishTransactionsModule,
+    RequestLogsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -118,7 +122,7 @@ export class AppModule implements NestModule {
     consumer
       .apply(DeviceIdMiddleware)
       .forRoutes('*') // Apply device ID middleware to all routes first
-      .apply(loggerMiddleware)
+      .apply(LoggerMiddleware)
       .forRoutes('*'); // Then apply logger middleware
   }
 }

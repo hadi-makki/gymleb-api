@@ -1,19 +1,15 @@
-import { ForbiddenException, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { isPhoneNumber, ValidationError } from 'class-validator';
+import { ValidationError } from 'class-validator';
+import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
+import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
-import { returnAllRoles } from './decorators/roles/role.enum';
 import { HttpExceptionFilter } from './error';
 import { BadRequestException } from './error/bad-request-error';
-import { loggerMiddleware } from './logger/logger.service';
-import cookieParser from 'cookie-parser';
-import { NextFunction } from 'express';
-import { Request } from 'express';
-import { Response } from 'express';
 import { isValidPhoneUsingISO } from './utils/validations';
 
 dotenv.config({
@@ -55,8 +51,6 @@ async function bootstrap() {
       },
     }),
   );
-
-  app.use(loggerMiddleware);
 
   const configService = app.get<ConfigService>(ConfigService);
 

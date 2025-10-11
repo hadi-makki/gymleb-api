@@ -153,6 +153,14 @@ export const navItems: NavItem[] = [
 
   // Transactions
   {
+    title: 'API Logs',
+    url: '/super-admin/api-logs',
+    icon: 'receipt',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
+  {
     title: 'Super Admin Transactions',
     url: '/super-admin/transactions',
     icon: 'receipt',
