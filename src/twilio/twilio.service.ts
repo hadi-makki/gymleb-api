@@ -93,11 +93,7 @@ export class TwilioService {
       (gym.membersNotified || 0) +
       (gym.invoiceMessageNotified || 0) +
       (gym.birthdayMessageNotified || 0);
-    console.log('this is the totalMessages', totalMessages);
-    console.log(
-      'this is the activeSubscription.allowedNotificationsNumber',
-      activeSubscription.allowedNotificationsNumber,
-    );
+
     return totalMessages < activeSubscription.allowedNotificationsNumber;
   }
 
@@ -125,10 +121,7 @@ export class TwilioService {
       console.log('phoneNumberISOCode', phoneNumberISOCode);
       console.log('gym', gym.id, gym.name);
     }
-    console.log(
-      'this is the gym can send messages',
-      this.checkIfGymCanSendMessages(gym, activeSubscription),
-    );
+
     if (!this.checkIfGymCanSendMessages(gym, activeSubscription)) {
       console.log('Gym can send messages limit reached');
       return;
@@ -142,7 +135,7 @@ export class TwilioService {
         contentSid: twilioTemplate,
         contentVariables: JSON.stringify(contentVariables),
       });
-      console.log('this is twilio response', res);
+
       return res;
     }
   }
@@ -325,7 +318,7 @@ export class TwilioService {
       gym,
       activeSubscription,
     });
-    console.log('this is twilio response', res);
+
     if (res) {
       await this.saveTwilioMessage({
         message: res.body,
@@ -592,7 +585,6 @@ export class TwilioService {
         contentVariables: JSON.stringify(contentVariables),
       })
       .then(async (res) => {
-        console.log('this is twilio response', res);
         await this.saveTwilioMessage({
           message: res.body,
           phoneNumber: phoneNumber,
