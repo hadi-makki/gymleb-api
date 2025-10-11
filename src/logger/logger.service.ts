@@ -17,13 +17,28 @@ export function loggerMiddleware(
     return '\x1b[37m'; // White
   };
 
+  const getClientIp = (): string => {
+    const xff = req.headers['x-forwarded-for'] as string | string[] | undefined;
+    if (Array.isArray(xff) && xff.length > 0) {
+      return xff[0].split(',')[0].trim();
+    }
+    if (typeof xff === 'string' && xff.length > 0) {
+      return xff.split(',')[0].trim();
+    }
+    if (req.ip) return req.ip;
+    if (req.socket?.remoteAddress) return req.socket.remoteAddress;
+    return 'unknown';
+  };
+
   // Listen for the response to finish before logging
   res.on('finish', () => {
     const { statusCode } = res;
     const duration = Date.now() - start;
     const color = getColor(statusCode);
 
-    Logger.log(`${color}${method} ${url} ${statusCode} - ${duration}ms\x1b[0m`);
+    Logger.log(
+      `${color}${method} ${url} ${statusCode} - ${duration}ms - IP: ${getClientIp()}\x1b[0m`,
+    );
   });
 
   next();
