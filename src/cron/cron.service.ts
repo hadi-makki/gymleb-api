@@ -146,4 +146,12 @@ export class CronService implements OnApplicationBootstrap {
       await this.memberService.processBirthdayAutomationForGym(gym);
     }
   }
+
+  @Cron(CronExpression.EVERY_HOUR, {
+    name: 'check-expired-members',
+    timeZone: 'Asia/Beirut',
+  })
+  async checkExpiredMembers() {
+    await this.memberService.syncExpiredMembersFlag();
+  }
 }

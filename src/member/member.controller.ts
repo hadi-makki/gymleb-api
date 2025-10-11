@@ -678,4 +678,9 @@ export class MemberController {
       gymId,
     );
   }
+
+  @Get('sync/expired/members/all-gyms')
+  async syncExpiredMembersAllGyms() {
+    return await this.memberService.syncExpiredMembersFlag();
+  }
 }

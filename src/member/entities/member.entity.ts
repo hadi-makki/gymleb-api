@@ -234,4 +234,7 @@ export class MemberEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   welcomeMessageSentManually: boolean;
+
+  @Column('boolean', { default: false })
+  isExpired: boolean;
 }
