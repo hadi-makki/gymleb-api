@@ -776,9 +776,7 @@ export class MemberService {
       },
     };
 
-    const items = await Promise.all(
-      res.data.map(async (m: any) => this.returnMember(m)),
-    );
+    const items = await this.buildMembersDtoBatch(res.data);
 
     return {
       ...res,
@@ -808,6 +806,169 @@ export class MemberService {
         getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
       );
     }
+  }
+
+  private async buildMembersDtoBatch(members: MemberEntity[]) {
+    if (!members || members.length === 0) return [];
+
+    const memberIds = members.map((m) => m.id);
+
+    // Batch fetch data needed for all members
+    const [
+      activeSubs,
+      latestSubs,
+      attendingDays,
+      reservations,
+      notificationSettings,
+    ] = await Promise.all([
+      // Active subscriptions for all members
+      this.transactionModel.find({
+        where: {
+          member: { id: In(memberIds) },
+          endDate: MoreThan(new Date()),
+          isInvalidated: false,
+        },
+        relations: { subscription: true },
+        order: { endDate: 'DESC' },
+      }),
+      // Latest transactions per member (will pick first per member in code)
+      this.transactionModel.find({
+        where: { member: { id: In(memberIds) } },
+        relations: {},
+        order: { createdAt: 'DESC' },
+      }),
+      // Attending days for all members
+      this.attendingDaysModel.find({
+        where: { member: { id: In(memberIds) } },
+        order: { dayOfWeek: 'ASC' },
+      }),
+      // Active reservations for all members
+      this.reservationModel.find({
+        where: { member: { id: In(memberIds) }, isActive: true },
+        relations: ['gym'],
+        order: { reservationDate: 'ASC', startTime: 'ASC' },
+      }),
+      // Notification settings (fetch only ids that exist)
+      (async () => {
+        const nsIds = Array.from(
+          new Set(
+            members.map((m) => m.notificationSettingId).filter((id) => !!id),
+          ),
+        );
+        if (nsIds.length === 0) return [];
+        return this.notificationSettingModel.find({ where: { id: In(nsIds) } });
+      })(),
+    ]);
+
+    // Group results by memberId for quick access
+    const activeByMember = new Map<string, any[]>();
+    for (const tx of activeSubs) {
+      const mId = tx.memberId || tx.member?.id;
+      if (!mId) continue;
+      const arr = activeByMember.get(mId) || [];
+      arr.push(tx);
+      activeByMember.set(mId, arr);
+    }
+
+    const latestByMember = new Map<string, any>();
+    for (const tx of latestSubs) {
+      const mId = tx.memberId || tx.member?.id;
+      if (!mId) continue;
+      if (!latestByMember.has(mId)) {
+        latestByMember.set(mId, tx);
+      }
+    }
+
+    const attendingByMember = new Map<string, any[]>();
+    for (const d of attendingDays) {
+      const mId = d.memberId || d.member?.id;
+      if (!mId) continue;
+      const arr = attendingByMember.get(mId) || [];
+      arr.push(d);
+      attendingByMember.set(mId, arr);
+    }
+
+    const reservationsByMember = new Map<string, any[]>();
+    for (const r of reservations) {
+      const mId = r.memberId || r.member?.id;
+      if (!mId) continue;
+      const arr = reservationsByMember.get(mId) || [];
+      arr.push(r);
+      reservationsByMember.set(mId, arr);
+    }
+
+    const notificationById = new Map<string, any>();
+    for (const ns of notificationSettings) {
+      notificationById.set(ns.id, ns);
+    }
+
+    // Compose DTOs similar to returnMember but using preloaded data
+    const dtos = members.map((member) => {
+      const mId = member.id;
+      const currentActiveSubscriptions = activeByMember.get(mId) || [];
+      const lastSubscription = latestByMember.get(mId);
+      const attending = member.attendingDays?.length
+        ? member.attendingDays
+        : attendingByMember.get(mId) || [];
+      const memberReservations = reservationsByMember.get(mId) || [];
+      const notificationSetting = notificationById.get(
+        member.notificationSettingId,
+      );
+
+      const dto: ReturnUserDto = {
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        gender: member.gender,
+        gym: member.gym,
+        subscription: member.subscription,
+        subscriptionTransactions: member.transactions,
+        createdAt: member.createdAt,
+        updatedAt: member.updatedAt,
+        hasActiveSubscription: currentActiveSubscriptions.length > 0,
+        currentActiveSubscriptions: currentActiveSubscriptions,
+        lastSubscription: lastSubscription,
+        isNotified: member.isNotified,
+        profileImage: member.profileImage,
+        attendingDays: attending,
+        reservations: memberReservations,
+        allowedReservations: member.allowedReservations,
+        usedReservations: member.usedReservations,
+        trainingLevel: member.trainingLevel,
+        trainingGoals: member.trainingGoals,
+        trainingPreferences: member.trainingPreferences,
+        trainingPrograms: member.trainingPrograms,
+        weight: member.weight,
+        height: member.height,
+        waistWidth: member.waistWidth,
+        chestWidth: member.chestWidth,
+        armWidth: member.armWidth,
+        thighWidth: member.thighWidth,
+        bodyFatPercentage: member.bodyFatPercentage,
+        muscleMass: member.muscleMass,
+        bmi: member.bmi,
+        bloodType: member.bloodType,
+        allergies: member.allergies,
+        medicalConditions: member.medicalConditions,
+        medications: member.medications,
+        emergencyContact: member.emergencyContact,
+        emergencyPhone: member.emergencyPhone,
+        birthday: member.birthday,
+        lastHealthCheck: member.lastHealthCheck
+          ? member.lastHealthCheck.toISOString()
+          : undefined,
+        programLink: member.programLink,
+        isWelcomeMessageSent: member.isWelcomeMessageSent,
+        notificationSetting: notificationSetting,
+        phoneNumberISOCode: member.phoneNumberISOCode,
+        welcomeMessageSentManually: member.welcomeMessageSentManually,
+      };
+
+      return dto;
+    });
+
+    return dtos;
   }
 
   async findOne(id: string, gymId: string) {
