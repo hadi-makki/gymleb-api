@@ -1451,14 +1451,6 @@ export class MemberService {
     onlyNotNotified: boolean = false,
     gender?: Gender,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-
     // OPTIMIZATION: Use SQL subquery to find expired member IDs directly
     let queryBuilder = this.memberModel
       .createQueryBuilder('member')
