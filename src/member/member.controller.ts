@@ -139,7 +139,6 @@ export class MemberController {
     @Query('expiringInDays') expiringInDays?: string,
     @Query('gender') gender?: Gender,
   ) {
-    console.log('reachint the controller');
     return await this.memberService.findAll(
       manager,
       search,
