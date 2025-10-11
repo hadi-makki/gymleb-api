@@ -87,9 +87,6 @@ export class MediaService {
   }
 
   async getFileStreamById(id: string, res: Response) {
-    console.log('id', id);
-    console.log('isMongoId', isMongoId(id));
-    console.log('isUUID', isUUID(id));
     const media = await this.mediaRepository.findOne({
       where: {
         ...(isMongoId(id) && { mongoId: id }),
