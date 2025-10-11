@@ -1451,54 +1451,48 @@ export class MemberService {
     onlyNotNotified: boolean = false,
     gender?: Gender,
   ) {
-    // OPTIMIZATION: Use SQL subquery to find expired member IDs directly
-    let queryBuilder = this.memberModel
-      .createQueryBuilder('member')
-      .select('member.id')
-      .innerJoin('member.transactions', 'tx', 'tx.type = :subscriptionType', {
-        subscriptionType: TransactionType.SUBSCRIPTION,
-      })
-      .where('member.gymId = :gymId', { gymId });
+    // OPTIMIZATION: Page results directly in SQL to avoid building huge IN() lists
+    const offset = Math.max(0, (page - 1) * limit);
 
-    // Add isNotified condition only if onlyNotNotified is true
-    if (onlyNotNotified) {
-      queryBuilder = queryBuilder.andWhere('member.isNotified = :isNotified', {
-        isNotified: false,
-      });
-    }
-
-    // Add gender condition only if gender is specified
-    if (gender) {
-      queryBuilder = queryBuilder.andWhere('member.gender = :gender', {
-        gender,
-      });
-    }
-
-    const expiredMemberIds = await queryBuilder
+    // Build COUNT query with same filters
+    const countQb = this.memberModel
+      .createQueryBuilder('m')
+      .where('m."gymId" = :gymId', { gymId })
       .andWhere(
-        `member.id IN (
-          SELECT DISTINCT m.id 
-          FROM members m
-          INNER JOIN transactions t ON t."memberId" = m.id 
-          WHERE t.type = :subscriptionType
+        `EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t."memberId" = m.id
+            AND t.type = :subscriptionType
             AND t.id = (
-              SELECT t2.id 
-              FROM transactions t2 
-              WHERE t2."memberId" = m.id 
-                AND t2.type = :subscriptionType 
-              ORDER BY t2."createdAt" DESC 
+              SELECT t2.id FROM transactions t2
+              WHERE t2."memberId" = m.id AND t2.type = :subscriptionType
+              ORDER BY t2."createdAt" DESC
               LIMIT 1
             )
             AND (t."endDate" < NOW() OR t."isInvalidated" = true)
         )`,
         { subscriptionType: TransactionType.SUBSCRIPTION },
-      )
-      .getRawMany<{ member_id: string }>();
+      );
 
-    const expiredIds = expiredMemberIds.map((row) => row.member_id);
+    if (onlyNotNotified) {
+      countQb.andWhere('m."isNotified" = false');
+    }
+    if (gender) {
+      countQb.andWhere('m."gender" = :gender', { gender });
+    }
+    if (search) {
+      countQb.andWhere(
+        '(m.name ILIKE :q OR m.phone ILIKE :q OR m.email ILIKE :q)',
+        { q: `%${search}%` },
+      );
+    }
 
-    // If no expired members found, return empty result
-    if (expiredIds.length === 0) {
+    const countRaw = await countQb
+      .select('COUNT(*)', 'count')
+      .getRawOne<{ count: string }>();
+    const totalItems = parseInt(countRaw?.count || '0', 10);
+
+    if (totalItems === 0) {
       return {
         data: [],
         meta: {
@@ -1516,36 +1510,90 @@ export class MemberService {
       };
     }
 
-    // OPTIMIZATION: Use pagination utility with the filtered IDs
-    const res = await paginate(
-      {
-        limit,
-        page,
-        search,
-        path: 'phone',
-      },
-      this.memberModel,
-      {
-        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
-        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
-        searchableColumns: ['name', 'phone', 'email'],
-        defaultSortBy: [['createdAt', 'DESC']],
-        where: { id: In(expiredIds) },
-        filterableColumns: {
-          name: [FilterOperator.ILIKE],
-          phone: [FilterOperator.ILIKE],
-          email: [FilterOperator.ILIKE],
-        },
-        maxLimit: 100,
-      },
-    );
+    // Build IDs page query with same filters and ORDER + LIMIT/OFFSET
+    const idsQb = this.memberModel
+      .createQueryBuilder('m')
+      .select('m.id', 'id')
+      .where('m."gymId" = :gymId', { gymId })
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t."memberId" = m.id
+            AND t.type = :subscriptionType
+            AND t.id = (
+              SELECT t2.id FROM transactions t2
+              WHERE t2."memberId" = m.id AND t2.type = :subscriptionType
+              ORDER BY t2."createdAt" DESC
+              LIMIT 1
+            )
+            AND (t."endDate" < NOW() OR t."isInvalidated" = true)
+        )`,
+        { subscriptionType: TransactionType.SUBSCRIPTION },
+      )
+      .orderBy('m."createdAt"', 'DESC')
+      .offset(offset)
+      .limit(limit);
 
-    // OPTIMIZATION: Use batch processing for returnMember calls
-    const items = await this.buildMembersDtoBatch(res.data);
+    if (onlyNotNotified) {
+      idsQb.andWhere('m."isNotified" = false');
+    }
+    if (gender) {
+      idsQb.andWhere('m."gender" = :gender', { gender });
+    }
+    if (search) {
+      idsQb.andWhere(
+        '(m.name ILIKE :q OR m.phone ILIKE :q OR m.email ILIKE :q)',
+        {
+          q: `%${search}%`,
+        },
+      );
+    }
+
+    const idRows = await idsQb.getRawMany<{ id: string }>();
+    const expiredIds = idRows.map((r) => r.id);
+
+    if (expiredIds.length === 0) {
+      return {
+        data: [],
+        meta: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit,
+        },
+        links: {
+          first: '',
+          previous: '',
+          next: '',
+          last: '',
+        },
+      };
+    }
+
+    // Fetch page members with relations (only for current page IDs)
+    const pageMembers = await this.memberModel.find({
+      where: { id: In(expiredIds) },
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Build DTOs in batch
+    const items = await this.buildMembersDtoBatch(pageMembers);
 
     return {
-      ...res,
       data: items,
+      meta: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        itemsPerPage: limit,
+      },
+      links: {
+        first: '',
+        previous: '',
+        next: '',
+        last: '',
+      },
     };
   }
 
