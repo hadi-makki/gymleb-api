@@ -13,7 +13,7 @@ import {
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { Twilio } from 'twilio';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, MoreThan } from 'typeorm';
 import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { isValidPhoneUsingISO } from 'src/utils/validations';
@@ -84,17 +84,46 @@ export class TwilioService {
     return false;
   }
 
-  checkIfGymCanSendMessages(
+  async checkIfGymCanSendMessages(
     gym: GymEntity,
     activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
-    const totalMessages =
-      (gym.welcomeMessageNotified || 0) +
-      (gym.membersNotified || 0) +
-      (gym.invoiceMessageNotified || 0) +
-      (gym.birthdayMessageNotified || 0);
+    const totalMessages = await this.twilioMessageModel.count({
+      where: {
+        gym: {
+          id: gym.id,
+        },
+      },
+    });
 
     return totalMessages < activeSubscription.allowedNotificationsNumber;
+  }
+
+  async getRemainingMessages(gymId: string) {
+    const gym = await this.gymService.getGymById(gymId);
+    const activeSubscription =
+      await this.gymService.getGymActiveSubscription(gymId);
+    if (!activeSubscription.activeSubscription) {
+      throw new BadRequestException('Active subscription not found');
+    }
+    const totalMessages = await this.twilioMessageModel.count({
+      where: {
+        gym: {
+          id: gym.id,
+        },
+        createdAt: MoreThan(activeSubscription.activeSubscription.createdAt),
+      },
+    });
+
+    return {
+      remainingMessages:
+        activeSubscription.activeSubscription.ownerSubscriptionType
+          .allowedNotificationsNumber - totalMessages,
+      canSendMessages:
+        totalMessages <
+        activeSubscription.activeSubscription.ownerSubscriptionType
+          .allowedNotificationsNumber,
+    };
   }
 
   async sendWhatsappMessage({
@@ -122,7 +151,7 @@ export class TwilioService {
       console.log('gym', gym.id, gym.name);
     }
 
-    if (!this.checkIfGymCanSendMessages(gym, activeSubscription)) {
+    if (!(await this.checkIfGymCanSendMessages(gym, activeSubscription))) {
       console.log('Gym can send messages limit reached');
       return;
     }
@@ -263,13 +292,30 @@ export class TwilioService {
         twilioTemplate:
           TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
       });
-      await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
-
-      member.isWelcomeMessageSent = true;
-      await this.memberModel.save(member);
     }
 
-    await this.gymService.addGymWelcomeMessageNotified(gym.id, 1);
+    // Add mock data for local environment when gym can send messages
+    if (
+      checkNodeEnv('local') &&
+      (await this.checkIfGymCanSendMessages(gym, activeSubscription))
+    ) {
+      const mockRes = {
+        body: `Mock welcome message for ${memberName} at ${gym.name}. Welcome to our ${gym.gymType.charAt(0).toUpperCase() + gym.gymType.slice(1)}! Visit us at https://gym-leb.com/${gym.gymDashedName}/overview or call ${gym.phone}`,
+        sid: `mock_welcome_sid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+
+      await this.saveTwilioMessage({
+        message: mockRes.body,
+        phoneNumber: memberPhone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.welcomeMessage,
+        messageSid: mockRes.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
+      });
+    }
+
     member.isWelcomeMessageSent = true;
     await this.memberModel.save(member);
     return {
@@ -331,6 +377,28 @@ export class TwilioService {
           TwilioWhatsappTemplates.gymPaymentConfirmation[gym.messagesLanguage],
       });
       await this.gymService.addGymInvoiceMessageNotified(gym.id, 1);
+    }
+
+    // Add mock data for local environment when gym can send messages
+    if (
+      checkNodeEnv('local') &&
+      (await this.checkIfGymCanSendMessages(gym, activeSubscription))
+    ) {
+      const mockRes = {
+        body: `Mock payment confirmation for ${memberName} at ${gym.name}. Payment of $${amountPaid} for ${paymentFor} received on ${paymentDate}. Thank you!`,
+        sid: `mock_payment_sid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+
+      await this.saveTwilioMessage({
+        message: mockRes.body,
+        phoneNumber: memberPhone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.gymPaymentConfirmation,
+        messageSid: mockRes.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.gymPaymentConfirmation[gym.messagesLanguage],
+      });
     }
 
     if (!checkNodeEnv('local')) {
@@ -444,8 +512,24 @@ export class TwilioService {
 
       if (
         checkNodeEnv('local') &&
-        this.checkIfGymCanSendMessages(gym, activeSubscription)
+        (await this.checkIfGymCanSendMessages(gym, activeSubscription))
       ) {
+        // Mock data for local environment
+        const mockRes = {
+          body: `Mock expiry reminder message for ${member.name} at ${gym.name}. Your subscription expires on ${transaction.endDate ? format(new Date(transaction.endDate), 'dd/MM/yyyy') : 'N/A'}. Contact us at ${gym.phone}`,
+          sid: `mock_sid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        };
+
+        await this.saveTwilioMessage({
+          message: mockRes.body,
+          phoneNumber: member.phone,
+          phoneNumberISOCode: memberPhoneISOCode,
+          gym,
+          messageType: TwilioMessageType.expiaryReminder,
+          messageSid: mockRes.sid,
+          twilioTemplate:
+            TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
+        });
         await this.transactionService.toggleNotified(transaction.id, true);
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
@@ -790,6 +874,120 @@ export class TwilioService {
       errorCount: errors.length,
       errors,
       results,
+    };
+  }
+
+  async generate250MessagesForGym(gymId: string) {
+    const gym = await this.gymService.getGymById(gymId);
+    const activeSubscription =
+      await this.gymService.getGymActiveSubscription(gymId);
+    if (!activeSubscription) {
+      throw new BadRequestException('Active subscription not found');
+    }
+
+    // Generate 250 mock messages with different types
+    const messageTypes = [
+      TwilioMessageType.welcomeMessage,
+      TwilioMessageType.expiaryReminder,
+      TwilioMessageType.gymPaymentConfirmation,
+      TwilioMessageType.memberExpiredReminder,
+    ];
+
+    const mockMessages = [];
+
+    for (let i = 0; i < 250; i++) {
+      const messageType = messageTypes[i % messageTypes.length];
+      const timestamp = new Date(
+        Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000,
+      ); // Random date within last 30 days
+
+      let mockMessage = '';
+      let mockPhoneNumber = '';
+
+      // Generate different mock data based on message type
+      switch (messageType) {
+        case TwilioMessageType.welcomeMessage:
+          mockMessage = `Mock welcome message for Member ${i + 1} at ${gym.name}. Welcome to our ${gym.gymType.charAt(0).toUpperCase() + gym.gymType.slice(1)}! Visit us at https://gym-leb.com/${gym.gymDashedName}/overview or call ${gym.phone}`;
+          mockPhoneNumber = `+961${Math.floor(Math.random() * 90000000) + 10000000}`;
+          break;
+
+        case TwilioMessageType.expiaryReminder:
+          const expiryDate = new Date(
+            Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000,
+          );
+          mockMessage = `Mock expiry reminder message for Member ${i + 1} at ${gym.name}. Your subscription expires on ${format(expiryDate, 'dd/MM/yyyy')}. Contact us at ${gym.phone}`;
+          mockPhoneNumber = `+961${Math.floor(Math.random() * 90000000) + 10000000}`;
+          break;
+
+        case TwilioMessageType.gymPaymentConfirmation:
+          const paymentAmount = (Math.random() * 200 + 50).toFixed(2);
+          const paymentDate = new Date(
+            Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000,
+          );
+          mockMessage = `Mock payment confirmation for Member ${i + 1} at ${gym.name}. Payment of $${paymentAmount} for Monthly Membership received on ${format(paymentDate, 'dd/MM/yyyy')}. Thank you!`;
+          mockPhoneNumber = `+961${Math.floor(Math.random() * 90000000) + 10000000}`;
+          break;
+
+        case TwilioMessageType.memberExpiredReminder:
+          mockMessage = `Mock member expired reminder for Member ${i + 1} at ${gym.name}. Your membership has expired. Please renew to continue enjoying our services. Contact us at ${gym.phone}`;
+          mockPhoneNumber = `+961${Math.floor(Math.random() * 90000000) + 10000000}`;
+          break;
+      }
+
+      const mockSid = `mock_${messageType}_sid_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const twilioMessage = this.twilioMessageModel.create({
+        message: mockMessage,
+        phoneNumber: mockPhoneNumber,
+        phoneNumberISOCode: 'LB',
+        gym,
+        messageType,
+        messageSid: mockSid,
+        twilioTemplate:
+          TwilioWhatsappTemplates[messageType]?.[gym.messagesLanguage] ||
+          TwilioWhatsappTemplates.welcomeMessage[gym.messagesLanguage],
+      });
+
+      mockMessages.push(twilioMessage);
+    }
+
+    // Save all messages in batches to avoid memory issues
+    const batchSize = 50;
+    for (let i = 0; i < mockMessages.length; i += batchSize) {
+      const batch = mockMessages.slice(i, i + batchSize);
+      await this.twilioMessageModel.save(batch);
+    }
+
+    // Update gym notification counters
+    const welcomeCount = mockMessages.filter(
+      (m) => m.messageType === TwilioMessageType.welcomeMessage,
+    ).length;
+    const expiryCount = mockMessages.filter(
+      (m) => m.messageType === TwilioMessageType.expiaryReminder,
+    ).length;
+    const paymentCount = mockMessages.filter(
+      (m) => m.messageType === TwilioMessageType.gymPaymentConfirmation,
+    ).length;
+    const expiredReminderCount = mockMessages.filter(
+      (m) => m.messageType === TwilioMessageType.memberExpiredReminder,
+    ).length;
+
+    await this.gymService.addGymWelcomeMessageNotified(gym.id, welcomeCount);
+    await this.gymService.addGymMembersNotified(
+      gym.id,
+      expiryCount + expiredReminderCount,
+    );
+    await this.gymService.addGymInvoiceMessageNotified(gym.id, paymentCount);
+
+    return {
+      message: `Successfully generated 250 mock messages for gym ${gym.name}`,
+      breakdown: {
+        welcomeMessages: welcomeCount,
+        expiryReminders: expiryCount,
+        paymentConfirmations: paymentCount,
+        expiredReminders: expiredReminderCount,
+        total: 250,
+      },
     };
   }
 }

@@ -158,4 +158,23 @@ export class TwilioController {
       body.memberIds,
     );
   }
+
+  @Get('get-remaining-messages/:gymId')
+  @ApiOperation({ summary: 'Get remaining messages' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  async getRemainingMessages(@Param('gymId') gymId: string) {
+    return await this.twilioService.getRemainingMessages(gymId);
+  }
+
+  @Post('generate-250-mock-messages/:gymId')
+  @ApiOperation({ summary: 'Generate 250 mock messages for testing' })
+  @ApiBearerAuth()
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  async generate250MockMessages(@Param('gymId') gymId: string) {
+    return await this.twilioService.generate250MessagesForGym(gymId);
+  }
 }
