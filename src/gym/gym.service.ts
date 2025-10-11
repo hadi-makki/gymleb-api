@@ -1673,11 +1673,6 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-
     const endDate = end ? new Date(end) : new Date();
     const startDate = start
       ? new Date(start)
@@ -1710,32 +1705,30 @@ export class GymService {
     }
 
     // Determine members active at the start of the window (baseline)
-    const baselineSubs = await this.transactionModel.find({
-      where: {
-        gym: { id: gym.id },
-        status: PaymentStatus.PAID,
-        isInvalidated: false,
-        type: TransactionType.SUBSCRIPTION,
-        startDate: LessThanOrEqual(startDate),
-        endDate: MoreThan(startDate),
-      },
-      relations: ['member'],
-    });
+    // OPTIMIZATION: Use a grouped MAX(endDate) per member to avoid loading all rows
+    const baselineLatestEndsRaw = await this.transactionModel
+      .createQueryBuilder('t')
+      .select('t.memberId', 'memberId')
+      .addSelect('MAX(t.endDate)', 'lastEnd')
+      .where('t.gymId = :gymId', { gymId })
+      .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+      .andWhere('t.isInvalidated = false')
+      .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
+      .andWhere('t.startDate <= :startDate', { startDate })
+      .andWhere('t.endDate > :startDate', { startDate })
+      .groupBy('t.memberId')
+      .getRawMany<{ memberId: string; lastEnd: string }>();
 
-    const baselineMemberIds = Array.from(
-      new Set(
-        baselineSubs
-          .map((t) => t.memberId)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    );
+    const baselineMemberIds = baselineLatestEndsRaw
+      .map((r) => r.memberId)
+      .filter((id): id is string => Boolean(id));
 
     // If there is no baseline, report insufficient data
     if (baselineMemberIds.length === 0) {
       // Find the earliest subscription in the gym to estimate needed days
       const earliestSub = await this.transactionModel.findOne({
         where: {
-          gym: { id: gym.id },
+          gym: { id: gymId },
           status: PaymentStatus.PAID,
           isInvalidated: false,
           type: TransactionType.SUBSCRIPTION,
@@ -1770,26 +1763,12 @@ export class GymService {
       };
     }
 
-    // Fetch all subscription transactions for baseline members to determine their latest coverage
-    const subsForBaseline = await this.transactionModel.find({
-      where: {
-        gym: { id: gym.id },
-        status: PaymentStatus.PAID,
-        isInvalidated: false,
-        type: TransactionType.SUBSCRIPTION,
-        member: { id: In(baselineMemberIds) },
-      },
-      order: { endDate: 'ASC' },
-    });
-
+    // Use the grouped results to build latest end per member efficiently
     const latestEndByMember = new Map<string, Date>();
-    subsForBaseline.forEach((tr) => {
-      if (!tr.memberId || !tr.endDate) return;
-      const current = latestEndByMember.get(tr.memberId);
-      if (!current || (tr.endDate && tr.endDate > current)) {
-        latestEndByMember.set(tr.memberId, tr.endDate);
-      }
-    });
+    for (const row of baselineLatestEndsRaw) {
+      if (!row.memberId || !row.lastEnd) continue;
+      latestEndByMember.set(row.memberId, new Date(row.lastEnd));
+    }
 
     // Count base and per-day lost members
     const baseCount = baselineMemberIds.length;
@@ -1836,54 +1815,33 @@ export class GymService {
     prevEnd.setDate(prevEnd.getDate() - 1);
     const prevStart = subDays(startDate, periodDays);
 
-    // Determine previous baseline
-    const prevBaselineSubs = await this.transactionModel.find({
-      where: {
-        gym: { id: gym.id },
-        status: PaymentStatus.PAID,
-        isInvalidated: false,
-        type: TransactionType.SUBSCRIPTION,
-        startDate: LessThanOrEqual(prevStart),
-        endDate: MoreThan(prevStart),
-      },
-    });
-    const prevBaselineMemberIds = Array.from(
-      new Set(
-        prevBaselineSubs
-          .map((t) => t.memberId)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    );
+    // Determine previous baseline using grouped MAX(endDate) per member
+    const prevBaselineLatestEndsRaw = await this.transactionModel
+      .createQueryBuilder('t')
+      .select('t.memberId', 'memberId')
+      .addSelect('MAX(t.endDate)', 'lastEnd')
+      .where('t.gymId = :gymId', { gymId })
+      .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+      .andWhere('t.isInvalidated = false')
+      .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
+      .andWhere('t.startDate <= :prevStart', { prevStart })
+      .andWhere('t.endDate > :prevStart', { prevStart })
+      .groupBy('t.memberId')
+      .getRawMany<{ memberId: string; lastEnd: string }>();
+    const prevBaselineMemberIds = prevBaselineLatestEndsRaw
+      .map((r) => r.memberId)
+      .filter((id): id is string => Boolean(id));
 
     let previousPeriodChurnRate: number | null = null;
     if (prevBaselineMemberIds.length > 0) {
-      const prevSubsForBaseline = await this.transactionModel.find({
-        where: {
-          gym: { id: gym.id },
-          status: PaymentStatus.PAID,
-          isInvalidated: false,
-          type: TransactionType.SUBSCRIPTION,
-          member: { id: In(prevBaselineMemberIds) },
-        },
-        order: { endDate: 'ASC' },
-      });
-      const prevLatestEndByMember = new Map<string, Date>();
-      prevSubsForBaseline.forEach((tr) => {
-        if (!tr.memberId || !tr.endDate) return;
-        const current = prevLatestEndByMember.get(tr.memberId);
-        if (!current || (tr.endDate && tr.endDate > current)) {
-          prevLatestEndByMember.set(tr.memberId, tr.endDate);
-        }
-      });
-
       let prevLost = 0;
-      prevBaselineMemberIds.forEach((memberId) => {
-        const lastEnd = prevLatestEndByMember.get(memberId);
-        if (!lastEnd) return;
+      for (const row of prevBaselineLatestEndsRaw) {
+        if (!row.lastEnd) continue;
+        const lastEnd = new Date(row.lastEnd);
         if (lastEnd >= prevStart && lastEnd <= prevEnd) {
           prevLost += 1;
         }
-      });
+      }
       previousPeriodChurnRate = prevBaselineMemberIds.length
         ? Number(((prevLost / prevBaselineMemberIds.length) * 100).toFixed(4))
         : null;
