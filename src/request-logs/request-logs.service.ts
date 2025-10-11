@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
@@ -7,7 +7,7 @@ import {
   LessThan,
   Repository,
 } from 'typeorm';
-import { RequestLogEntity } from './request-log.entity';
+import { RequestLogEntity, ResolveStatus } from './request-log.entity';
 import { FilterOperator, PaginateQuery, paginate } from 'nestjs-paginate';
 
 @Injectable()
@@ -49,5 +49,13 @@ export class RequestLogsService {
 
   async deleteOlderThan(date: Date) {
     await this.repo.delete({ createdAt: LessThan(date) });
+  }
+
+  async updateResolveStatus(id: string, resolveStatus: ResolveStatus) {
+    const result = await this.repo.update(id, { resolveStatus });
+    if (result.affected === 0) {
+      throw new NotFoundException('Request log not found');
+    }
+    return { message: 'Resolve status updated successfully' };
   }
 }

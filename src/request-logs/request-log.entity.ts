@@ -7,6 +7,11 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+export enum ResolveStatus {
+  PENDING = 'pending',
+  RESOLVED = 'resolved',
+}
+
 @Entity('request_logs')
 export class RequestLogEntity extends PgMainEntity {
   @Column({ type: 'varchar', length: 10 })
@@ -50,4 +55,7 @@ export class RequestLogEntity extends PgMainEntity {
 
   @Column({ type: 'boolean', default: false })
   isSlow: boolean;
+
+  @Column({ type: 'text', default: ResolveStatus.PENDING })
+  resolveStatus: ResolveStatus;
 }
