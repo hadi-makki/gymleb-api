@@ -676,20 +676,13 @@ export class MemberService {
     expiringInDays?: number,
     gender?: Gender,
   ) {
-    const checkGym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!checkGym) {
-      throw new NotFoundException('Gym not found');
-    }
-
     // Build a base query that selects only member.id to avoid pagination issues with joins
     let idsQuery = this.memberModel
       .createQueryBuilder('member')
       .select('member.id', 'id')
       .addSelect('member.createdAt', 'createdAt')
       .leftJoin('member.gym', 'gym')
-      .where('gym.id = :gymId', { gymId: checkGym.id });
+      .where('gym.id = :gymId', { gymId: gymId });
 
     // Add search filter
     if (search) {
