@@ -1708,7 +1708,6 @@ export class MemberService {
     gymId: string,
     transactionId: string,
   ) {
-    console.log('invalidateMemberSubscription', id, gymId, transactionId);
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
     });
@@ -1725,6 +1724,7 @@ export class MemberService {
       member.id,
       transactionId,
     );
+    member.isExpired = true;
     await this.memberModel.save(member);
     return { message: 'Member subscription invalidated successfully' };
   }

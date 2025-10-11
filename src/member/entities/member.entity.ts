@@ -2,6 +2,7 @@ import { PgMainEntity } from '../../main-classes/mainEntity';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToMany,
   ManyToOne,
@@ -47,12 +48,14 @@ export enum Gender {
 @Entity('members')
 export class MemberEntity extends PgMainEntity {
   @Column('text')
+  @Index()
   name: string;
 
   @Column('text', { nullable: true })
   email: string;
 
   @Column('text')
+  @Index()
   phone: string;
 
   @Column('text', { default: 'LB' })
@@ -61,9 +64,11 @@ export class MemberEntity extends PgMainEntity {
   @ManyToOne(() => GymEntity, (gym) => gym.members, {
     onDelete: 'CASCADE',
   })
+  @Index()
   gym: GymEntity;
 
   @RelationId((member: MemberEntity) => member.gym)
+  // @Index()
   gymId: string | null;
 
   @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.members, {
@@ -236,5 +241,6 @@ export class MemberEntity extends PgMainEntity {
   welcomeMessageSentManually: boolean;
 
   @Column('boolean', { default: false })
+  @Index('idx_isExpired')
   isExpired: boolean;
 }

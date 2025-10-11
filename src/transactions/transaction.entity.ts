@@ -4,25 +4,24 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import {
   SubscriptionEntity,
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
+import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 import {
   Column,
   Entity,
-  JoinColumn,
-  ManyToMany,
+  Index,
   ManyToOne,
   OneToMany,
   OneToOne,
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
-import { ProductsOffersEntity } from 'src/products/products-offers.entity';
-import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -75,6 +74,7 @@ export class TransactionEntity extends PgMainEntity {
   @ManyToOne(() => GymEntity, (gym) => gym.transactions, {
     onDelete: 'SET NULL',
   })
+  @Index()
   gym: GymEntity;
 
   @RelationId((transaction: TransactionEntity) => transaction.gym)
