@@ -2385,13 +2385,9 @@ export class GymService {
 
     // Build contiguous monthly series between start and end (fill zeros)
     const monthsByKey = new Map<string, number>();
-    // initialize from startOfRange first of month
-    const startMonth = new Date(startOfRange);
-    startMonth.setDate(1);
-    const endMonth = new Date(endOfRange);
-    endMonth.setDate(1);
-    let cursor = new Date(startMonth);
-    while (cursor <= endMonth) {
+
+    let cursor = new Date(startOfRange);
+    while (cursor <= endOfRange) {
       monthsByKey.set(format(cursor, 'yyyy-MM'), 0);
       // increment by one month
       const year = cursor.getFullYear();
