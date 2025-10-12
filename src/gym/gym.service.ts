@@ -2188,27 +2188,11 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
-    // If no explicit start/end provided, default to the previous full calendar month
-    // (e.g., if today is 2025-10-12 → use 2025-09-01 00:00:00 to 2025-09-30 23:59:59)
-    let startOfRange: Date;
-    let endOfRange: Date;
-    let startDate: Date;
-    let endDate: Date;
-
-    if (!start && !end) {
-      const prevMonthStart = startOfMonth(subMonths(new Date(), 1));
-      const prevMonthEnd = endOfMonth(subMonths(new Date(), 1));
-      startOfRange = startOfDay(prevMonthStart);
-      endOfRange = endOfDay(prevMonthEnd);
-      startDate = prevMonthStart;
-      endDate = prevMonthEnd;
-    } else {
-      const window = this.resolveWindow(start, end);
-      startOfRange = window.startOfRange;
-      endOfRange = window.endOfRange;
-      startDate = window.startDate;
-      endDate = window.endDate;
-    }
+    // Default to last 30 days when no start/end provided
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
 
     const [revenueRow, membersCountRow] = await Promise.all([
       this.transactionModel
