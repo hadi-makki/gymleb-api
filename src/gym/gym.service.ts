@@ -3134,13 +3134,13 @@ export class GymService {
   }
 
   // Public gym methods (no authentication required)
-  async getPublicGyms(): Promise<PublicGymDto[]> {
+  async getPublicGyms(): Promise<GymEntity[]> {
     const gyms = await this.gymModel.find({
       where: { isDeactivated: false },
       select: ['id', 'name'],
     });
 
-    return gyms.map(this.mapToPublicGymDto);
+    return gyms;
   }
 
   async getPublicGymByName(
