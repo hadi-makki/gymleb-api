@@ -16,4 +16,8 @@ export class LoginMemberDto {
   @IsNotEmpty()
   @IsString()
   gymId: string;
+
+  @IsOptional()
+  @IsString()
+  memberId?: string;
 }

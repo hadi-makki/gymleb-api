@@ -240,4 +240,8 @@ export class GymEntity extends PgMainEntity {
   // Manual messages permission (controlled by super admin)
   @Column('boolean', { default: false })
   allowManualMessages: boolean;
+
+  // Allow duplicate member phone numbers within the same gym
+  @Column('boolean', { default: false })
+  allowDuplicateMemberPhoneNumbers: boolean;
 }

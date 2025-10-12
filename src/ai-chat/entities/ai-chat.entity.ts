@@ -26,7 +26,7 @@ export class AiChatEntity {
   @Column({ type: 'uuid', nullable: true })
   managerId: string;
 
-  @ManyToOne(() => MemberEntity, { nullable: true })
+  @ManyToOne(() => MemberEntity, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'memberId' })
   member: MemberEntity;
 

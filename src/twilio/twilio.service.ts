@@ -88,11 +88,14 @@ export class TwilioService {
     gym: GymEntity,
     activeSubscription: OwnerSubscriptionTypeEntity,
   ) {
+    const getActiveSubscription =
+      await this.gymService.getGymActiveSubscription(gym.id);
     const totalMessages = await this.twilioMessageModel.count({
       where: {
         gym: {
           id: gym.id,
         },
+        createdAt: MoreThan(getActiveSubscription.activeSubscription.createdAt),
       },
     });
 

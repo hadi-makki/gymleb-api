@@ -49,6 +49,7 @@ import { UpdateAllowUserSignupDto } from './dto/update-allow-user-signup.dto';
 import { UpdateBirthdayAutomationDto } from './dto/update-birthday-automation.dto';
 import { UpdateMonthlyReminderDto } from './dto/update-monthly-reminder.dto';
 import { UpdateManualMessagesDto } from './dto/update-manual-messages.dto';
+import { UpdateAllowDuplicateMemberPhonesDto } from './dto/update-allow-duplicate-member-phones.dto';
 import { UpdateAllowUserReservationsDto } from './dto/update-allow-user-reservations.dto';
 import { UpdateMaxReservationsPerSessionDto } from './dto/update-max-reservations-per-session.dto';
 import { UpdateSessionTimeDto } from './dto/update-session-time.dto';
@@ -1016,6 +1017,25 @@ export class GymController {
     return this.gymService.updateManualMessages(
       gymId,
       updateManualMessagesDto.allowManualMessages,
+    );
+  }
+
+  @Patch('update/allow-duplicate-member-phones/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Update policy of allowing duplicate member phone numbers',
+  })
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Roles(Permissions.SuperAdmin)
+  updateAllowDuplicateMemberPhones(
+    @Param('gymId') gymId: string,
+    @Body() body: UpdateAllowDuplicateMemberPhonesDto,
+  ) {
+    return this.gymService.updateAllowDuplicateMemberPhones(
+      gymId,
+      body.allowDuplicateMemberPhoneNumbers,
     );
   }
 }

@@ -1032,6 +1032,13 @@ export class GymService {
         isDeactivated: true,
         createdAt: true,
         updatedAt: true,
+        isAutoRenew: true,
+        allowDuplicateMemberPhoneNumbers: true,
+        enableMultiSubscription: true,
+        sendInvoiceMessages: true,
+        allowManualMessages: true,
+        sendMonthlyReminder: true,
+        isAiChatEnabled: true,
       },
     });
 
@@ -2625,5 +2632,23 @@ export class GymService {
     await this.gymModel.update(gymId, { allowManualMessages });
 
     return { message: 'Manual messages permission updated successfully' };
+  }
+
+  async updateAllowDuplicateMemberPhones(
+    gymId: string,
+    allowDuplicateMemberPhoneNumbers: boolean,
+  ) {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    await this.gymModel.update(gymId, { allowDuplicateMemberPhoneNumbers });
+
+    return { message: 'Duplicate phone policy updated successfully' };
   }
 }

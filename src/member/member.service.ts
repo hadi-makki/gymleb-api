@@ -410,9 +410,10 @@ export class MemberService {
         gym: { id: gym.id },
       },
     });
-    const checkIfPhoneExists = await this.memberModel.exists({
+    const checkIfPhoneExists = await this.memberModel.find({
       where: {
         phone: createMemberDto.phoneNumber,
+        phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
         gym: { id: gym.id },
       },
     });
@@ -430,7 +431,10 @@ export class MemberService {
       throw new BadRequestException('Name already exists');
     }
 
-    if (checkIfPhoneExists) {
+    if (
+      checkIfPhoneExists.length > 0 &&
+      !gym.allowDuplicateMemberPhoneNumbers
+    ) {
       throw new BadRequestException('Phone already exists');
     }
 
@@ -495,6 +499,7 @@ export class MemberService {
 
     if (
       createMemberDto.sendWelcomeMessage &&
+      checkIfPhoneExists.length === 0 &&
       getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
     ) {
       await this.twilioService.sendWelcomeMessage(
@@ -610,32 +615,96 @@ export class MemberService {
     loginMemberDto: LoginMemberDto,
     deviceId: string,
     res: Response,
-  ): Promise<ReturnUserDto | { hasPassword: boolean; message: string }> {
-    const member = await this.memberModel.findOne({
-      where: {
-        phone: loginMemberDto.phoneNumber,
-        phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
-        gym: {
-          ...(isUUID(loginMemberDto.gymId)
-            ? { id: loginMemberDto.gymId }
-            : { gymDashedName: loginMemberDto.gymId }),
+  ): Promise<
+    | ReturnUserDto
+    | {
+        hasPassword: boolean;
+        message: string;
+        membersWithSameNumber?: { id: string; name: string }[];
+      }
+  > {
+    const gymWhere = isUUID(loginMemberDto.gymId)
+      ? { id: loginMemberDto.gymId }
+      : { gymDashedName: loginMemberDto.gymId };
+
+    // If memberId is provided, fetch that specific member with phone match
+    let member: MemberEntity | null = null;
+    if (loginMemberDto.memberId) {
+      member = await this.memberModel.findOne({
+        where: {
+          id: loginMemberDto.memberId,
+          phone: loginMemberDto.phoneNumber,
+          phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+          gym: gymWhere,
         },
-      },
-      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
-    });
+        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      });
+    } else {
+      // If no memberId, try to find by phone; if multiple, return list with hasPassword
+      const members = await this.memberModel.find({
+        where: {
+          phone: loginMemberDto.phoneNumber,
+          phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+          gym: gymWhere,
+        },
+        relations: ['gym'],
+        select: ['id', 'name', 'password', 'phone', 'phoneNumberISOCode'],
+      });
+
+      if (!members || members.length === 0) {
+        throw new BadRequestException('Invalid phone number');
+      }
+
+      if (members.length > 1 && !loginMemberDto.password) {
+        return {
+          hasPassword: members.some((m) => !!m.password),
+          message:
+            'Multiple accounts found with this phone number. Please select your account.',
+          membersWithSameNumber: members.map((m) => ({
+            id: m.id,
+            name: m.name,
+          })),
+        };
+      }
+
+      member = await this.memberModel.findOne({
+        where: {
+          phone: loginMemberDto.phoneNumber,
+          phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+          gym: gymWhere,
+        },
+        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      });
+    }
 
     if (!member) {
       throw new BadRequestException('Invalid phone number');
     }
 
-    // If no password provided, return password status
+    // If no password provided, return password status (and list if multiples exist)
     if (!loginMemberDto.password) {
+      // Also include list if there are multiple with same phone
+      const siblings = await this.memberModel.find({
+        where: {
+          phone: loginMemberDto.phoneNumber,
+          phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+          gym: gymWhere,
+        },
+        select: ['id', 'name', 'password'],
+      });
+      const multi = siblings.length > 1;
       return {
         hasPassword: !!member.password,
         message: member.password
           ? 'Please enter your password'
           : 'Please set a password for your account',
-      };
+        ...(multi && {
+          membersWithSameNumber: siblings.map((m) => ({
+            id: m.id,
+            name: m.name,
+          })),
+        }),
+      } as any;
     }
 
     // If member doesn't have password, set it and login
