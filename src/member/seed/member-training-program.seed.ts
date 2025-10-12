@@ -1,5 +1,9 @@
 import { OnModuleInit } from '@nestjs/common';
-import { MemberTrainingProgramEntity } from '../entities/member-training-program.entity';
+import {
+  MemberTrainingProgramEntity,
+  ProgramKey,
+} from '../entities/member-training-program.entity';
+import { MemberEntity } from '../entities/member.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -7,10 +11,13 @@ export class MemberTrainingProgramSeed implements OnModuleInit {
   constructor(
     @InjectRepository(MemberTrainingProgramEntity)
     private readonly memberTrainingProgramRepository: Repository<MemberTrainingProgramEntity>,
+    @InjectRepository(MemberEntity)
+    private readonly memberRepository: Repository<MemberEntity>,
   ) {}
 
   async onModuleInit() {
     // await this.migrateTrainingProgramsSchema();
+    // await this.generateDefaultTrainingPrograms();
   }
 
   async migrateTrainingProgramsSchema() {
@@ -81,5 +88,115 @@ export class MemberTrainingProgramSeed implements OnModuleInit {
     console.log(
       `Migration completed. ${migratedCount} training programs migrated.`,
     );
+  }
+
+  async generateDefaultTrainingPrograms() {
+    console.log('Starting default training programs generation...');
+
+    // Get all members
+    const members = await this.memberRepository.find({
+      relations: ['trainingPrograms'],
+    });
+
+    if (members.length === 0) {
+      console.log('No members found to generate training programs for.');
+      return;
+    }
+
+    let generatedCount = 0;
+    const programKeys = Object.values(ProgramKey);
+
+    for (const member of members) {
+      // Get existing program keys for this member
+      const existingProgramKeys =
+        member.trainingPrograms?.map((program) => program.programKey) || [];
+
+      // Find missing program keys
+      const missingProgramKeys = programKeys.filter(
+        (key) => !existingProgramKeys.includes(key),
+      );
+
+      if (missingProgramKeys.length === 0) {
+        console.log(
+          `Member ${member.name} (ID: ${member.id}) already has all training programs.`,
+        );
+        continue;
+      }
+
+      // Generate default training programs for missing keys
+      const newPrograms = missingProgramKeys.map((programKey) => {
+        return this.memberTrainingProgramRepository.create({
+          member: member,
+          programKey: programKey,
+          name: programKey,
+          exercises: [],
+        });
+      });
+
+      // Save the new programs
+      await this.memberTrainingProgramRepository.save(newPrograms);
+      generatedCount += newPrograms.length;
+
+      console.log(
+        `Generated ${newPrograms.length} training programs for member ${member.name} (ID: ${member.id})`,
+      );
+    }
+
+    console.log(
+      `Default training programs generation completed. ${generatedCount} programs generated for ${members.length} members.`,
+    );
+  }
+
+  async generateDefaultTrainingProgramsForMember(memberId: string) {
+    console.log(
+      `Generating default training programs for member ID: ${memberId}`,
+    );
+
+    // Get the specific member
+    const member = await this.memberRepository.findOne({
+      where: { id: memberId },
+      relations: ['trainingPrograms'],
+    });
+
+    if (!member) {
+      console.log(`Member with ID ${memberId} not found.`);
+      return;
+    }
+
+    // Get existing program keys for this member
+    const existingProgramKeys =
+      member.trainingPrograms?.map((program) => program.programKey) || [];
+
+    // Find missing program keys
+    const programKeys = Object.values(ProgramKey);
+    const missingProgramKeys = programKeys.filter(
+      (key) => !existingProgramKeys.includes(key),
+    );
+
+    if (missingProgramKeys.length === 0) {
+      console.log(
+        `Member ${member.name} (ID: ${member.id}) already has all training programs.`,
+      );
+      return;
+    }
+
+    // Generate default training programs for missing keys
+    const newPrograms = missingProgramKeys.map((programKey) => {
+      return this.memberTrainingProgramRepository.create({
+        member: member,
+        programKey: programKey,
+        name: programKey,
+        exercises: [],
+      });
+    });
+
+    // Save the new programs
+    await this.memberTrainingProgramRepository.save(newPrograms);
+
+    console.log(
+      `Generated ${newPrograms.length} training programs for member ${member.name} (ID: ${member.id})`,
+    );
+
+    return newPrograms;
   }
 }

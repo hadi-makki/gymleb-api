@@ -26,7 +26,7 @@ export class MemberTrainingProgramEntity extends PgMainEntity {
   memberId: string;
 
   @Column({ type: 'text' })
-  programKey: ProgramKey;
+  programKey: string;
 
   @Column('text')
   name: string;

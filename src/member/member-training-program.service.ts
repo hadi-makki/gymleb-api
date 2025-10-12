@@ -10,7 +10,6 @@ import { MemberEntity } from './entities/member.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { CreateTrainingProgramDto } from './dto/create-training-program.dto';
 import { UpdateTrainingProgramDto } from './dto/update-training-program.dto';
-import { ProgramKey } from './entities/member-training-program.entity';
 import { isUUID } from 'class-validator';
 
 @Injectable()
@@ -135,7 +134,7 @@ export class MemberTrainingProgramService {
     const trainingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        programKey: programKey as ProgramKey,
+        programKey: programKey,
       },
     });
 
@@ -166,7 +165,7 @@ export class MemberTrainingProgramService {
     const trainingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        programKey: programKey as ProgramKey,
+        programKey: programKey,
       },
     });
 
@@ -211,7 +210,7 @@ export class MemberTrainingProgramService {
     const trainingProgram = await this.trainingProgramRepository.findOne({
       where: {
         member: { id: memberId },
-        programKey: programKey as ProgramKey,
+        programKey: programKey,
       },
     });
 
@@ -221,5 +220,92 @@ export class MemberTrainingProgramService {
 
     await this.trainingProgramRepository.remove(trainingProgram);
     return { message: 'Training program deleted successfully' };
+  }
+
+  async renameTrainingProgramKey(
+    memberId: string,
+    gymId: string,
+    programKey: string,
+    newProgramKey: string,
+    manager: ManagerEntity | null,
+  ) {
+    // Verify member exists and belongs to the gym
+    const member = await this.memberRepository.findOne({
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const trainingProgram = await this.trainingProgramRepository.findOne({
+      where: { member: { id: memberId }, programKey: programKey },
+    });
+
+    if (!trainingProgram) {
+      throw new NotFoundException('Training program not found for this key');
+    }
+
+    // If there is already a program with the new key, overwrite it by moving data
+    const existingTarget = await this.trainingProgramRepository.findOne({
+      where: { member: { id: memberId }, programKey: newProgramKey },
+    });
+
+    if (existingTarget) {
+      // Overwrite name/exercises of target, then delete old one
+      existingTarget.name = trainingProgram.name;
+      existingTarget.exercises = trainingProgram.exercises;
+      await this.trainingProgramRepository.save(existingTarget);
+      await this.trainingProgramRepository.remove(trainingProgram);
+      return existingTarget;
+    }
+
+    trainingProgram.programKey = newProgramKey;
+    return await this.trainingProgramRepository.save(trainingProgram);
+  }
+
+  async renameTrainingProgramKeyById(
+    memberId: string,
+    gymId: string,
+    programId: string,
+    newProgramKey: string,
+    manager: ManagerEntity | null,
+  ) {
+    // Verify member belongs to gym
+    const member = await this.memberRepository.findOne({
+      where: {
+        id: memberId,
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+    });
+    if (!member) throw new NotFoundException('Member not found');
+
+    const trainingProgram = await this.trainingProgramRepository.findOne({
+      where: { id: programId, member: { id: memberId } },
+    });
+    if (!trainingProgram) {
+      throw new NotFoundException('Training program not found');
+    }
+
+    const existingTarget = await this.trainingProgramRepository.findOne({
+      where: { member: { id: memberId }, programKey: newProgramKey },
+    });
+    if (existingTarget) {
+      existingTarget.name = trainingProgram.name;
+      existingTarget.exercises = trainingProgram.exercises;
+      await this.trainingProgramRepository.save(existingTarget);
+      await this.trainingProgramRepository.remove(trainingProgram);
+      return existingTarget;
+    }
+
+    trainingProgram.programKey = newProgramKey;
+    return await this.trainingProgramRepository.save(trainingProgram);
   }
 }

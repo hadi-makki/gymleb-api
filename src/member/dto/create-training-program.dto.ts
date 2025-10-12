@@ -29,8 +29,9 @@ export class ExerciseDto {
 }
 
 export class CreateTrainingProgramDto {
-  @IsEnum(ProgramKey)
-  programKey: ProgramKey;
+  @IsString()
+  @IsNotEmpty()
+  programKey: string;
 
   @IsString()
   @IsNotEmpty()
