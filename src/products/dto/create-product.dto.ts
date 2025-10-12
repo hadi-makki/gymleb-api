@@ -3,9 +3,9 @@ import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
   IsNumber,
-  IsNumberString,
   IsOptional,
   IsString,
+  Max,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -24,6 +24,8 @@ export class CreateProductDto {
   @IsNotEmpty()
   @Transform(({ value }) => Number(value))
   @IsNumber()
+  // add max value for integer
+  @Max(1000000, { message: 'Price cannot exceed 1,000,000' })
   price: number;
 
   @ApiProperty({
@@ -52,6 +54,7 @@ export class CreateProductDto {
   @IsNotEmpty()
   @Transform(({ value }) => Number(value))
   @IsNumber()
+  @Max(1000000, { message: 'Stock cannot exceed 1,000,000' })
   stock: number;
 }
 
@@ -73,6 +76,7 @@ export class UpdateProductDto {
   @IsOptional()
   @IsNumber()
   @Transform(({ value }) => Number(value))
+  @Max(1000000, { message: 'Price cannot exceed 1,000,000' })
   price?: number;
 
   @ApiProperty({
@@ -101,6 +105,7 @@ export class UpdateProductDto {
   @IsOptional()
   @Transform(({ value }) => Number(value))
   @IsNumber()
+  @Max(1000000, { message: 'Stock cannot exceed 1,000,000' })
   stock?: number;
 }
 
