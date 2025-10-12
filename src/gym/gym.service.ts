@@ -3137,31 +3137,7 @@ export class GymService {
   async getPublicGyms(): Promise<PublicGymDto[]> {
     const gyms = await this.gymModel.find({
       where: { isDeactivated: false },
-      select: [
-        'id',
-        'name',
-        'gymDashedName',
-        'address',
-        'googleMapsLink',
-        'email',
-        'phone',
-        'phoneNumberISOCode',
-        'description',
-        'gymType',
-        'allowUserSignUp',
-        'allowUserResevations',
-        'allowedUserResevationsPerSession',
-        'sessionTimeInHours',
-        'socialMediaLinks',
-        'openingDays',
-        'womensTimes',
-        'offers',
-        'showPersonalTrainers',
-        'restrictPublicProgramsToActiveMembers',
-        'messagesLanguage',
-        'createdAt',
-        'updatedAt',
-      ],
+      select: ['id', 'name'],
     });
 
     return gyms.map(this.mapToPublicGymDto);

@@ -138,7 +138,7 @@ export class MemberService {
               phoneNumberISOCode: member.phoneNumberISOCode,
               gym: gymWithSettings,
               activeSubscription:
-                activeSubscription.activeSubscription.ownerSubscriptionType,
+                activeSubscription?.activeSubscription?.ownerSubscriptionType,
             });
           }
 
@@ -508,7 +508,7 @@ export class MemberService {
         newMember.phone,
         newMember.phoneNumberISOCode,
         gym,
-        getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
       );
     }
 
@@ -519,7 +519,7 @@ export class MemberService {
       await this.twilioService.sendPaymentConfirmationMessage({
         memberName: member.name,
         activeSubscription:
-          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+          getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
         memberPhone: member.phone,
         memberPhoneISOCode: member.phoneNumberISOCode,
         gym,
@@ -598,7 +598,7 @@ export class MemberService {
       savedMember.phone,
       savedMember.phoneNumberISOCode,
       gym,
-      getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+      getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
     );
 
     // Return member without token if no password (they'll need to set it later)
@@ -871,14 +871,15 @@ export class MemberService {
       if (!member.gym) {
         throw new NotFoundException('Gym not found');
       }
-
-      await this.twilioService.sendWelcomeMessage(
-        member.name,
-        member.phone,
-        member.phoneNumberISOCode,
-        member.gym,
-        getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
-      );
+      if (getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType) {
+        await this.twilioService.sendWelcomeMessage(
+          member.name,
+          member.phone,
+          member.phoneNumberISOCode,
+          member.gym,
+          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+        );
+      }
     }
   }
 
@@ -2010,7 +2011,7 @@ export class MemberService {
           gymId: member.gym.id,
           memberPhoneISOCode: member.member.phoneNumberISOCode,
           activeSubscription:
-            getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+            getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
           dontCheckExpired: true,
         });
       }
@@ -2047,7 +2048,8 @@ export class MemberService {
             gymId: member.gym.id,
             memberPhoneISOCode: member.phoneNumberISOCode,
             activeSubscription:
-              getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+              getLatestGymSubscription?.activeSubscription
+                ?.ownerSubscriptionType,
           });
         }
       }
@@ -2511,7 +2513,7 @@ export class MemberService {
           gymId: member.gym.id,
           memberPhoneISOCode: member.member.phoneNumberISOCode,
           activeSubscription:
-            getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+            getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
         });
       }
     }
