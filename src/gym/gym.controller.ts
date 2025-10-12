@@ -669,6 +669,148 @@ export class GymController {
     }
   }
 
+  // New analytics endpoints (last 30 days default)
+  @Get('admin/analytics/members/new-vs-returning/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({
+    summary: 'New vs Returning members (last 30 days by default)',
+  })
+  async getNewVsReturningMembers(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('isMobile') isMobile?: boolean,
+  ) {
+    return this.gymService.getNewVsReturningMembers(
+      gymId,
+      start,
+      end,
+      isMobile,
+    );
+  }
+
+  @Get('admin/analytics/members/active-vs-inactive/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({
+    summary: 'Active vs Inactive members (last 30 days default window)',
+  })
+  async getActiveVsInactiveMembers(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getActiveVsInactiveMembers(gymId, start, end);
+  }
+
+  @Get('admin/analytics/members/membership-type-breakdown/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({
+    summary: 'Membership type breakdown (last 30 days default window)',
+  })
+  async getMembershipTypeBreakdown(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getMembershipTypeBreakdown(gymId, start, end);
+  }
+
+  @Get('admin/analytics/members/average-membership-duration/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Average membership duration within window' })
+  async getAverageMembershipDuration(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getAverageMembershipDuration(gymId, start, end);
+  }
+
+  @Get('admin/analytics/members/demographics/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({
+    summary: 'Member demographics (gender, age buckets) within window',
+  })
+  async getMemberDemographics(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getMemberDemographics(gymId, start, end);
+  }
+
+  @Get('admin/analytics/revenue/by-source/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({
+    summary:
+      'Revenue by source (subscriptions, PT, products, revenue categories)',
+  })
+  async getRevenueBySource(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getRevenueBySource(gymId, start, end);
+  }
+
+  @Get('admin/analytics/revenue/arpu/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Average Revenue Per User within window' })
+  async getArpu(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getArpu(gymId, start, end);
+  }
+
+  @Get('admin/analytics/revenue/outstanding-payments/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({
+    summary: 'Outstanding payments totals and count within window',
+  })
+  async getOutstandingPayments(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getOutstandingPayments(gymId, start, end);
+  }
+
+  @Get('admin/analytics/revenue/recurring-vs-onetime/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Recurring vs One-Time income within window' })
+  async getRecurringVsOnetime(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.gymService.getRecurringVsOnetime(gymId, start, end);
+  }
+
+  @Get('admin/analytics/revenue/forecast/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
+  @ApiOperation({ summary: 'Monthly revenue forecast based on recent trend' })
+  async getRevenueForecast(
+    @Param('gymId') gymId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('horizonMonths') horizonMonths?: string,
+  ) {
+    const horizon = horizonMonths ? parseInt(horizonMonths) : 3;
+    return this.gymService.getRevenueForecast(gymId, start, end, horizon);
+  }
+
   @Patch('show-personal-trainers/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym show personal trainers setting' })

@@ -39,6 +39,7 @@ import {
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
+import { SubscriptionType } from 'src/subscription/entities/subscription.entity';
 import { paginate, FilterOperator } from 'nestjs-paginate';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
@@ -1799,6 +1800,652 @@ export class GymService {
       startDate: startOfRange,
       endDate: endOfRange,
     };
+  }
+
+  // === New analytics service methods (30-day default) ===
+  private resolveWindow(start?: string, end?: string, isMobile?: boolean) {
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start
+      ? new Date(start)
+      : subDays(new Date(), isMobile ? 7 : 30);
+    return {
+      startOfRange: startOfDay(startDate),
+      endOfRange: endOfDay(endDate),
+      startDate,
+      endDate,
+    };
+  }
+
+  async getNewVsReturningMembers(
+    gymId: string,
+    start?: string,
+    end?: string,
+    isMobile?: boolean,
+  ): Promise<{
+    data: { date: string; newMembers: number; returningMembers: number }[];
+    startDate: Date;
+    endDate: Date;
+    isMobile?: boolean;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+      isMobile,
+    );
+
+    // Seed date map
+    const dateRange = eachDayOfInterval({
+      start: startOfRange,
+      end: endOfRange,
+    });
+    const byDate = new Map<
+      string,
+      { date: string; newMembers: number; returningMembers: number }
+    >();
+    dateRange.forEach((d) => {
+      const key = format(d, 'yyyy-MM-dd');
+      byDate.set(key, { date: key, newMembers: 0, returningMembers: 0 });
+    });
+
+    // New members created per day
+    const newMembers = await this.memberModel
+      .createQueryBuilder('m')
+      .select(`TO_CHAR(m."createdAt", 'YYYY-MM-DD')`, 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where('m."gymId" = :gymId', { gymId })
+      .andWhere('m."createdAt" BETWEEN :start AND :end', {
+        start: startOfRange,
+        end: endOfRange,
+      })
+      .groupBy(`TO_CHAR(m."createdAt", 'YYYY-MM-DD')`)
+      .getRawMany<{ date: string; count: string }>();
+    newMembers.forEach((row) => {
+      const existing = byDate.get(row.date);
+      if (existing) existing.newMembers = Number(row.count) || 0;
+    });
+
+    // Returning members: had a paid subscription tx on the day, created before that day
+    const returning = await this.transactionModel
+      .createQueryBuilder('t')
+      .leftJoin('t.member', 'm')
+      .select(`TO_CHAR(t."paidAt", 'YYYY-MM-DD')`, 'date')
+      .addSelect('COUNT(DISTINCT t."memberId")', 'count')
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+      .andWhere('t."type" = :type', { type: TransactionType.SUBSCRIPTION })
+      .andWhere('t."paidAt" BETWEEN :start AND :end', {
+        start: startOfRange,
+        end: endOfRange,
+      })
+      .andWhere('m."createdAt" < t."paidAt"')
+      .groupBy(`TO_CHAR(t."paidAt", 'YYYY-MM-DD')`)
+      .getRawMany<{ date: string; count: string }>();
+    returning.forEach((row) => {
+      const existing = byDate.get(row.date);
+      if (existing) existing.returningMembers = Number(row.count) || 0;
+    });
+
+    return { data: Array.from(byDate.values()), startDate, endDate };
+  }
+
+  async getActiveVsInactiveMembers(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    active: number;
+    inactive: number;
+    total: number;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { endOfRange, startDate, endDate } = this.resolveWindow(start, end);
+
+    const total = await this.memberModel.count({
+      where: { gym: { id: gymId } },
+    });
+
+    // Active at endOfRange: has a latest subscription tx with endDate >= endOfRange and not invalidated
+    const activeQb = this.transactionModel
+      .createQueryBuilder('t')
+      .select('t."memberId"', 'memberId')
+      .addSelect('MAX(t."endDate")', 'lastEnd')
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."type" = :type', { type: TransactionType.SUBSCRIPTION })
+      .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+      .andWhere('t."isInvalidated" = false')
+      .andWhere('t."memberId" IS NOT NULL')
+      .groupBy('t."memberId"');
+
+    const latestEnds = await activeQb.getRawMany<{
+      memberId: string;
+      lastEnd: string;
+    }>();
+    let active = 0;
+    const cutoff = endOfRange.getTime();
+    latestEnds.forEach((row) => {
+      const lastEnd = row.lastEnd ? new Date(row.lastEnd).getTime() : 0;
+      if (lastEnd >= cutoff) active += 1;
+    });
+    const inactive = Math.max(0, total - active);
+    return { active, inactive, total, startDate, endDate };
+  }
+
+  async getMembershipTypeBreakdown(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    breakdown: { type: SubscriptionType; amount: number; count: number }[];
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    const rows = await this.transactionModel
+      .createQueryBuilder('t')
+      .leftJoin('t.subscription', 's')
+      .select('COALESCE(t."subscriptionType", s."type")', 'type')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('COALESCE(SUM(t."paidAmount"), 0)', 'amount')
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."type" = :type', { type: TransactionType.SUBSCRIPTION })
+      .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+      .andWhere('t."paidAt" BETWEEN :start AND :end', {
+        start: startOfRange,
+        end: endOfRange,
+      })
+      .groupBy('COALESCE(t."subscriptionType", s."type")')
+      .getRawMany<{
+        type: SubscriptionType | null;
+        count: string;
+        amount: string;
+      }>();
+
+    const breakdown = rows
+      .filter((r) => r.type !== null)
+      .map((r) => ({
+        type: r.type as SubscriptionType,
+        count: Number(r.count) || 0,
+        amount: Number(r.amount) || 0,
+      }));
+    return { breakdown, startDate, endDate };
+  }
+
+  async getAverageMembershipDuration(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    averageDays: number;
+    samples: number;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    const subs = await this.transactionModel.find({
+      where: {
+        gym: { id: gymId },
+        type: TransactionType.SUBSCRIPTION,
+        status: PaymentStatus.PAID,
+        paidAt: Between(startOfRange, endOfRange),
+      },
+      select: ['startDate', 'endDate'],
+    });
+    let totalDays = 0;
+    let samples = 0;
+    subs.forEach((t) => {
+      if (t.startDate && t.endDate) {
+        const days = Math.max(
+          0,
+          Math.round(
+            (endOfDay(new Date(t.endDate)).getTime() -
+              startOfDay(new Date(t.startDate)).getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        );
+        totalDays += days;
+        samples += 1;
+      }
+    });
+    const averageDays = samples > 0 ? totalDays / samples : 0;
+    return { averageDays, samples, startDate, endDate };
+  }
+
+  async getMemberDemographics(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    gender: { male: number; female: number; other: number };
+    ageBuckets: { bucket: string; count: number }[];
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { endOfRange, startDate, endDate } = this.resolveWindow(start, end);
+
+    // Only consider members created up to the end of the selected range
+    const members = await this.memberModel.find({
+      where: { gym: { id: gymId }, createdAt: LessThanOrEqual(endOfRange) },
+      select: ['gender', 'birthday', 'createdAt'],
+    });
+
+    // Gender counts
+    let male = 0,
+      female = 0,
+      other = 0;
+    members.forEach((m) => {
+      if (m.gender === 'male') male += 1;
+      else if (m.gender === 'female') female += 1;
+      else other += 1;
+    });
+
+    // Age buckets as of endOfRange
+    const bucketDefs = [
+      { name: '0-17', min: 0, max: 17 },
+      { name: '18-24', min: 18, max: 24 },
+      { name: '25-34', min: 25, max: 34 },
+      { name: '35-44', min: 35, max: 44 },
+      { name: '45-54', min: 45, max: 54 },
+      { name: '55-64', min: 55, max: 64 },
+      { name: '65+', min: 65, max: 200 },
+    ];
+    const ageBuckets = bucketDefs.map((b) => ({ bucket: b.name, count: 0 }));
+    let unknown = 0;
+    members.forEach((m) => {
+      if (!m.birthday) {
+        unknown += 1;
+        return;
+      }
+      const birth = new Date(m.birthday as unknown as string);
+      if (isNaN(birth.getTime())) {
+        unknown += 1;
+        return;
+      }
+      const ageMs = endOfRange.getTime() - birth.getTime();
+      const age = Math.floor(ageMs / (1000 * 60 * 60 * 24 * 365.25));
+      const idx = bucketDefs.findIndex((b) => age >= b.min && age <= b.max);
+      if (idx >= 0) ageBuckets[idx].count += 1;
+      else unknown += 1;
+    });
+    if (unknown > 0) ageBuckets.push({ bucket: 'Unknown', count: unknown });
+
+    return { gender: { male, female, other }, ageBuckets, startDate, endDate };
+  }
+
+  async getRevenueBySource(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    sources: {
+      subscriptions: number;
+      ptSessions: number;
+      products: number;
+      otherRevenue: number;
+      expenses: number;
+    };
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    // Get all transactions and categorize them properly
+    const transactions = await this.transactionModel
+      .createQueryBuilder('t')
+      .select('t."type"', 'type')
+      .addSelect('t."paidAmount"', 'paidAmount')
+      .addSelect('t."productId"', 'productId')
+      .addSelect('t."personalTrainerId"', 'personalTrainerId')
+      .addSelect('t."subscriptionId"', 'subscriptionId')
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+      .andWhere('t."paidAt" BETWEEN :start AND :end', {
+        start: startOfRange,
+        end: endOfRange,
+      })
+      .getRawMany<{
+        type: TransactionType;
+        paidAmount: number;
+        productId: string | null;
+        personalTrainerId: string | null;
+        subscriptionId: string | null;
+      }>();
+
+    let subscriptions = 0;
+    let ptSessions = 0;
+    let products = 0;
+    let otherRevenue = 0;
+    let expenses = 0;
+
+    transactions.forEach((t) => {
+      const amount = Number(t.paidAmount) || 0;
+
+      switch (t.type) {
+        case TransactionType.SUBSCRIPTION:
+          subscriptions += amount;
+          break;
+        case TransactionType.PERSONAL_TRAINER_SESSION:
+          ptSessions += amount;
+          break;
+        case TransactionType.REVENUE:
+          // If it has a productId, it's a product sale
+          if (t.productId) {
+            products += amount;
+          } else {
+            otherRevenue += amount;
+          }
+          break;
+        case TransactionType.EXPENSE:
+          expenses += amount;
+          break;
+        default:
+          // For any other transaction types, check if they're related to products or PT
+          if (t.productId) {
+            products += amount;
+          } else if (t.personalTrainerId) {
+            ptSessions += amount;
+          } else if (t.subscriptionId) {
+            subscriptions += amount;
+          } else {
+            otherRevenue += amount;
+          }
+      }
+    });
+
+    return {
+      sources: { subscriptions, ptSessions, products, otherRevenue, expenses },
+      startDate,
+      endDate,
+    };
+  }
+
+  async getArpu(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    arpu: number;
+    totalRevenue: number;
+    memberCount: number;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    const [revenueRow, membersCountRow] = await Promise.all([
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select('COALESCE(SUM(t."paidAmount"), 0)', 'sum')
+        .where('t."gymId" = :gymId', { gymId })
+        .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+        .andWhere('t."paidAt" BETWEEN :start AND :end', {
+          start: startOfRange,
+          end: endOfRange,
+        })
+        .getRawOne<{ sum: string }>(),
+      this.transactionModel
+        .createQueryBuilder('t')
+        .select('COUNT(DISTINCT t."memberId")', 'count')
+        .where('t."gymId" = :gymId', { gymId })
+        .andWhere('t."memberId" IS NOT NULL')
+        .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+        .andWhere('t."paidAt" BETWEEN :start AND :end', {
+          start: startOfRange,
+          end: endOfRange,
+        })
+        .getRawOne<{ count: string }>(),
+    ]);
+
+    const totalRevenue = Number(revenueRow?.sum || '0') || 0;
+    const memberCount = Number(membersCountRow?.count || '0') || 0;
+    const arpu = memberCount > 0 ? totalRevenue / memberCount : 0;
+    return { arpu, totalRevenue, memberCount, startDate, endDate };
+  }
+
+  async getOutstandingPayments(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    totalOutstanding: number;
+    count: number;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    // Consider unpaid or partially paid transactions in window by createdAt/paidAt
+    const rows = await this.transactionModel
+      .createQueryBuilder('t')
+      .select(
+        'COALESCE(SUM(COALESCE(t."originalAmount", 0) - COALESCE(t."paidAmount", 0)), 0)',
+        'outstanding',
+      )
+      .addSelect('COUNT(*)', 'count')
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."status" IN (:...statuses)', {
+        statuses: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID],
+      })
+      .andWhere(
+        '(t."paidAt" BETWEEN :start AND :end OR t."createdAt" BETWEEN :start AND :end)',
+        {
+          start: startOfRange,
+          end: endOfRange,
+        },
+      )
+      .getRawOne<{ outstanding: string; count: string }>();
+
+    const totalOutstanding = Number(rows?.outstanding || '0') || 0;
+    const count = Number(rows?.count || '0') || 0;
+    return { totalOutstanding, count, startDate, endDate };
+  }
+
+  async getRecurringVsOnetime(
+    gymId: string,
+    start?: string,
+    end?: string,
+  ): Promise<{
+    recurring: number;
+    onetime: number;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    // Get all paid transactions in the date range
+    const transactions = await this.transactionModel
+      .createQueryBuilder('t')
+      .select('t."type"', 'type')
+      .addSelect('t."isSubscription"', 'isSubscription')
+      .addSelect('t."paidAmount"', 'paidAmount')
+      .addSelect('t."subscriptionId"', 'subscriptionId')
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+      .andWhere('t."paidAt" BETWEEN :start AND :end', {
+        start: startOfRange,
+        end: endOfRange,
+      })
+      .getRawMany<{
+        type: string;
+        isSubscription: boolean;
+        paidAmount: number;
+        subscriptionId: string | null;
+      }>();
+
+    let recurring = 0;
+    let onetime = 0;
+
+    transactions.forEach((t) => {
+      const amount = Number(t.paidAmount) || 0;
+
+      // Categorize as recurring if:
+      // 1. It's explicitly marked as subscription
+      // 2. It has a subscriptionId (member subscription)
+      // 3. It's a subscription type transaction
+      const isRecurring =
+        t.isSubscription ||
+        t.subscriptionId !== null ||
+        t.type === 'subscription';
+
+      if (isRecurring) {
+        recurring += amount;
+      } else {
+        onetime += amount;
+      }
+    });
+
+    return { recurring, onetime, startDate, endDate };
+  }
+
+  async getRevenueForecast(
+    gymId: string,
+    start?: string,
+    end?: string,
+    horizonMonths = 3,
+  ): Promise<{
+    forecastMonthly: { month: string; projectedRevenue: number }[];
+    forecastTotal: number;
+    startDate: Date;
+    endDate: Date;
+    insufficientData?: {
+      neededMonths: number;
+      availableMonths: number;
+      reason: string;
+    };
+  }> {
+    if (!gymId) throw new BadRequestException('Gym ID is required');
+    const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
+      start,
+      end,
+    );
+
+    // Pull historical monthly net revenue within window (expenses negative)
+    const history = await this.transactionModel
+      .createQueryBuilder('t')
+      .select(`TO_CHAR(t."paidAt", 'YYYY-MM')`, 'month')
+      .addSelect(
+        `SUM(CASE WHEN t."type" = :expense THEN -t."paidAmount" ELSE t."paidAmount" END)`,
+        'revenue',
+      )
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+      .andWhere('t."paidAt" BETWEEN :start AND :end', {
+        start: startOfRange,
+        end: endOfRange,
+      })
+      .setParameters({ expense: TransactionType.EXPENSE })
+      .groupBy(`TO_CHAR(t."paidAt", 'YYYY-MM')`)
+      .orderBy(`TO_CHAR(t."paidAt", 'YYYY-MM')`, 'ASC')
+      .getRawMany<{ month: string; revenue: string }>();
+
+    // Build contiguous monthly series between start and end (fill zeros)
+    const monthsByKey = new Map<string, number>();
+    // initialize from startOfRange first of month
+    const startMonth = new Date(startOfRange);
+    startMonth.setDate(1);
+    const endMonth = new Date(endOfRange);
+    endMonth.setDate(1);
+    let cursor = new Date(startMonth);
+    while (cursor <= endMonth) {
+      monthsByKey.set(format(cursor, 'yyyy-MM'), 0);
+      // increment by one month
+      const year = cursor.getFullYear();
+      const month = cursor.getMonth();
+      cursor = new Date(year, month + 1, 1);
+    }
+    history.forEach((row) => {
+      monthsByKey.set(row.month, Number(row.revenue) || 0);
+    });
+    const seriesEntries = Array.from(monthsByKey.entries()).sort((a, b) =>
+      a[0] < b[0] ? -1 : 1,
+    );
+    const series = seriesEntries.map(([, v]) => v);
+
+    // Require minimum months of data to show analytics
+    const availableMonths = series.length;
+    const neededMonths = 3;
+    if (availableMonths < neededMonths) {
+      return {
+        forecastMonthly: [],
+        forecastTotal: 0,
+        startDate,
+        endDate,
+        insufficientData: {
+          neededMonths,
+          availableMonths,
+          reason: 'Not enough monthly data to compute forecast',
+        },
+      };
+    }
+
+    // Linear regression (least squares) on (x = month index, y = revenue)
+    const n = series.length;
+    let sumX = 0,
+      sumY = 0,
+      sumXY = 0,
+      sumXX = 0;
+    for (let i = 0; i < n; i++) {
+      const x = i;
+      const y = series[i];
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumXX += x * x;
+    }
+    const denom = n * sumXX - sumX * sumX;
+    const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+    const intercept = n !== 0 ? sumY / n - (slope * sumX) / n : 0;
+
+    const lastMonthKey = seriesEntries[seriesEntries.length - 1][0];
+    // derive last month date from key
+    let lastDate = new Date(lastMonthKey + '-01T00:00:00.000Z');
+    const forecastMonthly: { month: string; projectedRevenue: number }[] = [];
+    for (let i = 1; i <= Math.max(1, horizonMonths); i++) {
+      // compute next month key
+      const year = lastDate.getFullYear();
+      const month = lastDate.getMonth();
+      const next = new Date(year, month + i, 1);
+      const x = n - 1 + i; // continue index after history
+      const y = intercept + slope * x;
+      forecastMonthly.push({
+        month: format(next, 'yyyy-MM'),
+        projectedRevenue: Math.max(0, Number(y.toFixed(2))),
+      });
+    }
+    const forecastTotal = forecastMonthly.reduce(
+      (a, r) => a + r.projectedRevenue,
+      0,
+    );
+    return { forecastMonthly, forecastTotal, startDate, endDate };
   }
 
   async getGymChurnGraphData(
