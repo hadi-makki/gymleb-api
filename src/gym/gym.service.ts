@@ -2231,6 +2231,10 @@ export class GymService {
         .where('t."gymId" = :gymId', { gymId })
         .andWhere('t."memberId" IS NOT NULL')
         .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+        .andWhere('(t."type" = :subType OR t."type" = :ptType)', {
+          subType: TransactionType.SUBSCRIPTION,
+          ptType: TransactionType.PERSONAL_TRAINER_SESSION,
+        })
         .andWhere('t."paidAt" BETWEEN :start AND :end', {
           start: startOfRange,
           end: endOfRange,
