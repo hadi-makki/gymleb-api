@@ -283,7 +283,6 @@ export class MemberController {
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   async getExpiredMembers(
-    @User() manager: ManagerEntity,
     @Query('page') page = '1',
     @Query('limit') limit = '5',
     @Query('search') search: string,
@@ -291,7 +290,6 @@ export class MemberController {
     @Query('gender') gender?: Gender,
   ) {
     return await this.memberService.getExpiredMembers(
-      manager,
       Number(limit),
       Number(page),
       search,
@@ -682,5 +680,12 @@ export class MemberController {
   @Get('sync/expired/members/all-gyms')
   async syncExpiredMembersAllGyms() {
     return await this.memberService.syncExpiredMembersFlag();
+  }
+
+  @Get('notify/members-with-expired-subscriptions')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner)
+  async notifyMembersWithExpiredSubscriptions() {
+    return await this.memberService.notifyMembersWithExpiredSubscriptions();
   }
 }

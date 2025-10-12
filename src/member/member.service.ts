@@ -125,20 +125,22 @@ export class MemberService {
         if (gymWithSettings.sendBirthdayMessage) {
           const activeSubscription =
             await this.gymService.getGymActiveSubscription(gymWithSettings.id);
-          await this.twilioService.sendWhatsappMessage({
-            phoneNumber: member.phone,
-            twilioTemplate: this.twilioService.getBirthdayTemplateSid(
-              gymWithSettings.messagesLanguage,
-            ),
-            contentVariables: {
-              name: member.name,
-              gymName: gymWithSettings.name,
-            },
-            phoneNumberISOCode: member.phoneNumberISOCode,
-            gym: gymWithSettings,
-            activeSubscription:
-              activeSubscription.activeSubscription.ownerSubscriptionType,
-          });
+          if (activeSubscription?.activeSubscription?.ownerSubscriptionType) {
+            await this.twilioService.sendWhatsappMessage({
+              phoneNumber: member.phone,
+              twilioTemplate: this.twilioService.getBirthdayTemplateSid(
+                gymWithSettings.messagesLanguage,
+              ),
+              contentVariables: {
+                name: member.name,
+                gymName: gymWithSettings.name,
+              },
+              phoneNumberISOCode: member.phoneNumberISOCode,
+              gym: gymWithSettings,
+              activeSubscription:
+                activeSubscription.activeSubscription.ownerSubscriptionType,
+            });
+          }
 
           // Increment birthday messages counter (non-blocking)
           await this.gymService.addGymBirthdayMessageNotified(
@@ -1521,7 +1523,6 @@ export class MemberService {
    * - Speed improvement: ~10-20x faster
    */
   async getExpiredMembers(
-    manager: ManagerEntity,
     limit: number,
     page: number,
     search: string,
@@ -1601,6 +1602,7 @@ export class MemberService {
     // and checks whether it is expired (endDate <= now) or missing (no subscriptions).
     const baseQb = this.memberModel
       .createQueryBuilder('m')
+      .leftJoinAndSelect('m.gym', 'gym')
       .leftJoin(
         (qb) =>
           qb
@@ -1967,14 +1969,16 @@ export class MemberService {
     for (const member of members) {
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(member.gym.id);
-      await this.twilioService.notifySingleMember({
-        userId: member.id,
-        gymId: checkGym.id,
-        dontCheckExpired: true,
-        activeSubscription:
-          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
-        memberPhoneISOCode: member.phoneNumberISOCode,
-      });
+      if (getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType) {
+        await this.twilioService.notifySingleMember({
+          userId: member.id,
+          gymId: checkGym.id,
+          dontCheckExpired: true,
+          activeSubscription:
+            getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+          memberPhoneISOCode: member.phoneNumberISOCode,
+        });
+      }
     }
 
     return {
@@ -1999,14 +2003,16 @@ export class MemberService {
     for (const member of expiringMembers) {
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(member.gym.id);
-      await this.twilioService.notifySingleMember({
-        userId: member.member.id,
-        gymId: member.gym.id,
-        memberPhoneISOCode: member.member.phoneNumberISOCode,
-        activeSubscription:
-          getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
-        dontCheckExpired: true,
-      });
+      if (getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType) {
+        await this.twilioService.notifySingleMember({
+          userId: member.member.id,
+          gymId: member.gym.id,
+          memberPhoneISOCode: member.member.phoneNumberISOCode,
+          activeSubscription:
+            getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+          dontCheckExpired: true,
+        });
+      }
     }
 
     return {
@@ -2019,7 +2025,6 @@ export class MemberService {
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(gym.id);
       const getExpiredMembers = await this.getExpiredMembers(
-        null,
         1000,
         1,
         '',
@@ -2033,13 +2038,17 @@ export class MemberService {
         }),
       );
       for (const member of getExpiredMembers.data) {
-        await this.twilioService.notifyMemberExpiredReminder({
-          userId: member.id,
-          gymId: member.gym.id,
-          memberPhoneISOCode: member.phoneNumberISOCode,
-          activeSubscription:
-            getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
-        });
+        if (
+          getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType
+        ) {
+          await this.twilioService.notifyMemberExpiredReminder({
+            userId: member.id,
+            gymId: member.gym.id,
+            memberPhoneISOCode: member.phoneNumberISOCode,
+            activeSubscription:
+              getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+          });
+        }
       }
     }
   }
@@ -2476,5 +2485,31 @@ export class MemberService {
         await this.memberModel.save(member);
       }),
     );
+  }
+
+  async notifyMembersWithExpiredSubscriptions() {
+    const getAllGyms = await this.gymModel.find();
+    for (const gym of getAllGyms) {
+      const expiringMembers = await this.getExpiredMembers(1000, 1, '', gym.id);
+      for (const member of expiringMembers.data) {
+        const getLatestGymSubscription =
+          await this.gymService.getGymActiveSubscription(member.gym.id);
+        if (
+          getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType
+        ) {
+          await this.twilioService.notifyMemberExpiredReminder({
+            userId: member.id,
+            gymId: member.gym.id,
+            memberPhoneISOCode: member.phoneNumberISOCode,
+            activeSubscription:
+              getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+          });
+        }
+      }
+    }
+
+    return {
+      message: `Successfully notified members`,
+    };
   }
 }
