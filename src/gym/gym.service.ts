@@ -12,6 +12,10 @@ import {
   subDays,
   isBefore,
   differenceInCalendarDays,
+  format,
+  startOfDay,
+  endOfDay,
+  eachDayOfInterval,
 } from 'date-fns';
 import { AddOfferDto } from './dto/add-offer.dto';
 import { GymEntity, MessageLanguage } from './entities/gym.entity';
@@ -1526,16 +1530,42 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
+    // Use date-fns for consistent date handling
     const endDate = end ? new Date(end) : new Date();
     const startDate = start
       ? new Date(start)
       : subDays(new Date(), isMobile ? 7 : 30);
 
-    // OPTIMIZATION: Use SQL aggregation to compute revenue and transaction counts by date
+    // Ensure proper date boundaries using date-fns
+    const startOfRange = startOfDay(startDate);
+    const endOfRange = endOfDay(endDate);
+
+    // Generate all dates in the range using date-fns
+    const dateRange = eachDayOfInterval({
+      start: startOfRange,
+      end: endOfRange,
+    });
+
+    // Create initial data structure with all dates
+    const revenueByDate = new Map<
+      string,
+      { date: string; revenue: number; transactions: number }
+    >();
+
+    dateRange.forEach((date) => {
+      const dateKey = format(date, 'yyyy-MM-dd');
+      revenueByDate.set(dateKey, {
+        date: dateKey,
+        revenue: 0,
+        transactions: 0,
+      });
+    });
+
+    // Query revenue data using proper date formatting
     const revenueData = await this.transactionModel
       .createQueryBuilder('t')
       .select([
-        `DATE(t."createdAt") as date`,
+        `TO_CHAR(t."createdAt", 'YYYY-MM-DD') as date`,
         `SUM(
           CASE 
             WHEN t."type" = :expenseType THEN -t."paidAmount"
@@ -1545,33 +1575,13 @@ export class GymService {
         `COUNT(*) as transactions`,
       ])
       .where('t."gymId" = :gymId', { gymId })
-      .andWhere('t."createdAt" BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      })
+      .andWhere('t."createdAt" >= :startDate', { startDate: startOfRange })
+      .andWhere('t."createdAt" <= :endDate', { endDate: endOfRange })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .setParameters({ expenseType: TransactionType.EXPENSE })
-      .groupBy(`DATE(t."createdAt")`)
-      .orderBy(`DATE(t."createdAt")`, 'ASC')
+      .groupBy(`TO_CHAR(t."createdAt", 'YYYY-MM-DD')`)
+      .orderBy(`TO_CHAR(t."createdAt", 'YYYY-MM-DD')`, 'ASC')
       .getRawMany<{ date: string; revenue: string; transactions: string }>();
-
-    // OPTIMIZATION: Create date map from SQL results for O(1) lookup
-    const revenueByDate = new Map<
-      string,
-      { date: string; revenue: number; transactions: number }
-    >();
-
-    // Fill in all dates in the range with default values
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const dateKey = currentDate.toISOString().split('T')[0];
-      revenueByDate.set(dateKey, {
-        date: dateKey,
-        revenue: 0,
-        transactions: 0,
-      });
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
 
     // OPTIMIZATION: Update with actual data from SQL aggregation
     revenueData.forEach((row) => {
@@ -1585,8 +1595,8 @@ export class GymService {
 
     return {
       data: Array.from(revenueByDate.values()),
-      startDate,
-      endDate,
+      startDate: startOfRange,
+      endDate: endOfRange,
     };
   }
 
@@ -1705,42 +1715,23 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
+    // Use date-fns for consistent date handling
     const endDate = end ? new Date(end) : new Date();
     const startDate = start
       ? new Date(start)
       : subDays(new Date(), isMobile ? 7 : 30);
 
-    // OPTIMIZATION: Use SQL aggregation to compute transaction counts by date and type
-    const transactionData = await this.transactionModel
-      .createQueryBuilder('t')
-      .select([
-        `DATE(t."createdAt") as date`,
-        `COUNT(CASE WHEN t."type" = :subscriptionType THEN 1 END) as subscriptions`,
-        `COUNT(CASE WHEN t."type" = :revenueType THEN 1 END) as revenues`,
-        `COUNT(CASE WHEN t."type" = :expenseType THEN 1 END) as expenses`,
-        `COUNT(*) as total`,
-      ])
-      .where('t."gymId" = :gymId', { gymId })
-      .andWhere('t."createdAt" BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      })
-      .setParameters({
-        subscriptionType: TransactionType.SUBSCRIPTION,
-        revenueType: TransactionType.REVENUE,
-        expenseType: TransactionType.EXPENSE,
-      })
-      .groupBy(`DATE(t."createdAt")`)
-      .orderBy(`DATE(t."createdAt")`, 'ASC')
-      .getRawMany<{
-        date: string;
-        subscriptions: string;
-        revenues: string;
-        expenses: string;
-        total: string;
-      }>();
+    // Ensure proper date boundaries using date-fns
+    const startOfRange = startOfDay(startDate);
+    const endOfRange = endOfDay(endDate);
 
-    // OPTIMIZATION: Create date map from SQL results for O(1) lookup
+    // Generate all dates in the range using date-fns
+    const dateRange = eachDayOfInterval({
+      start: startOfRange,
+      end: endOfRange,
+    });
+
+    // Create initial data structure with all dates
     const transactionsByDate = new Map<
       string,
       {
@@ -1752,10 +1743,8 @@ export class GymService {
       }
     >();
 
-    // Fill in all dates in the range with default values
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const dateKey = currentDate.toISOString().split('T')[0];
+    dateRange.forEach((date) => {
+      const dateKey = format(date, 'yyyy-MM-dd');
       transactionsByDate.set(dateKey, {
         date: dateKey,
         subscriptions: 0,
@@ -1763,8 +1752,35 @@ export class GymService {
         expenses: 0,
         total: 0,
       });
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    });
+
+    // Query transaction data using proper date formatting
+    const transactionData = await this.transactionModel
+      .createQueryBuilder('t')
+      .select([
+        `TO_CHAR(t."createdAt", 'YYYY-MM-DD') as date`,
+        `COUNT(CASE WHEN t."type" = :subscriptionType THEN 1 END) as subscriptions`,
+        `COUNT(CASE WHEN t."type" = :revenueType THEN 1 END) as revenues`,
+        `COUNT(CASE WHEN t."type" = :expenseType THEN 1 END) as expenses`,
+        `COUNT(*) as total`,
+      ])
+      .where('t."gymId" = :gymId', { gymId })
+      .andWhere('t."createdAt" >= :startDate', { startDate: startOfRange })
+      .andWhere('t."createdAt" <= :endDate', { endDate: endOfRange })
+      .setParameters({
+        subscriptionType: TransactionType.SUBSCRIPTION,
+        revenueType: TransactionType.REVENUE,
+        expenseType: TransactionType.EXPENSE,
+      })
+      .groupBy(`TO_CHAR(t."createdAt", 'YYYY-MM-DD')`)
+      .orderBy(`TO_CHAR(t."createdAt", 'YYYY-MM-DD')`, 'ASC')
+      .getRawMany<{
+        date: string;
+        subscriptions: string;
+        revenues: string;
+        expenses: string;
+        total: string;
+      }>();
 
     // OPTIMIZATION: Update with actual data from SQL aggregation
     transactionData.forEach((row) => {
@@ -1780,8 +1796,8 @@ export class GymService {
 
     return {
       data: Array.from(transactionsByDate.values()),
-      startDate,
-      endDate,
+      startDate: startOfRange,
+      endDate: endOfRange,
     };
   }
 
