@@ -1803,11 +1803,18 @@ export class GymService {
   }
 
   // === New analytics service methods (30-day default) ===
-  private resolveWindow(start?: string, end?: string, isMobile?: boolean) {
+  private resolveWindow(
+    start?: string,
+    end?: string,
+    isMobile?: boolean,
+    startFromBeginningOfMonth: boolean = true,
+  ) {
     const endDate = end ? new Date(end) : new Date();
     const startDate = start
       ? new Date(start)
-      : subDays(new Date(), isMobile ? 7 : 30);
+      : startFromBeginningOfMonth
+        ? startOfMonth(new Date())
+        : subDays(new Date(), isMobile ? 7 : 30);
     return {
       startOfRange: startOfDay(startDate),
       endOfRange: endOfDay(endDate),
