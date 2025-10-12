@@ -466,7 +466,7 @@ export class MemberController {
 
   @Get('notify/members-with-expiring-subscriptions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.SuperAdmin)
+  @Roles(Permissions.GymOwner)
   async notifyMembersWithExpiringSubscriptions() {
     return await this.memberService.notifyMembersWithExpiringSubscriptions();
   }

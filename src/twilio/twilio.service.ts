@@ -452,7 +452,7 @@ export class TwilioService {
     const startOfToday = startOfDay(today);
 
     const filterTransactions = transactions.filter((transaction) => {
-      return transaction.subscription.duration >= 3;
+      return transaction?.subscription?.duration >= 3;
     });
 
     return filterTransactions.filter((transaction) => {
@@ -593,15 +593,19 @@ export class TwilioService {
   }) {
     const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
 
-    const transactions = await this.filterExpiredTransactionsByDateToday([
-      member.lastSubscription,
-    ]);
+    const transactions = await this.filterExpiredTransactionsByDateToday(
+      member.subscriptionTransactions,
+    );
 
     const gym = await this.gymService.getGymById(gymId);
 
-    for (const transaction of transactions.filter(
-      (transaction) => transaction.isNotified === false,
-    )) {
+    console.log('these are the transactions', transactions);
+
+    for (const transaction of transactions) {
+      console.log('this is the transaction not notified', transaction);
+      if (transaction.isNotified) {
+        continue;
+      }
       const data = {
         1: member.name,
         2: gym.name,
@@ -636,13 +640,13 @@ export class TwilioService {
           twilioTemplate:
             TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
         });
-        await this.memberService.toggleNotified(member.id, true);
+        await this.transactionService.toggleNotified(transaction.id, true);
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
 
       if (checkNodeEnv('local')) {
         console.log('this is local environment');
-        await this.memberService.toggleNotified(member.id, true);
+        await this.transactionService.toggleNotified(transaction.id, true);
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
     }
