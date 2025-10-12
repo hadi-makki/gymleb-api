@@ -2216,6 +2216,10 @@ export class GymService {
         .select('COALESCE(SUM(t."paidAmount"), 0)', 'sum')
         .where('t."gymId" = :gymId', { gymId })
         .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
+        .andWhere('(t."type" = :subType OR t."type" = :ptType)', {
+          subType: TransactionType.SUBSCRIPTION,
+          ptType: TransactionType.PERSONAL_TRAINER_SESSION,
+        })
         .andWhere('t."paidAt" BETWEEN :start AND :end', {
           start: startOfRange,
           end: endOfRange,
