@@ -2188,20 +2188,10 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
-    // Normalize possible 'undefined'/'null'/'' string values coming from query params
-    const normalizeParam = (p?: string): string | undefined => {
-      if (!p) return undefined;
-      const v = p.trim().toLowerCase();
-      if (v === 'undefined' || v === 'null' || v === '') return undefined;
-      return p;
-    };
-    const normStart = normalizeParam(start);
-    const normEnd = normalizeParam(end);
-
     // Default to last 30 days when no start/end provided
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
-      normStart,
-      normEnd,
+      start,
+      end,
     );
 
     const [revenueRow, membersCountRow] = await Promise.all([
