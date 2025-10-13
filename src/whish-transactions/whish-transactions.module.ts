@@ -8,6 +8,7 @@ import { OwnerSubscriptionsModule } from '../owner-subscriptions/owner-subscript
 import { OwnerSubscriptionTypeEntity } from '../owner-subscriptions/owner-subscription-type.entity';
 import { GymModule } from '../gym/gym.module';
 import { GymEntity } from 'src/gym/entities/gym.entity';
+import { AuthenticationModule } from 'src/common/AuthModule.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
     ConfigModule, // to access env
     forwardRef(() => OwnerSubscriptionsModule),
     forwardRef(() => GymModule),
+    AuthenticationModule,
   ],
   controllers: [WhishTransactionsController],
   providers: [WhishTransactionsService],

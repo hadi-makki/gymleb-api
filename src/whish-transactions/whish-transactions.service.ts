@@ -5,14 +5,18 @@ import {
   Logger,
 } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
-import { Repository } from 'typeorm';
+import { Repository, ILike, FindOptionsWhere } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { WhishTransaction } from './entities/whish-transaction.entity';
+import {
+  WhishStatus,
+  WhishTransaction,
+} from './entities/whish-transaction.entity';
 import { CreateWhishDto } from './dto/create-whish-transaction.dto';
 import { OwnerSubscriptionsService } from '../owner-subscriptions/owner-subscriptions.service';
 import { GymService } from '../gym/gym.service';
 import { checkNodeEnv } from 'src/config/helper/helper-functions';
+import { paginate, FilterOperator } from 'nestjs-paginate';
 
 @Injectable()
 export class WhishTransactionsService {
@@ -387,5 +391,80 @@ export class WhishTransactionsService {
     }
 
     return data;
+  }
+
+  /**
+   * Get all whish transactions with pagination for super admin
+   * Includes gym and owner information
+   */
+  async getAllWhishTransactions(
+    limit: number = 20,
+    page: number = 1,
+    search: string = '',
+    status: string = '',
+  ) {
+    // Build where conditions
+    const whereConditions: FindOptionsWhere<WhishTransaction> | null = null;
+
+    // Filter by status if specified
+    if (status && status.trim() !== '') {
+      whereConditions.status = status as WhishStatus;
+    }
+
+    // Search functionality across multiple fields
+    let searchConditions: any[] = [];
+    if (search && search.trim() !== '') {
+      searchConditions = [
+        { ...whereConditions, externalId: ILike(`%${search}%`) },
+        { ...whereConditions, orderId: ILike(`%${search}%`) },
+        { ...whereConditions, invoice: ILike(`%${search}%`) },
+        { ...whereConditions, gym: { name: ILike(`%${search}%`) } },
+        {
+          ...whereConditions,
+          gym: { owner: { firstName: ILike(`%${search}%`) } },
+        },
+        {
+          ...whereConditions,
+          gym: { owner: { lastName: ILike(`%${search}%`) } },
+        },
+        { ...whereConditions, gym: { owner: { email: ILike(`%${search}%`) } } },
+        {
+          ...whereConditions,
+          subscriptionType: { title: ILike(`%${search}%`) },
+        },
+      ];
+    }
+
+    // Use search conditions if available, otherwise use basic where conditions
+    const finalWhere =
+      searchConditions.length > 0 ? searchConditions : whereConditions;
+
+    return paginate(
+      {
+        page,
+        limit,
+        search: search && search.trim() !== '' ? search : undefined,
+        path: '/super-admin/whish-transactions',
+      },
+      this.repo,
+      {
+        relations: ['gym', 'gym.owner', 'subscriptionType', 'transaction'],
+        sortableColumns: [
+          'createdAt',
+          'updatedAt',
+          'amount',
+          'status',
+          'externalId',
+        ],
+        searchableColumns: ['externalId', 'orderId', 'invoice'],
+        defaultSortBy: [['createdAt', 'DESC']],
+        ...(finalWhere && { where: finalWhere }),
+        filterableColumns: {
+          status: [FilterOperator.EQ],
+          currency: [FilterOperator.EQ],
+        },
+        maxLimit: 100,
+      },
+    );
   }
 }

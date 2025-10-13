@@ -201,6 +201,14 @@ export const navItems: NavItem[] = [
     items: [],
     roles: [Permissions.SuperAdmin],
   },
+  {
+    title: 'Whish Transactions',
+    url: '/super-admin/whish-transactions',
+    icon: 'credit-card',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
 ];
 
 export const getNavItems = (permissions: Permissions[]) => {

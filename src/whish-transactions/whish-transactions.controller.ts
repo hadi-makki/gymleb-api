@@ -8,10 +8,14 @@ import {
   Get,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { WhishTransactionsService } from './whish-transactions.service';
 import { WhishCallbackDto } from './dto/whish-callback.dto';
 import { CreateWhishDto } from './dto/create-whish-transaction.dto';
+import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { Roles } from '../decorators/roles/Role';
+import { Permissions } from '../decorators/roles/role.enum';
 
 @Controller('payment/whish')
 export class WhishTransactionsController {
@@ -115,5 +119,28 @@ export class WhishTransactionsController {
     this.logger.log('Get WHISH account balance');
     const balance = await this.service.getAccountBalance();
     return balance;
+  }
+
+  /**
+   * Get all whish transactions with pagination for super admin
+   * GET /api/payment/whish/super-admin/all
+   */
+  @Get('super-admin/all')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.SuperAdmin)
+  async getAllWhishTransactions(
+    @Query('limit') limit: number = 20,
+    @Query('page') page: number = 1,
+    @Query('search') search: string = '',
+    @Query('status') status: string = '',
+  ) {
+    this.logger.log('Get all whish transactions for super admin');
+    const result = await this.service.getAllWhishTransactions(
+      limit,
+      page,
+      search,
+      status,
+    );
+    return result;
   }
 }
