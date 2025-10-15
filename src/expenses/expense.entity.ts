@@ -16,8 +16,11 @@ export class ExpenseEntity extends PgMainEntity {
   @Column('text')
   title: string;
 
-  @Column('int')
+  @Column('float', { nullable: true })
   amount: number;
+
+  @Column('int', { nullable: true })
+  amountMigration?: number;
 
   @Column('timestamp without time zone', { nullable: true })
   date: Date;

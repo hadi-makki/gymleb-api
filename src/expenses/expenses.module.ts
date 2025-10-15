@@ -3,6 +3,7 @@ import { AuthenticationModule } from '../common/AuthModule.module';
 import { TransactionModule } from '../transactions/transaction.module';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
+import { ExpenseMigration } from './expense.migration';
 
 @Module({
   imports: [AuthenticationModule, TransactionModule],
