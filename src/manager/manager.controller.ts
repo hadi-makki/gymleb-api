@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -47,6 +48,7 @@ import { UpdateShiftTimesDto } from './dto/update-shift-times.dto';
 import { ManagerService } from './manager.service';
 import { ManagerEntity } from './manager.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 @Controller('manager')
 @ApiTags('Manager')
 @ApiInternalServerErrorResponse()
@@ -227,12 +229,16 @@ export class ManagerController {
     @Query('start') start?: string,
     @Query('end') end?: string,
     @Query('useLast30Days') useLast30Days?: string,
+    @Headers('currency') currency?: Currency,
   ) {
     const useLast30DaysBool = useLast30Days === 'true';
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     return await this.ManagerService.getAdminAnalytics(
       start,
       end,
       useLast30DaysBool,
+      currency,
     );
   }
 

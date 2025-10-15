@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
   Query,
+  Headers,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Convert } from 'easy-currencies';
@@ -26,6 +27,7 @@ import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { PaymentStatus } from './transaction.entity';
 import { TransactionService } from './transaction.service';
+import { Currency } from 'src/common/enums/currency.enum';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -44,6 +46,7 @@ export class TransactionController {
     @Param('gymId') gymId: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
+    @Headers('currency') currency: Currency = Currency.USD,
   ) {
     const pageNum = Math.max(1, parseInt(page as any, 10) || 1);
     const limitNum = Math.max(
@@ -54,6 +57,7 @@ export class TransactionController {
       gymId,
       pageNum,
       limitNum,
+      currency,
     );
   }
 

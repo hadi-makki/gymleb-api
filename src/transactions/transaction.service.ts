@@ -73,18 +73,15 @@ export class TransactionService {
         paymentDetails?.subscriptionType === SubscriptionType.DAILY_GYM &&
         paymentDetails.subscription.duration <= 1
       ) {
-        console.log('this is the daily gym subscription');
         endDate = paymentDetails.giveFullDay
           ? addHours(startDate, 24)
           : endOfDay(startDate);
       } else {
-        console.log(
-          'this is the duration',
-          paymentDetails.subscription.duration,
-        );
         endDate = addDays(startDate, paymentDetails.subscription.duration);
       }
     }
+
+    console.log('this is the currency', paymentDetails.currency);
 
     const forFree =
       paymentDetails.forFree || paymentDetails.isBirthdaySubscription;
@@ -101,7 +98,7 @@ export class TransactionService {
       originalAmount: forFree ? 0 : paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
-      currency: paymentDetails.currency ?? Currency.USD,
+      currency: paymentDetails.currency,
       status: forFree
         ? PaymentStatus.PAID
         : paymentDetails.paidAmount < paymentDetails.amount
@@ -254,6 +251,7 @@ export class TransactionService {
     gymId: string,
     page: number,
     limit: number,
+    currency: Currency,
   ): Promise<any> {
     const start = startOfDay(new Date());
     const end = addDays(start, 1);
@@ -268,7 +266,7 @@ export class TransactionService {
           relations: ['member', 'gym'],
           sortableColumns: ['paidAt', 'createdAt', 'title'],
           defaultSortBy: [['paidAt', 'DESC']],
-          where: { gym: { id: gymId }, paidAt: Between(start, end) },
+          where: { gym: { id: gymId }, paidAt: Between(start, end), currency },
         },
       ),
 
@@ -284,6 +282,7 @@ export class TransactionService {
           'revenue',
         )
         .where('t."gymId" = :gymId', { gymId })
+        .andWhere('t."currency" = :currency', { currency })
         .andWhere('t."paidAt" BETWEEN :start AND :end', { start, end })
         .setParameters({ expense: TransactionType.EXPENSE })
         .getRawOne<{ expenses: string; revenue: string }>(),

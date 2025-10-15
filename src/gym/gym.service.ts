@@ -54,7 +54,7 @@ import { TransactionService } from 'src/transactions/transaction.service';
 import { ProductEntity } from 'src/products/products.entity';
 import { MediaService } from 'src/media/media.service';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
-
+import { Currency } from 'src/common/enums/currency.enum';
 @Injectable()
 export class GymService {
   constructor(
@@ -133,6 +133,7 @@ export class GymService {
     start?: string,
     end?: string,
     gymId?: string,
+    currency?: Currency,
   ) {
     const now = new Date();
     const lastMonthStart = startOfMonth(subMonths(now, 1));
@@ -178,6 +179,9 @@ export class GymService {
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
         .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.currency = :currency', {
+          currency: currency || Currency.USD,
+        })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -202,6 +206,9 @@ export class GymService {
           'sum',
         )
         .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.currency = :currency', {
+          currency: currency || Currency.USD,
+        })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
           from: filterFrom,
@@ -215,6 +222,9 @@ export class GymService {
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
         .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.currency = :currency', {
+          currency: currency || Currency.USD,
+        })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.REVENUE })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -228,6 +238,9 @@ export class GymService {
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
         .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.currency = :currency', {
+          currency: currency || Currency.USD,
+        })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.EXPENSE })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -241,6 +254,7 @@ export class GymService {
         where: {
           gym: { id: gymId },
           status: PaymentStatus.PAID,
+          currency: currency || Currency.USD,
           paidAt: Between(filterFrom, filterTo),
         },
       }),
@@ -250,6 +264,9 @@ export class GymService {
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
         .where('t.gymId = :gymId', { gymId })
+        .andWhere('t.currency = :currency', {
+          currency: currency || Currency.USD,
+        })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -2101,6 +2118,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    currency?: Currency,
   ): Promise<{
     sources: {
       subscriptions: number;
@@ -2118,6 +2136,8 @@ export class GymService {
       end,
     );
 
+    console.log('this is the currency', currency);
+
     // Get all transactions and categorize them properly
     const transactions = await this.transactionModel
       .createQueryBuilder('t')
@@ -2126,11 +2146,15 @@ export class GymService {
       .addSelect('t."productId"', 'productId')
       .addSelect('t."personalTrainerId"', 'personalTrainerId')
       .addSelect('t."subscriptionId"', 'subscriptionId')
+      .addSelect('t."currency"', 'currency')
       .where('t."gymId" = :gymId', { gymId })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."paidAt" BETWEEN :start AND :end', {
         start: startOfRange,
         end: endOfRange,
+      })
+      .andWhere('t."currency" = :currency', {
+        currency: currency,
       })
       .getRawMany<{
         type: TransactionType;
@@ -2138,6 +2162,7 @@ export class GymService {
         productId: string | null;
         personalTrainerId: string | null;
         subscriptionId: string | null;
+        currency: Currency;
       }>();
 
     let subscriptions = 0;

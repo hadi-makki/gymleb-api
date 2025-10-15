@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -61,6 +62,7 @@ import { UpdateRestrictPublicProgramsDto } from './dto/update-restrict-public-pr
 import { BulkDeleteTransactionsDto } from './dto/bulk-delete-transactions.dto';
 import { GymEntity } from './entities/gym.entity';
 import { GymService } from './gym.service';
+import { Currency } from 'src/common/enums/currency.enum';
 
 @Controller('gym')
 export class GymController {
@@ -158,8 +160,9 @@ export class GymController {
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
+    @Headers('currency') currency?: Currency,
   ) {
-    return this.gymService.getGymAnalytics(user, start, end, gymId);
+    return this.gymService.getGymAnalytics(user, start, end, gymId, currency);
   }
 
   @Get('super-admin/analytics/:gymId')
@@ -171,7 +174,10 @@ export class GymController {
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getGymAnalytics(user, start, end, gymId);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const currency = (arguments?.[0]?.headers?.currency as any) || undefined;
+    return this.gymService.getGymAnalytics(user, start, end, gymId, currency);
   }
 
   // Admin endpoints to query by owner id
@@ -756,8 +762,9 @@ export class GymController {
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
+    @Headers('currency') currency?: Currency,
   ) {
-    return this.gymService.getRevenueBySource(gymId, start, end);
+    return this.gymService.getRevenueBySource(gymId, start, end, currency);
   }
 
   @Get('admin/analytics/revenue/arpu/:gymId')

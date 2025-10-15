@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Currency } from 'src/common/enums/currency.enum';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
@@ -266,6 +267,7 @@ export class ManagerService {
     start?: string,
     end?: string,
     useLast30Days?: boolean,
+    currency?: Currency,
   ) {
     const now = new Date();
     const lastMonthStart = startOfMonth(subMonths(now, 1));
@@ -273,7 +275,10 @@ export class ManagerService {
     const currentMonthStart = startOfMonth(now);
     const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const baseFilter: any = { isOwnerSubscriptionAssignment: true };
+    const baseFilter: any = {
+      isOwnerSubscriptionAssignment: true,
+      ...(currency ? { currency } : {}),
+    };
 
     // Determine the date range based on parameters
     let dateFilter = {};

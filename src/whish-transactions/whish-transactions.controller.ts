@@ -9,6 +9,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Headers,
 } from '@nestjs/common';
 import { WhishTransactionsService } from './whish-transactions.service';
 import { WhishCallbackDto } from './dto/whish-callback.dto';
@@ -66,7 +67,7 @@ export class WhishTransactionsController {
   @Get('status/:externalId')
   async status(
     @Param('externalId') externalId: string,
-    @Query('currency') currency = 'USD',
+    @Headers('currency') currency = 'USD',
   ) {
     this.logger.log(`Status check externalId=${externalId}`);
     const data = await this.service.getCollectStatus(externalId, currency);

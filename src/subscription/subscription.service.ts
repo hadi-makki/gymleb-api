@@ -12,6 +12,7 @@ import {
   SubscriptionType,
 } from './entities/subscription.entity';
 import { isUUID } from 'class-validator';
+import { Currency } from 'src/common/enums/currency.enum';
 @Injectable()
 export class SubscriptionService {
   constructor(
@@ -47,6 +48,7 @@ export class SubscriptionService {
       gym: gym,
       duration: subscriptionDuration,
       allowedReservations: createSubscriptionDto.allowedReservations ?? 0,
+      currency: createSubscriptionDto.currency || Currency.USD,
     });
     const subscription = await this.subscriptionModel.save(
       createSubscriptionModel,

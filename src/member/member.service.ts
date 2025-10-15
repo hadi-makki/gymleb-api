@@ -463,6 +463,8 @@ export class MemberService {
       member.profileImage = imageData.id as any;
       await this.memberModel.save(member);
     }
+
+    console.log('this is the subscription', subscription);
     const subscriptionInstance =
       await this.transactionService.createSubscriptionInstance({
         member: member,
@@ -470,6 +472,7 @@ export class MemberService {
         subscription: subscription,
         subscriptionType: subscription.type,
         amount: subscription.price,
+        currency: subscription.currency,
         giveFullDay: createMemberDto.giveFullDay,
         startDate: createMemberDto.startDate,
         endDate: createMemberDto.endDate,
@@ -1278,6 +1281,7 @@ export class MemberService {
         startDate,
         endDate,
         paidAmount,
+        currency: checkSubscription.currency,
       });
 
     member.transactions.push(createSubscriptionInstance);
