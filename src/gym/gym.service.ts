@@ -1044,6 +1044,7 @@ export class GymService {
         allowManualMessages: true,
         sendMonthlyReminder: true,
         isAiChatEnabled: true,
+        allowUserWithoutPhoneNumber: true,
       },
     });
 
@@ -3301,5 +3302,23 @@ export class GymService {
     await this.gymModel.update(gymId, { allowDuplicateMemberPhoneNumbers });
 
     return { message: 'Duplicate phone policy updated successfully' };
+  }
+
+  async updateAllowUserWithoutPhoneNumber(
+    gymId: string,
+    allowUserWithoutPhoneNumber: boolean,
+  ) {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    await this.gymModel.update(gymId, { allowUserWithoutPhoneNumber });
+
+    return { message: 'Allow user without phone number updated successfully' };
   }
 }

@@ -411,13 +411,15 @@ export class MemberService {
         gym: { id: gym.id },
       },
     });
-    const checkIfPhoneExists = await this.memberModel.find({
-      where: {
-        phone: createMemberDto.phoneNumber,
-        phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
-        gym: { id: gym.id },
-      },
-    });
+    const checkIfPhoneExists = createMemberDto.phoneNumber
+      ? await this.memberModel.find({
+          where: {
+            phone: createMemberDto.phoneNumber,
+            phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
+            gym: { id: gym.id },
+          },
+        })
+      : [];
 
     const checkIfEmailExists = createMemberDto.email
       ? await this.memberModel.exists({
@@ -446,8 +448,10 @@ export class MemberService {
     const createMemberModel = this.memberModel.create({
       name: createMemberDto.name,
       ...(createMemberDto.email && { email: createMemberDto.email }),
-      phone: createMemberDto.phoneNumber,
-      phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
+      ...(createMemberDto.phoneNumber && {
+        phone: createMemberDto.phoneNumber,
+        phoneNumberISOCode: createMemberDto.phoneNumberISOCode || 'LB',
+      }),
       gym: gym,
       subscription: subscription,
       allowedReservations: subscription.allowedReservations ?? 0,
@@ -500,6 +504,7 @@ export class MemberService {
 
     if (
       createMemberDto.sendWelcomeMessage &&
+      createMemberDto.phoneNumber &&
       checkIfPhoneExists.length === 0 &&
       getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
     ) {
@@ -514,6 +519,7 @@ export class MemberService {
 
     if (
       createMemberDto.sendInvoiceMessage &&
+      newMember.phone &&
       getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
     ) {
       await this.twilioService.sendPaymentConfirmationMessage({
@@ -1403,8 +1409,10 @@ export class MemberService {
 
     member.name = updateMemberDto.name;
     member.email = updateMemberDto.email;
-    member.phone = updateMemberDto.phoneNumber;
-    member.phoneNumberISOCode = updateMemberDto.phoneNumberISOCode;
+    member.phone = updateMemberDto.phoneNumber || null;
+    member.phoneNumberISOCode = updateMemberDto.phoneNumber
+      ? updateMemberDto.phoneNumberISOCode || 'LB'
+      : null;
     await this.memberModel.save(member);
     return await this.returnMember(member);
   }
@@ -2003,6 +2011,7 @@ export class MemberService {
       }),
     );
     for (const member of expiringMembers) {
+      if (!member.member?.phone) continue;
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(member.gym.id);
       if (getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType) {
@@ -2040,6 +2049,7 @@ export class MemberService {
         }),
       );
       for (const member of getExpiredMembers.data) {
+        if (!member.phone) continue;
         if (
           getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType
         ) {
@@ -2505,6 +2515,7 @@ export class MemberService {
     );
 
     for (const member of getMembersWithExpiringSubscriptions) {
+      if (!member.member?.phone) continue;
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(member.gym.id);
       if (getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType) {

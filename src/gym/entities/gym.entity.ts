@@ -244,4 +244,7 @@ export class GymEntity extends PgMainEntity {
   // Allow duplicate member phone numbers within the same gym
   @Column('boolean', { default: false })
   allowDuplicateMemberPhoneNumbers: boolean;
+
+  @Column('boolean', { default: false })
+  allowUserWithoutPhoneNumber: boolean;
 }

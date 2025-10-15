@@ -50,6 +50,7 @@ import { UpdateBirthdayAutomationDto } from './dto/update-birthday-automation.dt
 import { UpdateMonthlyReminderDto } from './dto/update-monthly-reminder.dto';
 import { UpdateManualMessagesDto } from './dto/update-manual-messages.dto';
 import { UpdateAllowDuplicateMemberPhonesDto } from './dto/update-allow-duplicate-member-phones.dto';
+import { UpdateAllowUserWithoutPhoneNumberDto } from './dto/update-allow-user-without-phone.dto';
 import { UpdateAllowUserReservationsDto } from './dto/update-allow-user-reservations.dto';
 import { UpdateMaxReservationsPerSessionDto } from './dto/update-max-reservations-per-session.dto';
 import { UpdateSessionTimeDto } from './dto/update-session-time.dto';
@@ -1178,6 +1179,25 @@ export class GymController {
     return this.gymService.updateAllowDuplicateMemberPhones(
       gymId,
       body.allowDuplicateMemberPhoneNumbers,
+    );
+  }
+
+  @Patch('update/allow-user-without-phone/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Allow creating members without phone numbers',
+  })
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Roles(Permissions.SuperAdmin)
+  updateAllowUserWithoutPhoneNumber(
+    @Param('gymId') gymId: string,
+    @Body() body: UpdateAllowUserWithoutPhoneNumberDto,
+  ) {
+    return this.gymService.updateAllowUserWithoutPhoneNumber(
+      gymId,
+      body.allowUserWithoutPhoneNumber,
     );
   }
 }

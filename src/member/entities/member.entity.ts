@@ -54,12 +54,12 @@ export class MemberEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   email: string;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   @Index()
-  phone: string;
+  phone: string | null;
 
-  @Column('text', { default: 'LB' })
-  phoneNumberISOCode: string;
+  @Column('text', { default: 'LB', nullable: true })
+  phoneNumberISOCode: string | null;
 
   @ManyToOne(() => GymEntity, (gym) => gym.members, {
     onDelete: 'CASCADE',

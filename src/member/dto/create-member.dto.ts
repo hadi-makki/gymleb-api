@@ -16,13 +16,13 @@ export class CreateMemberDto {
   @IsOptional()
   email?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  phoneNumber: string;
+  phoneNumber?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  phoneNumberISOCode: string;
+  phoneNumberISOCode?: string;
 
   @IsNotEmpty()
   @IsString()
