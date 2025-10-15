@@ -22,6 +22,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
+import { Currency } from 'src/common/enums/currency.enum';
 
 export enum TransactionType {
   SUBSCRIPTION = 'subscription',
@@ -32,11 +33,6 @@ export enum TransactionType {
   PRODUCTS_TRANSFER = 'products_transfer',
   PRODUCTS_RECEIVE = 'products_receive',
   PRODUCTS_RETURN = 'products_return',
-}
-
-export enum Currency {
-  USD = 'USD',
-  LBP = 'LBP',
 }
 
 export enum PaymentStatus {

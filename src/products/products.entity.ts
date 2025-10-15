@@ -10,6 +10,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { ProductsOffersEntity } from './products-offers.entity';
@@ -62,4 +63,7 @@ export class ProductEntity extends PgMainEntity {
 
   @Column('boolean', { default: true })
   showInPublicPage: boolean;
+
+  @Column('text', { nullable: true, default: Currency.USD })
+  currency?: Currency;
 }

@@ -30,6 +30,7 @@ import {
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -100,6 +101,7 @@ export class TransactionService {
       originalAmount: forFree ? 0 : paymentDetails.amount,
       startDate: startDate,
       paidBy: paymentDetails.member.name,
+      currency: paymentDetails.currency ?? Currency.USD,
       status: forFree
         ? PaymentStatus.PAID
         : paymentDetails.paidAmount < paymentDetails.amount
@@ -125,6 +127,7 @@ export class TransactionService {
     endDate?: string;
     resetNotifications: boolean;
     whishTransaction?: WhishTransaction;
+    currency?: Currency;
   }) {
     const type = await this.ownerSubscriptionTypeRepository.findOne({
       where: { id: params.ownerSubscriptionTypeId },
@@ -162,6 +165,7 @@ export class TransactionService {
         `(${params.gym.name})`,
       owner: params.gym.owner,
       whishTransactions: [params.whishTransaction],
+      currency: params.currency ?? Currency.USD,
       paidAt: new Date(),
     });
     const trx = await this.transactionModel.save(trxModel);
@@ -461,6 +465,7 @@ export class TransactionService {
     date: Date;
     revenue: RevenueEntity;
     offer: ProductsOffersEntity;
+    currency?: Currency;
   }) {
     const newTransactionModel = this.transactionModel.create({
       title: dto.revenue.title,
@@ -472,6 +477,7 @@ export class TransactionService {
       revenue: dto.revenue,
       date: dto.date,
       offer: dto.offer,
+      currency: dto.currency ?? Currency.USD,
       paidAt: new Date(),
     });
     const newTransaction =
@@ -485,6 +491,7 @@ export class TransactionService {
     expense: ExpenseEntity;
     title: string;
     date: Date;
+    currency?: Currency;
   }) {
     const newTransactionModel = this.transactionModel.create({
       title: dto.expense.title,
@@ -493,6 +500,7 @@ export class TransactionService {
       gym: dto.gym,
       expense: dto.expense,
       date: dto.date,
+      currency: dto.currency ?? Currency.USD,
       paidAt: new Date(),
     });
     const newTransaction =
@@ -553,6 +561,7 @@ export class TransactionService {
     willPayLater: boolean;
     ptSession: PTSessionEntity;
     isTakingPtSessionsCut?: boolean;
+    currency?: Currency;
   }) {
     const gymsPTSessionPercentage = dto.gym.gymsPTSessionPercentage;
     console.log('this is the isTakingPtSessionsCut', dto.isTakingPtSessionsCut);
@@ -572,6 +581,7 @@ export class TransactionService {
       // Use many-to-one relation so multiple transactions can link to the same session
       relatedPtSession: dto.ptSession,
       isTakingPtSessionsCut: dto.isTakingPtSessionsCut,
+      currency: dto.currency ?? Currency.USD,
       paidAt: new Date(),
     });
     const newTransaction =
@@ -694,6 +704,7 @@ export class TransactionService {
     product: ProductEntity;
     transferQuantity: number;
     receiveQuantity: number;
+    currency?: Currency;
   }) {
     const newSendTransactionModel = this.transactionModel.create({
       title:
@@ -712,6 +723,7 @@ export class TransactionService {
       receiveQuantity: dto.receiveQuantity,
       paidAmount: 0,
       gym: dto.transferedFrom,
+      currency: dto.currency ?? Currency.USD,
     });
     const createdSendTransaction = await this.transactionModel.save(
       newSendTransactionModel,
@@ -737,6 +749,7 @@ export class TransactionService {
           typeof dto.transferedTo === 'string'
             ? dto.transferedFrom
             : dto.transferedTo,
+        currency: dto.currency ?? Currency.USD,
       });
       createdReceiveTransaction = await this.transactionModel.save(
         newReceiveTransactionModel,
@@ -753,6 +766,7 @@ export class TransactionService {
     returnedTo: GymEntity;
     product: ProductEntity;
     returnQuantity: number;
+    currency?: Currency;
   }) {
     const newReturnTransactionModel = this.transactionModel.create({
       title:
@@ -767,6 +781,7 @@ export class TransactionService {
       returnedQuantity: dto.returnQuantity,
       paidAmount: 0,
       gym: dto.returnedFrom,
+      currency: dto.currency ?? Currency.USD,
     });
     const createdReturnTransaction = await this.transactionModel.save(
       newReturnTransactionModel,
@@ -785,6 +800,7 @@ export class TransactionService {
       receiveQuantity: dto.returnQuantity,
       paidAmount: 0,
       gym: dto.returnedTo,
+      currency: dto.currency ?? Currency.USD,
     });
     const createdReceiveTransaction = await this.transactionModel.save(
       newReceiveTransactionModel,

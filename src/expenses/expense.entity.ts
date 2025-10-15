@@ -1,5 +1,6 @@
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 import {
   Column,
   Entity,
@@ -40,4 +41,7 @@ export class ExpenseEntity extends PgMainEntity {
   })
   @JoinColumn()
   transaction: TransactionEntity;
+
+  @Column('text', { nullable: true, default: Currency.USD })
+  currency?: Currency;
 }

@@ -8,6 +8,8 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { Currency } from 'src/common/enums/currency.enum';
+import { IsEnum } from 'class-validator';
 
 export class CreateExpenseDto {
   @ApiProperty()
@@ -39,4 +41,9 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsString()
   gymId?: string;
+
+  @ApiProperty({ required: false, enum: Currency })
+  @IsOptional()
+  @IsEnum(Currency)
+  currency?: Currency;
 }

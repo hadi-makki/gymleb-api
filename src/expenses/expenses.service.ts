@@ -7,6 +7,7 @@ import { TransactionService } from '../transactions/transaction.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseEntity } from './expense.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 
 @Injectable()
 export class ExpensesService {
@@ -26,6 +27,7 @@ export class ExpensesService {
     const expense = this.expenseModel.create({
       ...dto,
       date: dto.date ? new Date(dto.date) : new Date(),
+      currency: dto.currency ?? Currency.USD,
       gym: { id: dto.gymId },
     });
     const transaction = await this.transactionService.createExpenseTransaction({
@@ -34,6 +36,7 @@ export class ExpensesService {
       expense: expense,
       title: expense.title,
       date: expense.date,
+      currency: expense.currency,
     });
     expense.transaction = transaction;
     await this.expenseModel.save(expense);

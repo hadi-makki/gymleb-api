@@ -4,6 +4,7 @@ import {
   SubscriptionEntity,
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 
 export interface PaymentDetails {
   subscription?: SubscriptionEntity;
@@ -24,6 +25,9 @@ export interface PaymentDetails {
   forFree?: boolean;
 
   isBirthdaySubscription?: boolean;
+
+  // Optional currency for the transaction, defaults to USD when omitted
+  currency?: Currency;
 }
 
 export interface GooglePaymentsDetails {
