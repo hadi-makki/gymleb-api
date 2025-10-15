@@ -18,7 +18,11 @@ import {
   eachDayOfInterval,
 } from 'date-fns';
 import { AddOfferDto } from './dto/add-offer.dto';
-import { GymEntity, MessageLanguage } from './entities/gym.entity';
+import {
+  GymEntity,
+  MessageLanguage,
+  MonthlyReminderType,
+} from './entities/gym.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
@@ -3256,7 +3260,12 @@ export class GymService {
     };
   }
 
-  async updateMonthlyReminder(gymId: string, sendMonthlyReminder: boolean) {
+  async updateMonthlyReminder(
+    gymId: string,
+    sendMonthlyReminder: boolean,
+    monthlyReminderType?: MonthlyReminderType,
+    monthlyReminderDays?: number,
+  ) {
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
     }
@@ -3266,7 +3275,14 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
-    await this.gymModel.update(gymId, { sendMonthlyReminder });
+    const updatePayload: Partial<GymEntity> = { sendMonthlyReminder };
+    if (monthlyReminderType) {
+      updatePayload.monthlyReminderType = monthlyReminderType;
+    }
+    if (typeof monthlyReminderDays === 'number') {
+      updatePayload.monthlyReminderDays = monthlyReminderDays;
+    }
+    await this.gymModel.update(gymId, updatePayload);
 
     return { message: 'Monthly reminder setting updated successfully' };
   }

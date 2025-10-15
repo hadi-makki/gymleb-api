@@ -31,6 +31,12 @@ export enum MessageLanguage {
   ARABIC = 'ar',
 }
 
+export enum MonthlyReminderType {
+  BEFORE_EXPIRATION = 'before_expiration',
+  AFTER_EXPIRATION = 'after_expiration',
+  IMMEDIATE_REMINDING = 'immediate_reminding',
+}
+
 @Entity('gyms')
 export class GymEntity extends PgMainEntity {
   @Column('text')
@@ -236,6 +242,15 @@ export class GymEntity extends PgMainEntity {
   // Monthly reminder settings (controlled by gym owner)
   @Column('boolean', { default: true })
   sendMonthlyReminder: boolean;
+
+  @Column('text', {
+    nullable: true,
+    default: MonthlyReminderType.BEFORE_EXPIRATION,
+  })
+  monthlyReminderType: MonthlyReminderType;
+
+  @Column('int', { nullable: true, default: 3 })
+  monthlyReminderDays: number;
 
   // Manual messages permission (controlled by super admin)
   @Column('boolean', { default: false })

@@ -248,15 +248,14 @@ export class MemberService {
     const startOfTargetDate = startOfDay(new Date());
     const endOfTargetDate = endOfDay(targetDate);
 
+    console.log('startOfTargetDate', startOfTargetDate);
+    console.log('endOfTargetDate', endOfTargetDate);
+
     // Find all transactions that will expire on the target date
     const expiringTransactions = await this.transactionModel.find({
       where: [
         {
-          endDate: isExpired
-            ? LessThan(new Date())
-            : expiringToday
-              ? LessThan(new Date())
-              : Between(startOfTargetDate, endOfTargetDate),
+          endDate: Between(startOfTargetDate, endOfTargetDate),
           type: TransactionType.SUBSCRIPTION,
           isInvalidated: false,
           isNotified: false,
@@ -1999,36 +1998,107 @@ export class MemberService {
   }
 
   async notifyMembersWithExpiringSubscriptions() {
-    const expiringMembers = await this.getMembersWithExpiringSubscriptions({
-      days: 3,
-      isNotified: false,
-      ignoreMemberWhereGymDisabledMonthlyReminder: true,
+    // New behavior: iterate gyms with active owner subscription and send based on gym settings
+    const gyms = await this.gymModel.find({
+      where: { sendMonthlyReminder: true },
     });
-    console.log(
-      'expiringMembers',
-      expiringMembers.map((m) => {
-        return { id: m.member.id, name: m.member.name };
-      }),
-    );
-    for (const member of expiringMembers) {
-      if (!member.member?.phone) continue;
-      const getLatestGymSubscription =
-        await this.gymService.getGymActiveSubscription(member.gym.id);
-      if (getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType) {
-        await this.twilioService.notifySingleMember({
-          userId: member.member.id,
-          gymId: member.gym.id,
-          memberPhoneISOCode: member.member.phoneNumberISOCode,
-          activeSubscription:
-            getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
-          dontCheckExpired: true,
+    let totalNotified = 0;
+    for (const gym of gyms) {
+      const sub = await this.gymService.getGymActiveSubscription(gym.id);
+
+      if (!sub?.activeSubscription?.ownerSubscriptionType) continue;
+
+      const type = gym.monthlyReminderType;
+      const days = gym.monthlyReminderDays;
+
+      // Resolve members based on type
+      let members: any[] = [];
+      if (type === 'before_expiration') {
+        members = await this.getMembersWithExpiringSubscriptions({
+          days,
+          isNotified: false,
+          ignoreMemberWhereGymDisabledMonthlyReminder: true,
         });
+        // Filter to this gym only
+        members = members.filter((m) => m.gym?.id === gym.id);
+      } else if (type === 'after_expiration') {
+        const now = new Date();
+        const from = startOfDay(addDays(now, -days));
+        const to = endOfDay(now);
+        console.log('from and to', from, to);
+        const txs = await this.transactionModel.find({
+          where: [
+            {
+              gym: { id: gym.id },
+              endDate: Between(from, to),
+              type: TransactionType.SUBSCRIPTION,
+              isInvalidated: false,
+              isNotified: false,
+              subscription: {
+                type: Not(SubscriptionType.DAILY_GYM),
+                duration: Not(LessThan(7)),
+              },
+            },
+          ],
+          relations: { gym: true, member: true, subscription: true },
+        });
+        members = txs.map((t) => ({ ...t, expiringSubscription: t }));
+      } else if (type === 'immediate_reminding') {
+        const txs = await this.transactionModel.find({
+          where: [
+            {
+              gym: { id: gym.id },
+              endDate: LessThan(new Date()),
+              type: TransactionType.SUBSCRIPTION,
+              isInvalidated: false,
+              isNotified: false,
+              subscription: {
+                type: Not(SubscriptionType.DAILY_GYM),
+                duration: Not(LessThan(7)),
+              },
+            },
+          ],
+          relations: { gym: true, member: true, subscription: true },
+        });
+        members = txs
+          .filter((t) => t.member)
+          .map((t) => ({ ...t, expiringSubscription: t }));
+      }
+
+      for (const member of members) {
+        if (!member.member?.phone) continue;
+        const activeType = sub.activeSubscription.ownerSubscriptionType;
+        if (type === 'immediate_reminding') {
+          await this.twilioService.notifyMemberExpiredReminder({
+            userId: member.member.id,
+            gymId: gym.id,
+            memberPhoneISOCode: member.member.phoneNumberISOCode,
+            activeSubscription: activeType,
+          });
+          totalNotified += 1;
+        } else if (type === 'after_expiration') {
+          await this.twilioService.notifyMonthlyReminderForTransaction({
+            userId: member.member.id,
+            gymId: gym.id,
+            transactionId: member.expiringSubscription.id,
+            memberPhoneISOCode: member.member.phoneNumberISOCode,
+            activeSubscription: activeType,
+          });
+          totalNotified += 1;
+        } else {
+          await this.twilioService.notifySingleMember({
+            userId: member.member.id,
+            gymId: gym.id,
+            memberPhoneISOCode: member.member.phoneNumberISOCode,
+            activeSubscription: activeType,
+            dontCheckExpired: true,
+          });
+          totalNotified += 1;
+        }
       }
     }
 
-    return {
-      message: `Successfully notified ${expiringMembers.length} members`,
-    };
+    return { message: `Successfully notified ${totalNotified} members` };
   }
   async notifyMembersWithExpiringSubscriptionsReminder() {
     const getAllGyms = await this.gymModel.find();

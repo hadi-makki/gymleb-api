@@ -846,4 +846,14 @@ export class TransactionService {
     await this.transactionModel.save(transaction);
     return transaction;
   }
+
+  async getTransactionById(transactionId: string) {
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+    return transaction;
+  }
 }

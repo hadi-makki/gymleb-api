@@ -1141,6 +1141,8 @@ export class GymController {
     return this.gymService.updateMonthlyReminder(
       gymId,
       updateMonthlyReminderDto.sendMonthlyReminder,
+      updateMonthlyReminderDto.monthlyReminderType,
+      updateMonthlyReminderDto.monthlyReminderDays,
     );
   }
 

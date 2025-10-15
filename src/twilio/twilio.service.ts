@@ -654,6 +654,90 @@ export class TwilioService {
     return { message: 'Member expired reminder sent successfully' };
   }
 
+  async notifyMonthlyReminderForTransaction({
+    userId,
+    gymId,
+    transactionId,
+    memberPhoneISOCode,
+    activeSubscription,
+  }: {
+    userId: string;
+    gymId: string;
+    transactionId: string;
+    memberPhoneISOCode: string;
+    activeSubscription: OwnerSubscriptionTypeEntity;
+  }) {
+    const member = await this.memberService.getMemberByIdAndGym(userId, gymId);
+    const gym = await this.gymService.getGymById(gymId);
+    const transaction =
+      await this.transactionService.getTransactionById(transactionId);
+
+    if (!transaction || transaction.isNotified) {
+      return;
+    }
+
+    const data = {
+      1: member.name,
+      2: gym.name,
+      3: transaction.title || 'Subscription',
+      4: transaction.isInvalidated
+        ? format(new Date(transaction.invalidatedAt), 'dd/MM/yyyy')
+        : transaction.endDate
+          ? format(new Date(transaction.endDate), 'dd/MM/yyyy')
+          : 'N/A',
+      5: gym.phone,
+    } as Record<string, string>;
+
+    const res = await this.sendWhatsappMessage({
+      phoneNumber: member.phone,
+      twilioTemplate:
+        TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
+      contentVariables: data,
+      phoneNumberISOCode: memberPhoneISOCode,
+      gym,
+      activeSubscription,
+    });
+
+    if (res) {
+      await this.saveTwilioMessage({
+        message: res.body,
+        phoneNumber: member.phone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.expiaryReminder,
+        messageSid: res.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
+      });
+      await this.transactionService.toggleNotified(transaction.id, true);
+      await this.gymService.addGymMembersNotified(gym.id, 1);
+    }
+
+    if (
+      checkNodeEnv('local') &&
+      (await this.checkIfGymCanSendMessages(gym, activeSubscription))
+    ) {
+      const mockRes = {
+        body: `Mock expiry reminder message for ${member.name} at ${gym.name}. Your subscription expires on ${transaction.endDate ? format(new Date(transaction.endDate), 'dd/MM/yyyy') : 'N/A'}. Contact us at ${gym.phone}`,
+        sid: `mock_sid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+      await this.saveTwilioMessage({
+        message: mockRes.body,
+        phoneNumber: member.phone,
+        phoneNumberISOCode: memberPhoneISOCode,
+        gym,
+        messageType: TwilioMessageType.expiaryReminder,
+        messageSid: mockRes.sid,
+        twilioTemplate:
+          TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
+      });
+      await this.transactionService.toggleNotified(transaction.id, true);
+      await this.gymService.addGymMembersNotified(gym.id, 1);
+    }
+
+    return { message: 'Member notified successfully' };
+  }
+
   async notifyManyUsers(
     manager: ManagerEntity,
     userIds: string[],

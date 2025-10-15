@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, Min, IsOptional } from 'class-validator';
+import { MonthlyReminderType } from '../entities/gym.entity';
 
 export class UpdateMonthlyReminderDto {
   @ApiProperty({
@@ -8,4 +9,23 @@ export class UpdateMonthlyReminderDto {
   })
   @IsBoolean()
   sendMonthlyReminder: boolean;
+
+  @ApiProperty({
+    description: 'Monthly reminder type',
+    enum: MonthlyReminderType,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(MonthlyReminderType)
+  monthlyReminderType?: MonthlyReminderType;
+
+  @ApiProperty({
+    description: 'Days window for reminder (0 for immediate)',
+    example: 3,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  monthlyReminderDays?: number;
 }

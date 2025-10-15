@@ -118,10 +118,10 @@ export class CronService implements OnApplicationBootstrap {
 
   @Cron('0 7-23/4 * * *', {
     // @Cron(CronExpression.EVERY_10_SECONDS, {
-    name: 'notify-expired-members',
+    name: 'notify-monthly-members-reminder',
     timeZone: 'Asia/Beirut', // Lebanon timezone
   })
-  async notifyExpiredMembers() {
+  async notifyMonthlyMembersReminder() {
     await this.memberService.notifyMembersWithExpiringSubscriptions();
   }
 
