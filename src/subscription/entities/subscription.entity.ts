@@ -4,6 +4,7 @@ import { PgMainEntity } from 'src/main-classes/mainEntity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 
 export enum SubscriptionType {
   MONTHLY_GYM = 'monthly_gym',
@@ -48,4 +49,7 @@ export class SubscriptionEntity extends PgMainEntity {
 
   @OneToMany(() => MemberEntity, (member) => member.subscription)
   members: MemberEntity[];
+
+  @Column('text', { nullable: true })
+  currency: Currency;
 }

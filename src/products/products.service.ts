@@ -21,6 +21,7 @@ import { MediaEntity } from 'src/media/media.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { TransactionService } from 'src/transactions/transaction.service';
 import { ProductsOffersEntity } from './products-offers.entity';
+import { Currency } from 'src/common/enums/currency.enum';
 
 @Injectable()
 export class ProductsService {
@@ -132,6 +133,7 @@ export class ProductsService {
       images: [image],
       gym: gym,
       stock: createProductDto.stock,
+      currency: createProductDto.currency ?? Currency.USD,
     });
     const product = await this.productRepository.save(createProductModel);
     return {
@@ -183,6 +185,8 @@ export class ProductsService {
       product.description = updateProductDto.description;
     if (updateProductDto.stock !== undefined)
       product.stock = updateProductDto.stock;
+    if (updateProductDto.currency !== undefined)
+      product.currency = updateProductDto.currency;
     if (updateProductDto.code !== undefined) {
       if (updateProductDto.code) {
         const exists = await this.productRepository.findOne({

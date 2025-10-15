@@ -93,6 +93,7 @@ export class RevenueService {
       revenue: revenue,
       date: dto.date ? new Date(dto.date) : new Date(),
       offer: offer,
+      currency: product?.currency ?? dto.currency,
     });
     revenue.transaction = transaction;
 

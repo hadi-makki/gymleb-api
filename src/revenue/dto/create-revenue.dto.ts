@@ -7,6 +7,8 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { Currency } from 'src/common/enums/currency.enum';
 
 export class CreateRevenueDto {
   @ApiProperty()
@@ -48,4 +50,9 @@ export class CreateRevenueDto {
   @IsOptional()
   @IsString()
   offerId?: string;
+
+  @ApiProperty({ required: false, enum: Currency })
+  @IsOptional()
+  @IsEnum(Currency)
+  currency?: Currency;
 }

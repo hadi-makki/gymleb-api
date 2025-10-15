@@ -7,6 +7,8 @@ import {
   IsString,
   Max,
 } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { Currency } from 'src/common/enums/currency.enum';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -56,6 +58,11 @@ export class CreateProductDto {
   @IsNumber()
   @Max(1000000, { message: 'Stock cannot exceed 1,000,000' })
   stock: number;
+
+  @ApiProperty({ required: false, enum: Currency })
+  @IsOptional()
+  @IsEnum(Currency)
+  currency?: Currency;
 }
 
 export class UpdateProductDto {
@@ -107,6 +114,11 @@ export class UpdateProductDto {
   @IsNumber()
   @Max(1000000, { message: 'Stock cannot exceed 1,000,000' })
   stock?: number;
+
+  @ApiProperty({ required: false, enum: Currency })
+  @IsOptional()
+  @IsEnum(Currency)
+  currency?: Currency;
 }
 
 export class UploadFileDto {
