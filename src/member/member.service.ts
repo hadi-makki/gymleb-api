@@ -1200,6 +1200,7 @@ export class MemberService {
 
     // Reset birthday handled on renewal
     member.isBirthdayHandled = false;
+    member.isExpired = false;
     await this.memberModel.save(member);
 
     let checkSubscription;
@@ -1541,42 +1542,101 @@ export class MemberService {
     onlyNotNotified: boolean = false,
     gender?: Gender,
   ) {
-    // OPTIMIZATION: Use simple pagination with isExpired flag
-    const res = await paginate(
-      {
-        limit,
-        page,
-        search,
-        path: 'phone',
-      },
-      this.memberModel,
-      {
-        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
-        sortableColumns: ['createdAt', 'updatedAt', 'name', 'phone'],
-        searchableColumns: ['name', 'phone', 'email'],
-        defaultSortBy: [['createdAt', 'DESC']],
-        where: {
-          gym: { id: gymId },
-          isExpired: true, // OPTIMIZATION: Use the maintained flag instead of complex queries
-          ...(onlyNotNotified && { isNotified: false }),
-          ...(gender && { gender }),
-        },
-        filterableColumns: {
-          name: [FilterOperator.ILIKE],
-          phone: [FilterOperator.ILIKE],
-          email: [FilterOperator.ILIKE],
-        },
-        maxLimit: 100,
-      },
-    );
+    // SAFER METHOD: Determine expiration via transactions (no active subscription)
+    // Phase 1: Build a subquery to get latest subscription tx per member
+    const now = new Date();
 
-    // OPTIMIZATION: Use batch processing for returnMember calls
+    // Build IDs query to avoid pagination issues with joins
+    let idsQb = this.memberModel
+      .createQueryBuilder('m')
+      .select(['m.id AS id', 'm.createdAt AS createdAt'])
+      .leftJoin('m.gym', 'gym')
+      .where('gym.id = :gymId', { gymId });
+
+    if (onlyNotNotified) {
+      idsQb = idsQb.andWhere('m.isNotified = false');
+    }
+    if (gender) {
+      idsQb = idsQb.andWhere('m.gender = :gender', { gender });
+    }
+    if (search) {
+      idsQb = idsQb.andWhere(
+        '(m.name ILIKE :search OR m.phone ILIKE :search OR m.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Join latest subscription transaction and filter to members with no active subscription
+    idsQb = idsQb
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('t."memberId"', 'memberId')
+            .addSelect('MAX(t."createdAt")', 'lastCreatedAt')
+            .from('transactions', 't')
+            .where('t.type = :subscriptionType', {
+              subscriptionType: TransactionType.SUBSCRIPTION,
+            })
+            .groupBy('t."memberId"'),
+        'latest',
+        'latest."memberId" = m.id',
+      )
+      .leftJoin(
+        'transactions',
+        'tx',
+        'tx."memberId" = m.id AND tx.type = :subscriptionType AND tx."createdAt" = latest."lastCreatedAt"',
+        { subscriptionType: TransactionType.SUBSCRIPTION },
+      )
+      .andWhere(
+        '(tx.id IS NULL OR tx."endDate" <= :now OR tx."isInvalidated" = true)',
+        { now },
+      );
+
+    // Count distinct members
+    const totalItems = await idsQb.distinct(true).getCount();
+
+    // Pagination
+    const offset = (page - 1) * limit;
+    const pagedIdsRaw = await idsQb
+      .orderBy('m.createdAt', 'DESC')
+      .offset(offset)
+      .limit(limit)
+      .getRawMany();
+
+    const pagedIds = pagedIdsRaw.map((r: any) => r.id);
+
+    if (pagedIds.length === 0) {
+      return {
+        data: [],
+        meta: {
+          itemsPerPage: limit,
+          totalItems,
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit) || 1,
+        },
+      } as any;
+    }
+
+    // Phase 2: Fetch full entities with relations for those IDs
+    const members = await this.memberModel.find({
+      where: { id: In(pagedIds) },
+      relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const res = {
+      data: members,
+      meta: {
+        itemsPerPage: limit,
+        totalItems,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit) || 1,
+      },
+    };
+
     const items = await this.buildMembersDtoBatch(res.data);
 
-    return {
-      ...res,
-      data: items,
-    };
+    return { ...res, data: items };
   }
 
   async getMe(id: string) {
