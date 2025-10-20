@@ -36,6 +36,7 @@ export class RequestLogsService {
         statusCode: [FilterOperator.EQ, FilterOperator.GTE, FilterOperator.LTE],
         isError: [FilterOperator.EQ],
         isSlow: [FilterOperator.EQ],
+        logType: [FilterOperator.EQ],
       },
 
       ...(where && { where }),

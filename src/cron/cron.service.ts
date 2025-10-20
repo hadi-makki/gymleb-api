@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { MemberService } from '../member/member.service';
 import { TwilioService } from '../twilio/twilio.service';
 import { addDays } from 'date-fns';
+import { RequestLogsService } from '../request-logs/request-logs.service';
+import { LogType } from '../request-logs/request-log.entity';
 
 @Injectable()
 export class CronService implements OnApplicationBootstrap {
@@ -23,7 +25,37 @@ export class CronService implements OnApplicationBootstrap {
     private readonly twilioService: TwilioService,
     private readonly memberService: MemberService,
     private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly requestLogsService: RequestLogsService,
   ) {}
+
+  private async logCronError(
+    cronName: string,
+    error: Error,
+    additionalData?: any,
+  ) {
+    try {
+      await this.requestLogsService.create({
+        method: 'CRON',
+        url: `cron://${cronName}`,
+        statusCode: 500,
+        durationMs: 0,
+        deviceId: null,
+        ip: null,
+        country: null,
+        city: null,
+        headers: null,
+        requestBody: additionalData ? JSON.stringify(additionalData) : null,
+        queryParams: null,
+        routeParams: null,
+        isError: true,
+        isSlow: false,
+        resolveStatus: 'pending' as any,
+        logType: LogType.CRON,
+      });
+    } catch (logError) {
+      this.logger.error('Failed to log cron error:', logError);
+    }
+  }
 
   onApplicationBootstrap() {
     const logCrons = () => {
@@ -122,7 +154,16 @@ export class CronService implements OnApplicationBootstrap {
     timeZone: 'Asia/Beirut', // Lebanon timezone
   })
   async notifyMonthlyMembersReminder() {
-    await this.memberService.notifyMembersWithExpiringSubscriptions();
+    try {
+      await this.memberService.notifyMembersWithExpiringSubscriptions();
+      this.logger.log('Monthly members reminder cron completed successfully');
+    } catch (error) {
+      this.logger.error('Monthly members reminder cron failed:', error);
+      await this.logCronError(
+        'notify-monthly-members-reminder',
+        error as Error,
+      );
+    }
   }
 
   // @Cron('0 7-23/4 * * *', {
@@ -138,12 +179,20 @@ export class CronService implements OnApplicationBootstrap {
     timeZone: 'Asia/Beirut',
   })
   async processBirthdays() {
-    const gyms = await this.gymModel.find({
-      where: { enableBirthdayAutomation: true },
-      relations: { ownerSubscriptionType: true },
-    });
-    for (const gym of gyms) {
-      await this.memberService.processBirthdayAutomationForGym(gym);
+    try {
+      const gyms = await this.gymModel.find({
+        where: { enableBirthdayAutomation: true },
+        relations: { ownerSubscriptionType: true },
+      });
+      for (const gym of gyms) {
+        await this.memberService.processBirthdayAutomationForGym(gym);
+      }
+      this.logger.log(
+        `Birthday automation cron completed successfully for ${gyms.length} gyms`,
+      );
+    } catch (error) {
+      this.logger.error('Birthday automation cron failed:', error);
+      await this.logCronError('birthday-automation', error as Error);
     }
   }
 
@@ -152,6 +201,12 @@ export class CronService implements OnApplicationBootstrap {
     timeZone: 'Asia/Beirut',
   })
   async checkExpiredMembers() {
-    await this.memberService.syncExpiredMembersFlag();
+    try {
+      await this.memberService.syncExpiredMembersFlag();
+      this.logger.log('Check expired members cron completed successfully');
+    } catch (error) {
+      this.logger.error('Check expired members cron failed:', error);
+      await this.logCronError('check-expired-members', error as Error);
+    }
   }
 }

@@ -12,6 +12,11 @@ export enum ResolveStatus {
   RESOLVED = 'resolved',
 }
 
+export enum LogType {
+  API = 'api',
+  CRON = 'cron',
+}
+
 @Entity('request_logs')
 export class RequestLogEntity extends PgMainEntity {
   @Column({ type: 'varchar', length: 10 })
@@ -58,4 +63,7 @@ export class RequestLogEntity extends PgMainEntity {
 
   @Column({ type: 'text', default: ResolveStatus.PENDING })
   resolveStatus: ResolveStatus;
+
+  @Column({ type: 'text', default: LogType.API })
+  logType: LogType;
 }

@@ -20,6 +20,8 @@ import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { MemberModule } from '../member/member.module';
 import { TwilioModule } from '../twilio/twilio.module';
+import { RequestLogEntity } from '../request-logs/request-log.entity';
+import { RequestLogsService } from '../request-logs/request-logs.service';
 import { CronController } from './cron.controller';
 import { CronService } from './cron.service';
 
@@ -38,6 +40,7 @@ import { CronService } from './cron.service';
       OwnerSubscriptionTypeEntity,
       RevenueEntity,
       ExpenseEntity,
+      RequestLogEntity,
     ]),
     TwilioModule,
     MemberModule,
@@ -48,7 +51,12 @@ import { CronService } from './cron.service';
     OwnerSubscriptionsModule,
   ],
   controllers: [CronController],
-  providers: [CronService, MemberService, TransactionService],
+  providers: [
+    CronService,
+    MemberService,
+    TransactionService,
+    RequestLogsService,
+  ],
   exports: [CronService],
 })
 export class CronModule {}
