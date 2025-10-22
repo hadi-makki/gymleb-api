@@ -299,6 +299,53 @@ export class MemberController {
     );
   }
 
+  @Get('export/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  async exportMembers(
+    @User() manager: ManagerEntity,
+    @Param('gymId') gymId: string,
+    @Res() res: Response,
+    @Query('search') search?: string,
+    @Query('expiringInDays') expiringInDays?: string,
+    @Query('gender') gender?: Gender,
+  ) {
+    const { buffer, filename } = await this.memberService.exportMembersXlsx(
+      manager,
+      gymId,
+      search,
+      expiringInDays ? Number(expiringInDays) : undefined,
+      gender,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
+  }
+
+  @Get('expired/export/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  async exportExpiredMembers(
+    @Param('gymId') gymId: string,
+    @Res() res: Response,
+    @Query('search') search?: string,
+    @Query('gender') gender?: Gender,
+  ) {
+    const { buffer, filename } =
+      await this.memberService.exportExpiredMembersXlsx(gymId, search, gender);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
+  }
+
   @Get('me/:id')
   async getMe(@Param('id') id: string) {
     return await this.memberService.getMe(id);

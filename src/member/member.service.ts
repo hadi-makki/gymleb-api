@@ -47,6 +47,8 @@ import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 import { format } from 'date-fns';
 import { IsNull } from 'typeorm';
+import { buildMembersWorkbook, MemberExportRow } from 'src/utils/xlsx.util';
+import { format as dateFnsFormat } from 'date-fns';
 
 @Injectable()
 export class MemberService {
@@ -1769,6 +1771,179 @@ export class MemberService {
       throw new NotFoundException('Member not found');
     }
     return await this.returnMember(member);
+  }
+
+  async exportMembersXlsx(
+    manager: ManagerEntity,
+    gymId: string,
+    search?: string,
+    expiringInDays?: number,
+    gender?: Gender,
+  ) {
+    // Reuse the base of findAll but without pagination
+    let idsQuery = this.memberModel
+      .createQueryBuilder('member')
+      .select('member.id', 'id')
+      .leftJoin('member.gym', 'gym')
+      .where('gym.id = :gymId', { gymId });
+
+    if (search) {
+      idsQuery.andWhere(
+        '(member.name ILIKE :search OR member.phone ILIKE :search OR member.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+    if (gender) {
+      idsQuery.andWhere('member.gender = :gender', { gender });
+    }
+    if (expiringInDays !== undefined) {
+      const today = new Date();
+      const todayStr = dateFnsFormat(startOfDay(today), 'yyyy-MM-dd');
+      const endDate = addDays(today, expiringInDays);
+      const endDateStr = dateFnsFormat(endOfDay(endDate), 'yyyy-MM-dd');
+      idsQuery
+        .leftJoin('member.transactions', 'transactions')
+        .andWhere('transactions.type = :transactionType', {
+          transactionType: 'subscription',
+        })
+        .andWhere('transactions.isInvalidated = :isInvalidated', {
+          isInvalidated: false,
+        })
+        .andWhere('DATE(transactions.endDate) >= :todayDate', {
+          todayDate: todayStr,
+        })
+        .andWhere('DATE(transactions.endDate) <= :endDate', {
+          endDate: endDateStr,
+        });
+    }
+
+    const idsRaw = await idsQuery
+      .orderBy('member.createdAt', 'DESC')
+      .getRawMany();
+    const memberIds = idsRaw.map((r: any) => r.id);
+
+    const members = memberIds.length
+      ? await this.memberModel.find({
+          where: { id: In(memberIds) },
+          relations: ['gym', 'subscription', 'transactions'],
+          order: { createdAt: 'DESC' },
+        })
+      : [];
+
+    const dtos = await this.buildMembersDtoBatch(members);
+
+    const rows: MemberExportRow[] = dtos.map((m) => {
+      // latest ending subscription
+      const subs = (m as any).currentActiveSubscriptions || [];
+      const last = (m as any).lastSubscription;
+      const latest = subs?.length
+        ? subs.reduce(
+            (a: any, b: any) =>
+              new Date(a.endDate) > new Date(b.endDate) ? a : b,
+            subs[0],
+          )
+        : last;
+      const endDate = latest?.endDate ? new Date(latest.endDate) : undefined;
+      const isPaid =
+        latest?.status === 'paid' ||
+        latest?.status === 1 ||
+        latest?.status === 'PAID';
+      const hasActive = subs && subs.length > 0;
+      return {
+        name: m.name,
+        gender: (m.gender as any) || '',
+        phone: m.phone || '',
+        membershipType: latest?.title || latest?.subscription?.title || null,
+        expiresAt: endDate ? dateFnsFormat(endDate, 'dd/MM/yyyy') : null,
+        status: hasActive ? 'Active' : 'Inactive',
+        paymentStatus: isPaid ? 'Paid' : 'Unpaid',
+      };
+    });
+
+    const buffer = await buildMembersWorkbook(rows, 'Members');
+    const filename = `members-${dateFnsFormat(new Date(), 'yyyyMMdd')}.xlsx`;
+    return { buffer, filename };
+  }
+
+  async exportExpiredMembersXlsx(
+    gymId: string,
+    search?: string,
+    gender?: Gender,
+  ) {
+    // Reuse getExpiredMembers without pagination
+    let idsQb = this.memberModel
+      .createQueryBuilder('m')
+      .select(['m.id AS id', 'm.createdAt AS createdAt'])
+      .leftJoin('m.gym', 'gym')
+      .where('gym.id = :gymId', { gymId });
+
+    if (gender) idsQb = idsQb.andWhere('m.gender = :gender', { gender });
+    if (search) {
+      idsQb = idsQb.andWhere(
+        '(m.name ILIKE :search OR m.phone ILIKE :search OR m.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Filter to expired via latest transaction state
+    const now = new Date();
+    idsQb = idsQb
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('t."memberId"', 'memberId')
+            .addSelect('MAX(t."createdAt")', 'lastCreatedAt')
+            .from('transactions', 't')
+            .where('t.type = :subscriptionType', {
+              subscriptionType: TransactionType.SUBSCRIPTION,
+            })
+            .groupBy('t."memberId"'),
+        'latest',
+        'latest."memberId" = m.id',
+      )
+      .leftJoin(
+        'transactions',
+        'tx',
+        'tx."memberId" = m.id AND tx.type = :subscriptionType AND tx."createdAt" = latest."lastCreatedAt"',
+        { subscriptionType: TransactionType.SUBSCRIPTION },
+      )
+      .andWhere(
+        '(tx.id IS NULL OR tx."endDate" <= :now OR tx."isInvalidated" = true)',
+        { now },
+      );
+
+    const ids = await idsQb.orderBy('m.createdAt', 'DESC').getRawMany();
+    const memberIds = ids.map((r: any) => r.id);
+    const members = memberIds.length
+      ? await this.memberModel.find({
+          where: { id: In(memberIds) },
+          relations: ['gym', 'subscription', 'transactions'],
+          order: { createdAt: 'DESC' },
+        })
+      : [];
+    const dtos = await this.buildMembersDtoBatch(members);
+
+    const rows: MemberExportRow[] = dtos.map((m) => {
+      const last = (m as any).lastSubscription;
+      const endDate = last?.endDate ? new Date(last.endDate) : undefined;
+      const isPaid =
+        last?.status === 'paid' ||
+        last?.status === 1 ||
+        last?.status === 'PAID';
+      return {
+        name: m.name,
+        gender: (m.gender as any) || '',
+        phone: m.phone || '',
+        membershipType: last?.title || last?.subscription?.title || null,
+        expiresAt: endDate ? dateFnsFormat(endDate, 'dd/MM/yyyy') : null,
+        status: 'Inactive',
+        paymentStatus: isPaid ? 'Paid' : 'Unpaid',
+      };
+    });
+
+    const buffer = await buildMembersWorkbook(rows, 'Expired Members');
+    const filename = `expired-members-${dateFnsFormat(new Date(), 'yyyyMMdd')}.xlsx`;
+    return { buffer, filename };
   }
 
   async checkUserSubscriptionExpired(id: string) {
