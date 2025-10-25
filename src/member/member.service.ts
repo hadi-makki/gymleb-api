@@ -406,12 +406,6 @@ export class MemberService {
       throw new NotFoundException('Subscription not found');
     }
 
-    const checkIfNameExists = await this.memberModel.findOne({
-      where: {
-        name: createMemberDto.name,
-        gym: { id: gym.id },
-      },
-    });
     const checkIfPhoneExists = createMemberDto.phoneNumber
       ? await this.memberModel.find({
           where: {
@@ -430,10 +424,6 @@ export class MemberService {
           },
         })
       : false;
-
-    if (checkIfNameExists) {
-      throw new BadRequestException('Name already exists');
-    }
 
     if (
       checkIfPhoneExists.length > 0 &&

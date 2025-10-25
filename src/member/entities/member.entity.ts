@@ -18,7 +18,7 @@ import { TokenEntity } from 'src/token/token.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { MemberAttendingDaysEntity } from './member-attending-days.entity';
 import { MemberReservationEntity } from './member-reservation.entity';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { MemberTrainingProgramEntity } from './member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 

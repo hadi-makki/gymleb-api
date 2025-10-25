@@ -1,4 +1,4 @@
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
