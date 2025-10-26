@@ -44,4 +44,13 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsNumber()
   sessionPrice?: number;
+
+  @ApiProperty({
+    description: 'Duration of the session in hours (overrides PT default)',
+    example: 1.5,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  sessionDurationHours?: number;
 }

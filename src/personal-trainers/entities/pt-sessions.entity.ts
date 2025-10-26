@@ -57,6 +57,9 @@ export class PTSessionEntity extends PgMainEntity {
   @Column('float', { nullable: true })
   sessionPrice: number;
 
+  @Column('decimal', { nullable: true })
+  sessionDurationHours: number;
+
   @OneToOne(() => TransactionEntity, (transaction) => transaction.ptSession, {
     onDelete: 'CASCADE',
   })

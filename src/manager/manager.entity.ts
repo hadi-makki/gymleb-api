@@ -91,6 +91,17 @@ export class ManagerEntity extends PgMainEntity {
   @OneToMany(() => RevenueEntity, (revenue) => revenue.createdBy)
   createdRevenues: RevenueEntity[];
 
+  @Column('decimal', { default: 1 })
+  ptSessionDurationHours: number;
+
+  @Column('int', { default: 1 })
+  maxMembersPerSession: number;
+
+  @Column('simple-array', {
+    default: 'monday,tuesday,wednesday,thursday,friday',
+  })
+  workingDays: string[];
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,

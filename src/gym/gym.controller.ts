@@ -48,6 +48,7 @@ import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { UpdateShowPersonalTrainersDto } from './dto/update-show-personal-trainers.dto';
 import { UpdateAllowUserSignupDto } from './dto/update-allow-user-signup.dto';
 import { UpdateBirthdayAutomationDto } from './dto/update-birthday-automation.dto';
+import { UpdateAllowMembersSetPtTimesDto } from './dto/update-allow-members-set-pt-times.dto';
 import { UpdateMonthlyReminderDto } from './dto/update-monthly-reminder.dto';
 import { UpdateManualMessagesDto } from './dto/update-manual-messages.dto';
 import { UpdateAllowDuplicateMemberPhonesDto } from './dto/update-allow-duplicate-member-phones.dto';
@@ -1207,6 +1208,25 @@ export class GymController {
     return this.gymService.updateAllowUserWithoutPhoneNumber(
       gymId,
       body.allowUserWithoutPhoneNumber,
+    );
+  }
+
+  @Patch('allow-members-set-pt-times/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Update gym allow members set PT times setting' })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ApiBody({ type: UpdateAllowMembersSetPtTimesDto })
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  updateAllowMembersSetPtTimes(
+    @Param('gymId') gymId: string,
+    @Body() body: UpdateAllowMembersSetPtTimesDto,
+  ) {
+    return this.gymService.updateAllowMembersSetPtTimes(
+      gymId,
+      body.allowMembersSetPtTimes,
     );
   }
 }

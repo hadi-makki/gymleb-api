@@ -1720,6 +1720,90 @@ export class MemberService {
     return sessions;
   }
 
+  async getAllMyPtSessions(member: MemberEntity) {
+    const sessions = await this.ptSessionRepository.find({
+      where: {
+        members: { id: member.id },
+      },
+      relations: { members: true, personalTrainer: true, gym: true },
+      order: { sessionDate: 'ASC' },
+    });
+    return sessions;
+  }
+
+  async updateMyPtSessionDate(
+    member: MemberEntity,
+    gymId: string,
+    sessionId: string,
+    newDate: string,
+    timezone?: string,
+  ) {
+    // Check if gym allows member self-scheduling
+    const gym = await this.gymModel.findOne({
+      where: isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    if (!gym.allowMembersSetPtTimes) {
+      throw new BadRequestException(
+        'Your gym does not allow member self-scheduling for PT sessions',
+      );
+    }
+
+    // Find the session and validate member is part of it
+    const session = await this.ptSessionRepository.findOne({
+      where: {
+        id: sessionId,
+        gym: { id: gym.id },
+        members: { id: member.id },
+      },
+      relations: ['personalTrainer', 'members'],
+    });
+
+    if (!session) {
+      throw new NotFoundException(
+        'Session not found or you are not enrolled in this session',
+      );
+    }
+
+    // Get PT's settings
+    const pt = session.personalTrainer;
+    const sessionDuration =
+      session.sessionDurationHours || pt.ptSessionDurationHours;
+
+    // Convert date to UTC if timezone is provided
+    let sessionDate: Date;
+
+    sessionDate = new Date(newDate);
+
+    // Check PT availability
+    const availability = await this.personalTrainersService.checkPtAvailability(
+      pt.id,
+      sessionDate,
+      sessionDuration,
+      sessionId, // Exclude current session from overlap check
+    );
+
+    if (!availability.isAvailable) {
+      throw new BadRequestException(
+        availability.reason ||
+          `This time slot is fully booked for your personal trainer (${availability.currentCapacity}/${availability.maxCapacity} members)`,
+      );
+    }
+
+    // Update the session date
+    await this.ptSessionRepository.update(sessionId, {
+      sessionDate,
+    });
+
+    return {
+      message: 'Session date updated successfully',
+    };
+  }
+
   async getMember(id: string) {
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid member id');

@@ -1,23 +1,31 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
+import {
+  addHours,
+  isAfter,
+  isBefore,
+  isWithinInterval,
+  format,
+  parse,
+} from 'date-fns';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ManagerService } from 'src/manager/manager.service';
 import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionService } from 'src/transactions/transaction.service';
-import { Between, ILike, In, Repository } from 'typeorm';
+import { Between, ILike, In, IsNull, Not, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Permissions } from '../decorators/roles/role.enum';
 import { NotFoundException } from '../error/not-found-error';
 import { AddPersonalTrainerDto } from './dto/add-personal-trainer.dto';
+import { BulkUpdateSessionDatesDto } from './dto/bulk-update-session-dates.dto';
 import { CreatePersonalTrainerDto } from './dto/create-personal-trainer.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
-import { BulkUpdateSessionDatesDto } from './dto/bulk-update-session-dates.dto';
 import { PTSessionEntity } from './entities/pt-sessions.entity';
-import { isUUID } from 'class-validator';
 
 @Injectable()
 export class PersonalTrainersService {
@@ -421,6 +429,9 @@ export class PersonalTrainersService {
       if (updatePersonalTrainerDto.shiftEndTime) {
         personalTrainer.shiftEndTime = updatePersonalTrainerDto.shiftEndTime;
       }
+      if (updatePersonalTrainerDto.workingDays) {
+        personalTrainer.workingDays = updatePersonalTrainerDto.workingDays;
+      }
       if (updatePersonalTrainerDto.password) {
         personalTrainer.password = await ManagerEntity.hashPassword(
           updatePersonalTrainerDto.password,
@@ -441,6 +452,9 @@ export class PersonalTrainersService {
       }
       if (updatePersonalTrainerDto.shiftEndTime) {
         personalTrainer.shiftEndTime = updatePersonalTrainerDto.shiftEndTime;
+      }
+      if (updatePersonalTrainerDto.workingDays) {
+        personalTrainer.workingDays = updatePersonalTrainerDto.workingDays;
       }
       if (updatePersonalTrainerDto.password) {
         personalTrainer.password = await ManagerEntity.hashPassword(
@@ -585,6 +599,7 @@ export class PersonalTrainersService {
         gym: gym,
         sessionPrice: createSessionDto.sessionPrice,
         sessionDate: !setDateDone ? sessionDate : null,
+        sessionDurationHours: createSessionDto.sessionDurationHours,
       });
       const createdSession = await this.sessionEntity.save(createSessionModel);
       // Create a separate transaction per member for this session
@@ -792,10 +807,202 @@ export class PersonalTrainersService {
       updateData.sessionPrice = updateSessionDto.sessionPrice;
     }
 
+    // Update session duration if provided
+    if (updateSessionDto.sessionDurationHours !== undefined) {
+      updateData.sessionDurationHours = updateSessionDto.sessionDurationHours;
+    }
+
     await this.sessionEntity.save({ ...session, ...updateData });
 
     return {
       message: 'Session updated successfully',
+    };
+  }
+
+  async checkPtAvailability(
+    ptId: string,
+    date: Date,
+    durationHours: number,
+    excludeSessionId?: string,
+  ): Promise<{
+    isAvailable: boolean;
+    currentCapacity: number;
+    maxCapacity: number;
+    reason?: string;
+  }> {
+    // Get PT's schedule and capacity info
+    const pt = await this.managerEntity.findOne({
+      where: { id: ptId },
+      select: [
+        'maxMembersPerSession',
+        'workingDays',
+        'shiftStartTime',
+        'shiftEndTime',
+      ],
+    });
+
+    if (!pt) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+
+    const maxCapacity = pt.maxMembersPerSession;
+    const workingDays = pt.workingDays || [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+    ];
+
+    // Check if the requested day is in PT's working days
+    const dayOfWeek = format(date, 'EEEE').toLowerCase();
+    console.log(
+      'Checking day:',
+      dayOfWeek,
+      'against working days:',
+      workingDays,
+    );
+    if (!workingDays.includes(dayOfWeek)) {
+      return {
+        isAvailable: false,
+        currentCapacity: 0,
+        maxCapacity,
+        reason: `PT is not available on ${dayOfWeek}s`,
+      };
+    }
+
+    // Check if the requested time is within PT's shift hours
+    if (pt.shiftStartTime && pt.shiftEndTime) {
+      // The date comes as UTC, but we need to compare with local time
+      // Format the date in local timezone for comparison
+      const sessionTime = format(date, 'HH:mm');
+      const sessionEndTime = format(addHours(date, durationHours), 'HH:mm');
+
+      // Create Date objects for proper time comparison
+      const today = new Date();
+      const sessionTimeDate = parse(sessionTime, 'HH:mm', today);
+      const sessionEndTimeDate = parse(sessionEndTime, 'HH:mm', today);
+      const shiftStartDate = parse(pt.shiftStartTime, 'HH:mm', today);
+      const shiftEndDate = parse(pt.shiftEndTime, 'HH:mm', today);
+
+      // Handle case where shift ends at midnight (00:00) - it means end of day
+      if (pt.shiftEndTime === '00:00') {
+        // If shift ends at midnight, it means it goes until end of day
+        const endOfDay = parse('23:59', 'HH:mm', today);
+        if (
+          isBefore(sessionTimeDate, shiftStartDate) ||
+          isAfter(sessionEndTimeDate, endOfDay)
+        ) {
+          return {
+            isAvailable: false,
+            currentCapacity: 0,
+            maxCapacity,
+            reason: `PT is only available from ${pt.shiftStartTime} to 23:59`,
+          };
+        }
+      } else {
+        // Normal time range comparison
+        if (
+          isBefore(sessionTimeDate, shiftStartDate) ||
+          isAfter(sessionEndTimeDate, shiftEndDate)
+        ) {
+          return {
+            isAvailable: false,
+            currentCapacity: 0,
+            maxCapacity,
+            reason: `PT is only available from ${pt.shiftStartTime} to ${pt.shiftEndTime}`,
+          };
+        }
+      }
+    }
+
+    // Calculate time range for the requested session using date-fns
+    const sessionStart = date;
+    const sessionEnd = addHours(date, durationHours);
+
+    // Find all sessions for this PT that are not cancelled and have a date
+    const allSessions = await this.sessionEntity.find({
+      where: {
+        personalTrainer: { id: ptId },
+        isCancelled: false,
+        sessionDate: Not(IsNull()),
+        ...(excludeSessionId && { id: Not(excludeSessionId) }),
+      },
+      relations: ['members'],
+    });
+
+    // Filter sessions that overlap with the requested time range
+    const overlappingSessions = allSessions.filter((session) => {
+      if (!session.sessionDate) return false;
+
+      const sessionDuration = session.sessionDurationHours || 1;
+      const existingSessionStart = session.sessionDate;
+      const existingSessionEnd = addHours(session.sessionDate, sessionDuration);
+
+      // Check if sessions overlap using date-fns
+      return (
+        isWithinInterval(sessionStart, {
+          start: existingSessionStart,
+          end: existingSessionEnd,
+        }) ||
+        isWithinInterval(sessionEnd, {
+          start: existingSessionStart,
+          end: existingSessionEnd,
+        }) ||
+        (isBefore(existingSessionStart, sessionStart) &&
+          isAfter(existingSessionEnd, sessionEnd))
+      );
+    });
+
+    // Count total unique members across all overlapping sessions
+    const allMemberIds = new Set<string>();
+    overlappingSessions.forEach((session) => {
+      session.members.forEach((member) => {
+        allMemberIds.add(member.id);
+      });
+    });
+
+    const currentCapacity = allMemberIds.size;
+    const isAvailable = currentCapacity < maxCapacity;
+
+    return {
+      isAvailable,
+      currentCapacity,
+      maxCapacity,
+      reason: !isAvailable
+        ? `PT is at full capacity (${currentCapacity}/${maxCapacity})`
+        : undefined,
+    };
+  }
+
+  async getPtAvailability(ptId: string) {
+    const pt = await this.managerEntity.findOne({
+      where: { id: ptId },
+      select: [
+        'workingDays',
+        'shiftStartTime',
+        'shiftEndTime',
+        'ptSessionDurationHours',
+        'maxMembersPerSession',
+      ],
+    });
+
+    if (!pt) {
+      throw new NotFoundException('Personal trainer not found');
+    }
+
+    return {
+      workingDays: pt.workingDays || [
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+      ],
+      shiftStartTime: pt.shiftStartTime,
+      shiftEndTime: pt.shiftEndTime,
+      sessionDurationHours: pt.ptSessionDurationHours,
+      maxMembersPerSession: pt.maxMembersPerSession,
     };
   }
 
@@ -873,7 +1080,7 @@ export class PersonalTrainersService {
    * Convert a local date/time to UTC using timezone offset calculation
    * This follows the same pattern as the DateTimePicker component and createSession method
    */
-  private convertLocalToUTC(localDate: Date, timezone?: string): Date {
+  convertLocalToUTC(localDate: Date, timezone?: string): Date {
     if (!timezone) {
       return localDate;
     }

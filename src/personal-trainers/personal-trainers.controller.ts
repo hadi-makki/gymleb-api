@@ -711,4 +711,14 @@ export class PersonalTrainersController {
       timezone,
     );
   }
+
+  @Get('availability/:ptId')
+  @ApiOperation({ summary: 'Get PT availability information' })
+  @ApiResponse({
+    status: 200,
+    description: 'PT availability information retrieved successfully',
+  })
+  async getPtAvailability(@Param('ptId') ptId: string) {
+    return await this.personalTrainersService.getPtAvailability(ptId);
+  }
 }

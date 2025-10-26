@@ -262,4 +262,7 @@ export class GymEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   allowUserWithoutPhoneNumber: boolean;
+
+  @Column('boolean', { default: false })
+  allowMembersSetPtTimes: boolean;
 }

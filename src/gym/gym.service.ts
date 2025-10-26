@@ -2796,6 +2796,23 @@ export class GymService {
     return gym;
   }
 
+  async updateAllowMembersSetPtTimes(
+    gymId: string,
+    allowMembersSetPtTimes: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({ where: { id: gymId } });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    gym.allowMembersSetPtTimes = allowMembersSetPtTimes;
+
+    await this.gymModel.save(gym);
+    return {
+      message: 'PT member control setting updated successfully',
+    };
+  }
+
   async updateSessionTimeInHours(gymId: string, sessionTimeInHours: number) {
     const gym = await this.gymModel.findOne({ where: { id: gymId } });
     if (!gym) {

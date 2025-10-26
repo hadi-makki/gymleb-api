@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
@@ -20,6 +21,7 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOperation,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ManagerEntity } from 'src/manager/manager.entity';
@@ -365,6 +367,38 @@ export class MemberController {
     @Param('gymId') gymId: string,
   ) {
     return await this.memberService.getMyPtSessions(member, gymId);
+  }
+
+  @Get('pt-sessions')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Get all my personal trainer sessions across all gyms',
+  })
+  async getAllMyPtSessions(@User() member: MemberEntity) {
+    return await this.memberService.getAllMyPtSessions(member);
+  }
+
+  @Patch('pt-sessions/:gymId/:sessionId/date')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Update my PT session date' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session date updated successfully',
+  })
+  async updateMyPtSessionDate(
+    @User() member: MemberEntity,
+    @Param('gymId') gymId: string,
+    @Param('sessionId') sessionId: string,
+    @Body() body: { date: string },
+    @Headers('timezone') timezone?: string,
+  ) {
+    return await this.memberService.updateMyPtSessionDate(
+      member,
+      gymId,
+      sessionId,
+      body.date,
+      timezone,
+    );
   }
 
   @Get(':id')
