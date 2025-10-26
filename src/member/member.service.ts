@@ -456,7 +456,6 @@ export class MemberService {
       await this.memberModel.save(member);
     }
 
-    console.log('this is the subscription', subscription);
     const subscriptionInstance =
       await this.transactionService.createSubscriptionInstance({
         member: member,
@@ -482,6 +481,8 @@ export class MemberService {
       createdNotificationSetting,
     );
     member.notificationSetting = savedNotificationSetting;
+    member.subscriptionStartDate = subscriptionInstance.startDate;
+    member.subscriptionEndDate = subscriptionInstance.endDate;
 
     await this.memberModel.save(member);
 
@@ -754,6 +755,8 @@ export class MemberService {
     gymId: string,
     expiringInDays?: number,
     gender?: Gender,
+    expirationStartDate?: string,
+    expirationEndDate?: string,
   ) {
     // Build a base query that selects only member.id to avoid pagination issues with joins
     let idsQuery = this.memberModel
@@ -776,7 +779,7 @@ export class MemberService {
       idsQuery.andWhere('member.gender = :gender', { gender });
     }
 
-    // Add expiration filter
+    // Add expiration filter - either expiringInDays or date range (mutually exclusive)
     if (expiringInDays !== undefined) {
       const today = new Date();
       const todayStr = format(startOfDay(today), 'yyyy-MM-dd');
@@ -797,6 +800,52 @@ export class MemberService {
         .andWhere('DATE(transactions.endDate) <= :endDate', {
           endDate: endDateStr,
         });
+    } else if (expirationStartDate || expirationEndDate) {
+      // Date range filter
+      idsQuery
+        .leftJoin('member.transactions', 'transactions')
+        .andWhere('transactions.type = :transactionType', {
+          transactionType: 'subscription',
+        })
+        .andWhere('transactions.isInvalidated = :isInvalidated', {
+          isInvalidated: false,
+        });
+
+      if (expirationStartDate && expirationEndDate) {
+        // Both dates provided - filter between dates (inclusive)
+        const startDateStr = format(
+          startOfDay(new Date(expirationStartDate)),
+          'yyyy-MM-dd',
+        );
+        const endDateStr = format(
+          endOfDay(new Date(expirationEndDate)),
+          'yyyy-MM-dd',
+        );
+        idsQuery
+          .andWhere('DATE(transactions.endDate) >= :startDate', {
+            startDate: startDateStr,
+          })
+          .andWhere('DATE(transactions.endDate) <= :endDate', {
+            endDate: endDateStr,
+          });
+      } else if (expirationStartDate) {
+        // Only start date provided - filter for that specific date
+        const startDateStr = format(
+          startOfDay(new Date(expirationStartDate)),
+          'yyyy-MM-dd',
+        );
+        const endDateStr = format(
+          endOfDay(new Date(expirationStartDate)),
+          'yyyy-MM-dd',
+        );
+        idsQuery
+          .andWhere('DATE(transactions.endDate) >= :startDate', {
+            startDate: startDateStr,
+          })
+          .andWhere('DATE(transactions.endDate) <= :endDate', {
+            endDate: endDateStr,
+          });
+      }
     }
 
     // Count distinct members to avoid duplicate counts due to joins
@@ -1283,6 +1332,9 @@ export class MemberService {
     member.allowedReservations = checkSubscription.allowedReservations ?? 0;
     member.usedReservations = 0;
 
+    member.subscriptionStartDate = createSubscriptionInstance.startDate;
+    member.subscriptionEndDate = createSubscriptionInstance.endDate;
+
     await this.memberModel.save(member);
 
     const getLatestGymSubscription =
@@ -1353,24 +1405,26 @@ export class MemberService {
     // Reset reservations counters when adding a new subscription instance
     member.allowedReservations = getSubscription.allowedReservations ?? 0;
     member.usedReservations = 0;
-    await this.memberModel.save(member);
 
-    console.log('forFree', forFree);
-    console.log('paidAmount', paidAmount);
-    await this.transactionService.createSubscriptionInstance({
-      member: member,
-      gym: checkGym,
-      subscription: getSubscription,
-      subscriptionType: getSubscription?.type,
-      amount: getSubscription?.price,
-      giveFullDay,
-      willPayLater,
-      startDate,
-      endDate,
-      paidAmount,
-      forFree,
-      isBirthdaySubscription,
-    });
+    const createSubscriptionInstance =
+      await this.transactionService.createSubscriptionInstance({
+        member: member,
+        gym: checkGym,
+        subscription: getSubscription,
+        subscriptionType: getSubscription?.type,
+        amount: getSubscription?.price,
+        giveFullDay,
+        willPayLater,
+        startDate,
+        endDate,
+        paidAmount,
+        forFree,
+        isBirthdaySubscription,
+      });
+
+    member.subscriptionEndDate = createSubscriptionInstance.endDate;
+
+    await this.memberModel.save(member);
     return {
       message: 'Subscription added to member successfully',
     };
@@ -1853,6 +1907,8 @@ export class MemberService {
     search?: string,
     expiringInDays?: number,
     gender?: Gender,
+    expirationStartDate?: string,
+    expirationEndDate?: string,
   ) {
     // Reuse the base of findAll but without pagination
     let idsQuery = this.memberModel
@@ -1870,6 +1926,7 @@ export class MemberService {
     if (gender) {
       idsQuery.andWhere('member.gender = :gender', { gender });
     }
+    // Add expiration filter - either expiringInDays or date range (mutually exclusive)
     if (expiringInDays !== undefined) {
       const today = new Date();
       const todayStr = dateFnsFormat(startOfDay(today), 'yyyy-MM-dd');
@@ -1889,6 +1946,52 @@ export class MemberService {
         .andWhere('DATE(transactions.endDate) <= :endDate', {
           endDate: endDateStr,
         });
+    } else if (expirationStartDate || expirationEndDate) {
+      // Date range filter
+      idsQuery
+        .leftJoin('member.transactions', 'transactions')
+        .andWhere('transactions.type = :transactionType', {
+          transactionType: 'subscription',
+        })
+        .andWhere('transactions.isInvalidated = :isInvalidated', {
+          isInvalidated: false,
+        });
+
+      if (expirationStartDate && expirationEndDate) {
+        // Both dates provided - filter between dates (inclusive)
+        const startDateStr = dateFnsFormat(
+          startOfDay(new Date(expirationStartDate)),
+          'yyyy-MM-dd',
+        );
+        const endDateStr = dateFnsFormat(
+          endOfDay(new Date(expirationEndDate)),
+          'yyyy-MM-dd',
+        );
+        idsQuery
+          .andWhere('DATE(transactions.endDate) >= :startDate', {
+            startDate: startDateStr,
+          })
+          .andWhere('DATE(transactions.endDate) <= :endDate', {
+            endDate: endDateStr,
+          });
+      } else if (expirationStartDate) {
+        // Only start date provided - filter for that specific date
+        const startDateStr = dateFnsFormat(
+          startOfDay(new Date(expirationStartDate)),
+          'yyyy-MM-dd',
+        );
+        const endDateStr = dateFnsFormat(
+          endOfDay(new Date(expirationStartDate)),
+          'yyyy-MM-dd',
+        );
+        idsQuery
+          .andWhere('DATE(transactions.endDate) >= :startDate', {
+            startDate: startDateStr,
+          })
+          .andWhere('DATE(transactions.endDate) <= :endDate', {
+            endDate: endDateStr,
+          });
+      }
     }
 
     const idsRaw = await idsQuery

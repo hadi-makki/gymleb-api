@@ -206,6 +206,12 @@ export class MemberEntity extends PgMainEntity {
   @Column('text', { nullable: true })
   programLink: string | null;
 
+  @Column('timestamp without time zone', { nullable: true })
+  subscriptionStartDate: Date | null;
+
+  @Column('timestamp without time zone', { nullable: true })
+  subscriptionEndDate: Date | null;
+
   static async isPasswordMatch(
     password: string,
     hashedPassword: string,
