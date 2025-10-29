@@ -148,7 +148,7 @@ export class CronService implements OnApplicationBootstrap {
     }
   }
 
-  @Cron('0 7-23/4 * * *', {
+  @Cron('0 10-20/2 * * *', {
     // @Cron(CronExpression.EVERY_10_SECONDS, {
     name: 'notify-monthly-members-reminder',
     timeZone: 'Asia/Beirut', // Lebanon timezone
