@@ -50,6 +50,7 @@ import { NotificationSettingsModule } from './notification-settings/notification
 import { ManagerNotificationSettingsModule } from './manager-notification-settings/manager-notification-settings.module';
 import { WhishTransactionsModule } from './whish-transactions/whish-transactions.module';
 import { DatabaseMigration } from './database.migration';
+import { LicenseModule } from './license/license.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { DatabaseMigration } from './database.migration';
     ManagerNotificationSettingsModule,
     WhishTransactionsModule,
     RequestLogsModule,
+    LicenseModule,
   ],
   controllers: [AppController],
   providers: [

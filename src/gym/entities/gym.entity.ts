@@ -265,4 +265,14 @@ export class GymEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   allowMembersSetPtTimes: boolean;
+
+  // Desktop license key fields
+  @Column('text', { nullable: true })
+  licenseKey: string | null;
+
+  @Column('timestamp', { nullable: true })
+  licenseKeyActivatedAt: Date | null;
+
+  @Column('timestamp', { nullable: true })
+  licenseKeyExpiresAt: Date | null;
 }
