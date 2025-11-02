@@ -51,6 +51,7 @@ import { ManagerNotificationSettingsModule } from './manager-notification-settin
 import { WhishTransactionsModule } from './whish-transactions/whish-transactions.module';
 import { DatabaseMigration } from './database.migration';
 import { LicenseModule } from './license/license.module';
+import { AppUpdateModule } from './app-update/app-update.module';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { LicenseModule } from './license/license.module';
     WhishTransactionsModule,
     RequestLogsModule,
     LicenseModule,
+    AppUpdateModule,
   ],
   controllers: [AppController],
   providers: [

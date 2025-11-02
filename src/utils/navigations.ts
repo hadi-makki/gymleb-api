@@ -209,6 +209,14 @@ export const navItems: NavItem[] = [
     items: [],
     roles: [Permissions.SuperAdmin],
   },
+  {
+    title: 'App Updates',
+    url: '/super-admin/app-updates',
+    icon: 'download',
+    isActive: false,
+    items: [],
+    roles: [Permissions.SuperAdmin],
+  },
 ];
 
 export const getNavItems = (permissions: Permissions[]) => {
