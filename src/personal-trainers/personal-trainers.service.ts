@@ -1866,7 +1866,9 @@ export class PersonalTrainersService {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const trainer = await this.managerEntity.findOne({ where: { id: trainerId } });
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
     if (!trainer) throw new NotFoundException('Personal trainer not found');
 
     const sessions = await this.sessionEntity.find({
@@ -1876,7 +1878,8 @@ export class PersonalTrainersService {
     });
 
     const statuses = (options?.statuses || []).map((s) => s.toLowerCase());
-    const wantEverything = options?.everything === true || statuses.length === 0;
+    const wantEverything =
+      options?.everything === true || statuses.length === 0;
 
     const rows: PTSessionsExportRow[] = sessions
       .filter((s) => {
@@ -1887,12 +1890,12 @@ export class PersonalTrainersService {
         const isCompleted = hasDate && this.isSessionCompletedByNow(s);
         const isNoDate = !hasDate;
 
-        const match = (
+        const match =
           (isUpcoming && statuses.includes('upcoming')) ||
-          (isNoDate && (statuses.includes('no-date') || statuses.includes('no_date'))) ||
+          (isNoDate &&
+            (statuses.includes('no-date') || statuses.includes('no_date'))) ||
           (isCompleted && statuses.includes('completed')) ||
-          (isCancelled && statuses.includes('cancelled'))
-        );
+          (isCancelled && statuses.includes('cancelled'));
         return match;
       })
       .map((s) => {
@@ -1911,21 +1914,26 @@ export class PersonalTrainersService {
         return {
           date: dateStr,
           time: timeStr,
-          trainer: `${trainer.firstName || ''} ${trainer.lastName || ''}`.trim(),
-          members: (s.members || []).map((m) => m.name).filter(Boolean).join(', '),
+          trainer:
+            `${trainer.firstName || ''} ${trainer.lastName || ''}`.trim(),
+          members: (s.members || [])
+            .map((m) => m.name)
+            .filter(Boolean)
+            .join(', '),
           price: s.sessionPrice ?? '',
-          durationHours: (s as any).sessionDurationHours ?? null,
           status,
-          createdAt: s.createdAt ? format(new Date(s.createdAt), 'dd/MM/yyyy') : null,
+          createdAt: s.createdAt
+            ? format(new Date(s.createdAt), 'dd/MM/yyyy')
+            : null,
         } as PTSessionsExportRow;
       });
 
-    const buffer = await buildPtSessionsWorkbook(rows, 'PT Sessions');
+    const buffer = await buildPtSessionsWorkbook(rows, 'All Sessions');
     const trainerName = `${trainer.firstName || ''}-${trainer.lastName || ''}`
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .toLowerCase();
-    const filename = `pt-sessions-${trainerName}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    const filename = `pt-sessions_all_${trainerName}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
     return { buffer, filename };
   }
 
@@ -1938,7 +1946,9 @@ export class PersonalTrainersService {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
 
-    const trainer = await this.managerEntity.findOne({ where: { id: trainerId } });
+    const trainer = await this.managerEntity.findOne({
+      where: { id: trainerId },
+    });
     if (!trainer) throw new NotFoundException('Personal trainer not found');
 
     const member = await this.memberEntity.findOne({ where: { id: memberId } });
@@ -1955,7 +1965,8 @@ export class PersonalTrainersService {
     });
 
     const statuses = (options?.statuses || []).map((s) => s.toLowerCase());
-    const wantEverything = options?.everything === true || statuses.length === 0;
+    const wantEverything =
+      options?.everything === true || statuses.length === 0;
 
     const rows: PTSessionsExportRow[] = sessions
       .filter((s) => {
@@ -1966,12 +1977,12 @@ export class PersonalTrainersService {
         const isCompleted = hasDate && this.isSessionCompletedByNow(s);
         const isNoDate = !hasDate;
 
-        const match = (
+        const match =
           (isUpcoming && statuses.includes('upcoming')) ||
-          (isNoDate && (statuses.includes('no-date') || statuses.includes('no_date'))) ||
+          (isNoDate &&
+            (statuses.includes('no-date') || statuses.includes('no_date'))) ||
           (isCompleted && statuses.includes('completed')) ||
-          (isCancelled && statuses.includes('cancelled'))
-        );
+          (isCancelled && statuses.includes('cancelled'));
         return match;
       })
       .map((s) => {
@@ -1990,22 +2001,32 @@ export class PersonalTrainersService {
         return {
           date: dateStr,
           time: timeStr,
-          trainer: `${trainer.firstName || ''} ${trainer.lastName || ''}`.trim(),
-          members: (s.members || []).map((m) => m.name).filter(Boolean).join(', '),
+          trainer:
+            `${trainer.firstName || ''} ${trainer.lastName || ''}`.trim(),
+          members: (s.members || [])
+            .map((m) => m.name)
+            .filter(Boolean)
+            .join(', '),
           price: s.sessionPrice ?? '',
-          durationHours: (s as any).sessionDurationHours ?? null,
           status,
-          createdAt: s.createdAt ? format(new Date(s.createdAt), 'dd/MM/yyyy') : null,
+          createdAt: s.createdAt
+            ? format(new Date(s.createdAt), 'dd/MM/yyyy')
+            : null,
         } as PTSessionsExportRow;
       });
 
-    const buffer = await buildPtSessionsWorkbook(rows, 'PT Sessions');
+    const buffer = await buildPtSessionsWorkbook(
+      rows,
+      member.name ? `Sessions - ${member.name}` : 'Member Sessions',
+    );
     const trainerName = `${trainer.firstName || ''}-${trainer.lastName || ''}`
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .toLowerCase();
-    const memberName = `${member.name || ''}`.replace(/\s+/g, '-').toLowerCase();
-    const filename = `pt-sessions-${trainerName}-${memberName}-${format(
+    const memberName = `${member.name || ''}`
+      .replace(/\s+/g, '-')
+      .toLowerCase();
+    const filename = `pt-sessions_member_${trainerName}_${memberName}_${format(
       new Date(),
       'yyyy-MM-dd',
     )}.xlsx`;
