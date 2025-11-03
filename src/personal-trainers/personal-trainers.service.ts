@@ -26,6 +26,10 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdatePersonalTrainerDto } from './dto/update-personal-trainer.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { PTSessionEntity } from './entities/pt-sessions.entity';
+import {
+  PTSessionsExportRow,
+  buildPtSessionsWorkbook,
+} from 'src/utils/pt-sessions-xlsx.util';
 
 @Injectable()
 export class PersonalTrainersService {
@@ -1852,6 +1856,160 @@ export class PersonalTrainersService {
     } else {
       return this.groupSessionsByOwner(sessions);
     }
+  }
+
+  async exportTrainerSessionsXlsx(
+    gymId: string,
+    trainerId: string,
+    options: { statuses: string[]; everything: boolean },
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
+    if (!gym) throw new NotFoundException('Gym not found');
+
+    const trainer = await this.managerEntity.findOne({ where: { id: trainerId } });
+    if (!trainer) throw new NotFoundException('Personal trainer not found');
+
+    const sessions = await this.sessionEntity.find({
+      where: { gym: { id: gymId }, personalTrainer: { id: trainerId } },
+      relations: ['members', 'personalTrainer', 'gym'],
+      order: { sessionDate: 'ASC' },
+    });
+
+    const statuses = (options?.statuses || []).map((s) => s.toLowerCase());
+    const wantEverything = options?.everything === true || statuses.length === 0;
+
+    const rows: PTSessionsExportRow[] = sessions
+      .filter((s) => {
+        if (wantEverything) return true;
+        const isCancelled = !!s.isCancelled;
+        const hasDate = !!s.sessionDate;
+        const isUpcoming = hasDate && this.isSessionInFuture(s);
+        const isCompleted = hasDate && this.isSessionCompletedByNow(s);
+        const isNoDate = !hasDate;
+
+        const match = (
+          (isUpcoming && statuses.includes('upcoming')) ||
+          (isNoDate && (statuses.includes('no-date') || statuses.includes('no_date'))) ||
+          (isCompleted && statuses.includes('completed')) ||
+          (isCancelled && statuses.includes('cancelled'))
+        );
+        return match;
+      })
+      .map((s) => {
+        const dateStr = s.sessionDate
+          ? format(new Date(s.sessionDate), 'dd/MM/yyyy')
+          : null;
+        const timeStr = s.sessionDate
+          ? format(new Date(s.sessionDate), 'HH:mm')
+          : null;
+        let status: PTSessionsExportRow['status'];
+        if (s.isCancelled) status = 'Cancelled';
+        else if (!s.sessionDate) status = 'No date';
+        else if (this.isSessionInFuture(s)) status = 'Upcoming';
+        else status = 'Completed';
+
+        return {
+          date: dateStr,
+          time: timeStr,
+          trainer: `${trainer.firstName || ''} ${trainer.lastName || ''}`.trim(),
+          members: (s.members || []).map((m) => m.name).filter(Boolean).join(', '),
+          price: s.sessionPrice ?? '',
+          durationHours: (s as any).sessionDurationHours ?? null,
+          status,
+          createdAt: s.createdAt ? format(new Date(s.createdAt), 'dd/MM/yyyy') : null,
+        } as PTSessionsExportRow;
+      });
+
+    const buffer = await buildPtSessionsWorkbook(rows, 'PT Sessions');
+    const trainerName = `${trainer.firstName || ''}-${trainer.lastName || ''}`
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .toLowerCase();
+    const filename = `pt-sessions-${trainerName}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    return { buffer, filename };
+  }
+
+  async exportTrainerMemberSessionsXlsx(
+    gymId: string,
+    trainerId: string,
+    memberId: string,
+    options: { statuses: string[]; everything: boolean },
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const gym = await this.gymEntity.findOne({ where: { id: gymId } });
+    if (!gym) throw new NotFoundException('Gym not found');
+
+    const trainer = await this.managerEntity.findOne({ where: { id: trainerId } });
+    if (!trainer) throw new NotFoundException('Personal trainer not found');
+
+    const member = await this.memberEntity.findOne({ where: { id: memberId } });
+    if (!member) throw new NotFoundException('Member not found');
+
+    const sessions = await this.sessionEntity.find({
+      where: {
+        gym: { id: gymId },
+        personalTrainer: { id: trainerId },
+        members: { id: memberId },
+      },
+      relations: ['members', 'personalTrainer', 'gym'],
+      order: { sessionDate: 'ASC' },
+    });
+
+    const statuses = (options?.statuses || []).map((s) => s.toLowerCase());
+    const wantEverything = options?.everything === true || statuses.length === 0;
+
+    const rows: PTSessionsExportRow[] = sessions
+      .filter((s) => {
+        if (wantEverything) return true;
+        const isCancelled = !!s.isCancelled;
+        const hasDate = !!s.sessionDate;
+        const isUpcoming = hasDate && this.isSessionInFuture(s);
+        const isCompleted = hasDate && this.isSessionCompletedByNow(s);
+        const isNoDate = !hasDate;
+
+        const match = (
+          (isUpcoming && statuses.includes('upcoming')) ||
+          (isNoDate && (statuses.includes('no-date') || statuses.includes('no_date'))) ||
+          (isCompleted && statuses.includes('completed')) ||
+          (isCancelled && statuses.includes('cancelled'))
+        );
+        return match;
+      })
+      .map((s) => {
+        const dateStr = s.sessionDate
+          ? format(new Date(s.sessionDate), 'dd/MM/yyyy')
+          : null;
+        const timeStr = s.sessionDate
+          ? format(new Date(s.sessionDate), 'HH:mm')
+          : null;
+        let status: PTSessionsExportRow['status'];
+        if (s.isCancelled) status = 'Cancelled';
+        else if (!s.sessionDate) status = 'No date';
+        else if (this.isSessionInFuture(s)) status = 'Upcoming';
+        else status = 'Completed';
+
+        return {
+          date: dateStr,
+          time: timeStr,
+          trainer: `${trainer.firstName || ''} ${trainer.lastName || ''}`.trim(),
+          members: (s.members || []).map((m) => m.name).filter(Boolean).join(', '),
+          price: s.sessionPrice ?? '',
+          durationHours: (s as any).sessionDurationHours ?? null,
+          status,
+          createdAt: s.createdAt ? format(new Date(s.createdAt), 'dd/MM/yyyy') : null,
+        } as PTSessionsExportRow;
+      });
+
+    const buffer = await buildPtSessionsWorkbook(rows, 'PT Sessions');
+    const trainerName = `${trainer.firstName || ''}-${trainer.lastName || ''}`
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .toLowerCase();
+    const memberName = `${member.name || ''}`.replace(/\s+/g, '-').toLowerCase();
+    const filename = `pt-sessions-${trainerName}-${memberName}-${format(
+      new Date(),
+      'yyyy-MM-dd',
+    )}.xlsx`;
+    return { buffer, filename };
   }
 
   async getMySessionsByDate(

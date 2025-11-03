@@ -11,6 +11,7 @@ import {
   Query,
   UseInterceptors,
   Headers,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -36,6 +37,7 @@ import { BulkUpdateSessionDatesDto } from './dto/bulk-update-session-dates.dto';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidatePersonalTrainerRelatedToGym } from 'src/decorators/validate-personal-trainer-related-to-gym.decorator';
+import { Response } from 'express';
 
 @Controller('personal-trainers')
 export class PersonalTrainersController {
@@ -406,6 +408,84 @@ export class PersonalTrainersController {
       gymId,
       timezone,
     );
+  }
+
+  @Get('export/:gymId/:personalTrainerId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Export all sessions for a specific trainer as Excel',
+  })
+  async exportTrainerSessions(
+    @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
+    @Res() res: Response,
+    @Query('statuses') statuses?: string,
+    @Query('everything') everything?: string,
+  ) {
+    const options = {
+      statuses: (statuses || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => !!s),
+      everything: everything === 'true',
+    } as { statuses: string[]; everything: boolean };
+
+    const { buffer, filename } =
+      await this.personalTrainersService.exportTrainerSessionsXlsx(
+        gymId,
+        personalTrainerId,
+        options,
+      );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
+  }
+
+  @Get('export/:gymId/:personalTrainerId/member/:memberId')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @ValidateGymRelatedToOwner()
+  @ValidatePersonalTrainerRelatedToGym()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Export sessions for a specific member of a trainer as Excel',
+  })
+  async exportTrainerMemberSessions(
+    @Param('gymId') gymId: string,
+    @Param('personalTrainerId') personalTrainerId: string,
+    @Param('memberId') memberId: string,
+    @Res() res: Response,
+    @Query('statuses') statuses?: string,
+    @Query('everything') everything?: string,
+  ) {
+    const options = {
+      statuses: (statuses || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => !!s),
+      everything: everything === 'true',
+    } as { statuses: string[]; everything: boolean };
+
+    const { buffer, filename } =
+      await this.personalTrainersService.exportTrainerMemberSessionsXlsx(
+        gymId,
+        personalTrainerId,
+        memberId,
+        options,
+      );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
   }
 
   @Get('trainer/:gymId/:personalTrainerId/clients')
