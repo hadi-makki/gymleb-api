@@ -274,17 +274,20 @@ export class TransactionService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(
-          `COALESCE(SUM(CASE WHEN t."type" = :expense THEN t."paidAmount" ELSE 0 END), 0)`,
+          `COALESCE(SUM(CASE WHEN t."type" = :expense OR t."type" = :ownerSubAssign THEN t."paidAmount" ELSE 0 END), 0)`,
           'expenses',
         )
         .addSelect(
-          `COALESCE(SUM(CASE WHEN t."type" <> :expense THEN t."paidAmount" ELSE 0 END), 0)`,
+          `COALESCE(SUM(CASE WHEN t."type" <> :expense AND t."type" <> :ownerSubAssign THEN t."paidAmount" ELSE 0 END), 0)`,
           'revenue',
         )
         .where('t."gymId" = :gymId', { gymId })
         .andWhere('t."currency" = :currency', { currency })
         .andWhere('t."paidAt" BETWEEN :start AND :end', { start, end })
-        .setParameters({ expense: TransactionType.EXPENSE })
+        .setParameters({
+          expense: TransactionType.EXPENSE,
+          ownerSubAssign: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
+        })
         .getRawOne<{ expenses: string; revenue: string }>(),
     ]);
 
