@@ -21,6 +21,7 @@ import { PgMainEntity } from '../../main-classes/mainEntity';
 import { MemberReservationEntity } from '../../member/entities/member-reservation.entity';
 import { GymPresetEntity } from './gym-preset.entity';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
+import { MessageTemplateEntity } from './message-template.entity';
 export enum GymTypeEnum {
   FITNESS = 'fitness',
   CALISTHENICS = 'calisthenics',
@@ -224,6 +225,12 @@ export class GymEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   enableMultiSubscription: boolean;
+
+  @OneToMany(
+    () => MessageTemplateEntity,
+    (messageTemplate) => messageTemplate.gym,
+  )
+  messageTemplates: MessageTemplateEntity[];
 
   // Birthday automation settings
   @Column('boolean', { default: false })

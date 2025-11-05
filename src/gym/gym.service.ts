@@ -108,6 +108,7 @@ export class GymService {
         transactions: {
           ownerSubscriptionType: true,
         },
+        messageTemplates: true,
       },
     });
     if (!gym) {
