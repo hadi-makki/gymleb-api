@@ -20,7 +20,6 @@ import {
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
 import { Between, In, LessThan, MoreThan, Not, Repository } from 'typeorm';
-import { MemberReservationEntity } from './entities/member-reservation.entity';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
@@ -71,8 +70,6 @@ export class MemberService {
     private readonly gymService: GymService,
     @InjectRepository(PTSessionEntity)
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
-    @InjectRepository(MemberReservationEntity)
-    private readonly reservationModel: Repository<MemberReservationEntity>,
     @InjectRepository(NotificationSettingEntity)
     private readonly notificationSettingModel: Repository<NotificationSettingEntity>,
   ) {}
@@ -309,14 +306,13 @@ export class MemberService {
       activeSubscriptions,
       lastSubscription,
       attendingDays,
-      reservations,
       notificationSetting,
     ] = await Promise.all([
       // Get active subscription using SQL
       this.checkIfUserHasActiveSubscription(member.id),
 
-      // Get last subscription using SQL
-      this.getLatestSubscription(member.id),
+      // Get last subscription with subscription relation for UI needs
+      this.getLatestSubscription(member.id, true),
 
       // Get attending days using SQL (only if not already loaded)
       member.attendingDays ||
@@ -324,12 +320,6 @@ export class MemberService {
           where: { member: { id: member.id } },
           order: { dayOfWeek: 'ASC' },
         }),
-      // Get active reservations for this member in their gym
-      this.reservationModel.find({
-        where: { member: { id: member.id }, isActive: true },
-        relations: ['gym'],
-        order: { reservationDate: 'ASC', startTime: 'ASC' },
-      }),
       this.notificationSettingModel.findOne({
         where: { id: member.notificationSettingId },
       }),
@@ -352,9 +342,6 @@ export class MemberService {
       isNotified: member.isNotified,
       profileImage: member.profileImage,
       attendingDays: attendingDays,
-      reservations,
-      allowedReservations: member.allowedReservations,
-      usedReservations: member.usedReservations,
       trainingLevel: member.trainingLevel,
       trainingGoals: member.trainingGoals,
       trainingPreferences: member.trainingPreferences,
@@ -445,8 +432,6 @@ export class MemberService {
       }),
       gym: gym,
       subscription: subscription,
-      allowedReservations: subscription.allowedReservations ?? 0,
-      usedReservations: 0,
     });
     const member = await this.memberModel.save(createMemberModel);
     // Optional image upload and assignment
@@ -485,6 +470,25 @@ export class MemberService {
     member.subscriptionEndDate = subscriptionInstance.endDate;
 
     await this.memberModel.save(member);
+
+    // Optionally pre-seed PT sessions from subscription bundle
+    if (
+      createMemberDto.preseedPtSessions &&
+      subscription.ptSessionsCount &&
+      subscription.ptSessionsCount > 0 &&
+      createMemberDto.personalTrainerId
+    ) {
+      await this.personalTrainersService.createSession(gym.id, {
+        personalTrainerId: createMemberDto.personalTrainerId,
+        memberIds: [member.id],
+        // Leave date undefined for unscheduled sessions (per requirement)
+        numberOfSessions: subscription.ptSessionsCount,
+        // Create sessions with no price
+        sessionPrice: 0,
+        willPayLater: false,
+        isTakingPtSessionsCut: false,
+      });
+    }
 
     // Initialize attending days for the new member
     await this.initializeMemberAttendingDays(member.id);
@@ -941,7 +945,6 @@ export class MemberService {
    * - N queries to get active subscriptions (1 per member)
    * - N queries to get latest subscriptions (1 per member)
    * - N queries to get attending days (1 per member)
-   * - N queries to get reservations (1 per member)
    * - N queries to get notification settings (1 per member)
    *
    * SOLUTION: This method fetches ALL related data in just 5 parallel queries,
@@ -966,55 +969,45 @@ export class MemberService {
      * Instead of making individual queries for each member, we fetch ALL data
      * for ALL members in just 5 parallel database calls.
      */
-    const [
-      activeSubs,
-      latestSubs,
-      attendingDays,
-      reservations,
-      notificationSettings,
-    ] = await Promise.all([
-      // Query 1: Get ALL active subscriptions for ALL members at once
-      this.transactionModel.find({
-        where: {
-          member: { id: In(memberIds) }, // Get for all members in one query
-          endDate: MoreThan(new Date()),
-          isInvalidated: false,
-        },
-        relations: { subscription: true },
-        order: { endDate: 'DESC' },
-      }),
+    const [activeSubs, latestSubs, attendingDays, notificationSettings] =
+      await Promise.all([
+        // Query 1: Get ALL active subscriptions for ALL members at once
+        this.transactionModel.find({
+          where: {
+            member: { id: In(memberIds) }, // Get for all members in one query
+            endDate: MoreThan(new Date()),
+            isInvalidated: false,
+          },
+          relations: { subscription: true },
+          order: { endDate: 'DESC' },
+        }),
 
-      // Query 2: Get ALL latest transactions for ALL members at once
-      this.transactionModel.find({
-        where: { member: { id: In(memberIds) } },
-        relations: {},
-        order: { createdAt: 'DESC' },
-      }),
+        // Query 2: Get ALL latest transactions for ALL members at once
+        this.transactionModel.find({
+          where: { member: { id: In(memberIds) } },
+          relations: {},
+          order: { createdAt: 'DESC' },
+        }),
 
-      // Query 3: Get ALL attending days for ALL members at once
-      this.attendingDaysModel.find({
-        where: { member: { id: In(memberIds) } },
-        order: { dayOfWeek: 'ASC' },
-      }),
+        // Query 3: Get ALL attending days for ALL members at once
+        this.attendingDaysModel.find({
+          where: { member: { id: In(memberIds) } },
+          order: { dayOfWeek: 'ASC' },
+        }),
 
-      // Query 4: Get ALL active reservations for ALL members at once
-      this.reservationModel.find({
-        where: { member: { id: In(memberIds) }, isActive: true },
-        relations: ['gym'],
-        order: { reservationDate: 'ASC', startTime: 'ASC' },
-      }),
-
-      // Query 5: Get notification settings (only for members that have them)
-      (async () => {
-        const nsIds = Array.from(
-          new Set(
-            members.map((m) => m.notificationSettingId).filter((id) => !!id),
-          ),
-        );
-        if (nsIds.length === 0) return [];
-        return this.notificationSettingModel.find({ where: { id: In(nsIds) } });
-      })(),
-    ]);
+        // Query 5: Get notification settings (only for members that have them)
+        (async () => {
+          const nsIds = Array.from(
+            new Set(
+              members.map((m) => m.notificationSettingId).filter((id) => !!id),
+            ),
+          );
+          if (nsIds.length === 0) return [];
+          return this.notificationSettingModel.find({
+            where: { id: In(nsIds) },
+          });
+        })(),
+      ]);
 
     /**
      * STEP 2: Group Results by MemberId for O(1) Lookup
@@ -1053,16 +1046,6 @@ export class MemberService {
       attendingByMember.set(mId, arr);
     }
 
-    // Map: memberId -> array of reservations
-    const reservationsByMember = new Map<string, any[]>();
-    for (const r of reservations) {
-      const mId = r.memberId || r.member?.id;
-      if (!mId) continue;
-      const arr = reservationsByMember.get(mId) || [];
-      arr.push(r);
-      reservationsByMember.set(mId, arr);
-    }
-
     // Map: notificationSettingId -> notification setting object
     const notificationById = new Map<string, any>();
     for (const ns of notificationSettings) {
@@ -1084,7 +1067,6 @@ export class MemberService {
       const attending = member.attendingDays?.length
         ? member.attendingDays
         : attendingByMember.get(mId) || [];
-      const memberReservations = reservationsByMember.get(mId) || [];
       const notificationSetting = notificationById.get(
         member.notificationSettingId,
       );
@@ -1107,9 +1089,6 @@ export class MemberService {
         isNotified: member.isNotified,
         profileImage: member.profileImage,
         attendingDays: attending,
-        reservations: memberReservations,
-        allowedReservations: member.allowedReservations,
-        usedReservations: member.usedReservations,
         trainingLevel: member.trainingLevel,
         trainingGoals: member.trainingGoals,
         trainingPreferences: member.trainingPreferences,
@@ -1216,6 +1195,8 @@ export class MemberService {
     startDate?: string,
     endDate?: string,
     paidAmount?: number,
+    preseedPtSessions?: boolean,
+    personalTrainerId?: string,
   ) {
     const checkGym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -1244,7 +1225,7 @@ export class MemberService {
     member.isExpired = false;
     await this.memberModel.save(member);
 
-    let checkSubscription;
+    let checkSubscription: SubscriptionEntity | null = null;
 
     // If subscriptionId is provided, use it; otherwise use existing subscription
     if (subscriptionId) {
@@ -1272,7 +1253,7 @@ export class MemberService {
       }
 
       // Update member's subscription if it's different
-      member.subscription = checkSubscription.id;
+      member.subscription = checkSubscription;
       await this.memberModel.save(member);
     } else {
       // Use existing subscription logic
@@ -1303,13 +1284,10 @@ export class MemberService {
           throw new NotFoundException('Subscription not found');
         }
 
-        member.subscription = checkSubscription.id;
+        member.subscription = checkSubscription;
         await this.memberModel.save(member);
       }
     }
-
-    console.log('this is the start date', startDate);
-    console.log('this is the end date', endDate);
 
     const createSubscriptionInstance =
       await this.transactionService.createSubscriptionInstance({
@@ -1328,14 +1306,28 @@ export class MemberService {
 
     member.transactions.push(createSubscriptionInstance);
     member.isNotified = false;
-    // Reset reservations counters on renewal
-    member.allowedReservations = checkSubscription.allowedReservations ?? 0;
-    member.usedReservations = 0;
 
     member.subscriptionStartDate = createSubscriptionInstance.startDate;
     member.subscriptionEndDate = createSubscriptionInstance.endDate;
 
     await this.memberModel.save(member);
+
+    // Optionally pre-seed PT sessions on renewal
+    if (
+      preseedPtSessions &&
+      checkSubscription?.ptSessionsCount &&
+      checkSubscription.ptSessionsCount > 0 &&
+      personalTrainerId
+    ) {
+      await this.personalTrainersService.createSession(checkGym.id, {
+        personalTrainerId,
+        memberIds: [member.id],
+        numberOfSessions: checkSubscription.ptSessionsCount,
+        sessionPrice: 0,
+        willPayLater: false,
+        isTakingPtSessionsCut: false,
+      });
+    }
 
     const getLatestGymSubscription =
       await this.gymService.getGymActiveSubscription(checkGym.id);
@@ -1402,9 +1394,6 @@ export class MemberService {
     // Reset birthday handled when adding a new subscription instance
     member.isBirthdayHandled = false;
     member.subscription = getSubscription;
-    // Reset reservations counters when adding a new subscription instance
-    member.allowedReservations = getSubscription.allowedReservations ?? 0;
-    member.usedReservations = 0;
 
     const createSubscriptionInstance =
       await this.transactionService.createSubscriptionInstance({
@@ -2157,46 +2146,6 @@ export class MemberService {
 
   async logout(member: MemberEntity, deviceId: string) {
     await this.tokenService.deleteTokensByUserId(member.id, deviceId);
-  }
-
-  async increaseMemberAllowedReservations(
-    memberId: string,
-    gymId: string,
-    amount: number,
-  ) {
-    const checkGym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!checkGym) {
-      throw new NotFoundException('Gym not found');
-    }
-    if (!isUUID(memberId)) {
-      throw new BadRequestException('Invalid member id');
-    }
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new BadRequestException('Amount must be a positive integer');
-    }
-
-    const member = await this.memberModel.findOne({
-      where: { id: memberId, gym: { id: checkGym.id } },
-    });
-    if (!member) {
-      throw new NotFoundException('Member not found');
-    }
-
-    if (
-      member.allowedReservations === null ||
-      member.allowedReservations === undefined
-    ) {
-      member.allowedReservations = amount;
-    } else {
-      member.allowedReservations += amount;
-    }
-
-    await this.memberModel.save(member);
-    return {
-      message: 'Member reservations allowance increased successfully',
-      allowedReservations: member.allowedReservations,
-      usedReservations: member.usedReservations,
-    };
   }
 
   async invalidateMemberSubscription(

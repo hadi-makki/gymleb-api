@@ -18,7 +18,6 @@ import {
   RelationId,
 } from 'typeorm';
 import { PgMainEntity } from '../../main-classes/mainEntity';
-import { MemberReservationEntity } from '../../member/entities/member-reservation.entity';
 import { GymPresetEntity } from './gym-preset.entity';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 import { MessageTemplateEntity } from './message-template.entity';
@@ -150,17 +149,11 @@ export class GymEntity extends PgMainEntity {
   @OneToMany(() => GymPresetEntity, (preset) => preset.gym)
   presets: GymPresetEntity[];
 
-  @OneToMany(() => MemberReservationEntity, (reservation) => reservation.gym)
-  reservations: MemberReservationEntity[];
-
   @Column('text', { nullable: true, default: GymTypeEnum.FITNESS })
   gymType: GymTypeEnum;
 
   @Column('boolean', { default: false })
   allowUserSignUp: boolean;
-
-  @Column('boolean', { default: false })
-  allowUserResevations: boolean;
 
   @Column('int', { default: 0 })
   allowedUserResevationsPerSession: number;

@@ -53,8 +53,6 @@ import { UpdateMonthlyReminderDto } from './dto/update-monthly-reminder.dto';
 import { UpdateManualMessagesDto } from './dto/update-manual-messages.dto';
 import { UpdateAllowDuplicateMemberPhonesDto } from './dto/update-allow-duplicate-member-phones.dto';
 import { UpdateAllowUserWithoutPhoneNumberDto } from './dto/update-allow-user-without-phone.dto';
-import { UpdateAllowUserReservationsDto } from './dto/update-allow-user-reservations.dto';
-import { UpdateMaxReservationsPerSessionDto } from './dto/update-max-reservations-per-session.dto';
 import { UpdateSessionTimeDto } from './dto/update-session-time.dto';
 import { UpdateWomensTimesDto } from './dto/update-womens-times.dto';
 import { UpdateGymDescriptionDto } from './dto/update-gym-description.dto';
@@ -258,35 +256,6 @@ export class GymController {
   })
   getGymByName(@Param('gymName') gymName: string) {
     return this.gymService.getGymByGymName(gymName);
-  }
-
-  @Get('public-reservation-config/:gymId')
-  @ApiOperation({ summary: 'Get public reservation configuration for a gym' })
-  @ApiOkResponse({
-    description: 'Reservation configuration retrieved successfully.',
-    schema: {
-      type: 'object',
-      properties: {
-        allowUserResevations: { type: 'boolean' },
-        openingDays: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              day: { type: 'string' },
-              openingTime: { type: 'string' },
-              closingTime: { type: 'string' },
-              isOpen: { type: 'boolean' },
-            },
-          },
-        },
-        sessionTimeInHours: { type: 'number' },
-        allowedUserResevationsPerSession: { type: 'number' },
-      },
-    },
-  })
-  getPublicReservationConfig(@Param('gymId') gymId: string) {
-    return this.gymService.getPublicReservationConfig(gymId);
   }
 
   @Patch('day/:gymId')
@@ -865,39 +834,6 @@ export class GymController {
     return this.gymService.updateBirthdayAutomationSettings(
       gymId,
       updateBirthdayAutomationDto,
-    );
-  }
-
-  @Patch('allow-user-reservations/:gymId')
-  @UseGuards(ManagerAuthGuard)
-  @ApiOperation({ summary: 'Update gym allow user reservations setting' })
-  @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
-  @ApiBody({ type: UpdateAllowUserReservationsDto })
-  updateAllowUserReservations(
-    @Param('gymId') gymId: string,
-    @Body() updateAllowUserReservationsDto: UpdateAllowUserReservationsDto,
-  ) {
-    return this.gymService.updateAllowUserReservations(
-      gymId,
-      updateAllowUserReservationsDto.allowUserResevations,
-    );
-  }
-
-  @Patch('max-reservations-per-session/:gymId')
-  @UseGuards(ManagerAuthGuard)
-  @ApiOperation({ summary: 'Update max reservations allowed per session' })
-  @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
-  @ApiBody({ type: UpdateMaxReservationsPerSessionDto })
-  updateMaxReservationsPerSession(
-    @Param('gymId') gymId: string,
-    @Body()
-    updateMaxReservationsPerSessionDto: UpdateMaxReservationsPerSessionDto,
-  ) {
-    return this.gymService.updateMaxReservationsPerSession(
-      gymId,
-      updateMaxReservationsPerSessionDto.allowedUserResevationsPerSession,
     );
   }
 

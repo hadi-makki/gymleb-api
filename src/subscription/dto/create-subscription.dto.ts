@@ -14,12 +14,11 @@ export class CreateSubscriptionDto {
   @IsNumber()
   duration: number;
 
-  // Optional: omitted defaults to 0 (cannot reserve)
-  @IsOptional()
-  @IsNumber()
-  allowedReservations?: number;
-
   @IsOptional()
   @IsEnum(Currency)
   currency?: Currency;
+
+  @IsOptional()
+  @IsNumber()
+  ptSessionsCount?: number;
 }

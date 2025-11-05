@@ -36,9 +36,6 @@ export class PublicGymDto {
   allowUserSignUp: boolean;
 
   @ApiProperty()
-  allowUserResevations: boolean;
-
-  @ApiProperty()
   allowedUserResevationsPerSession: number;
 
   @ApiProperty()

@@ -1,7 +1,6 @@
 import { MediaEntity } from 'src/media/media.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { MemberAttendingDaysEntity } from '../entities/member-attending-days.entity';
-import { MemberReservationEntity } from '../entities/member-reservation.entity';
 import { MemberTrainingProgramEntity } from '../entities/member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
@@ -28,7 +27,6 @@ export class ReturnUserDto {
   trainingGoals: string;
   trainingPreferences: string;
   trainingPrograms?: MemberTrainingProgramEntity[];
-  reservations?: MemberReservationEntity[];
   weight?: number;
   height?: number;
   waistWidth?: number;
@@ -50,8 +48,6 @@ export class ReturnUserDto {
   isWelcomeMessageSent?: boolean;
   notificationSetting?: NotificationSettingEntity;
   phoneNumberISOCode?: string;
-  allowedReservations?: number | null;
-  usedReservations?: number;
   welcomeMessageSentManually?: boolean;
 }
 

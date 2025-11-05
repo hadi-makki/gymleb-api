@@ -31,18 +31,20 @@ export class CreateSessionDto {
   @ApiProperty({
     description: 'The date of the session',
     example: '2025-01-01',
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsDateString()
-  date: string;
+  date?: string;
 
   @ApiProperty({
     description: 'The price of the session',
     example: 100,
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  sessionPrice: number;
+  sessionPrice?: number;
 
   @ApiProperty({
     description: 'The number of sessions',

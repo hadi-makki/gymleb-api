@@ -47,7 +47,7 @@ export class SubscriptionService {
       price: createSubscriptionDto.price,
       gym: gym,
       duration: subscriptionDuration,
-      allowedReservations: createSubscriptionDto.allowedReservations ?? 0,
+      ptSessionsCount: createSubscriptionDto.ptSessionsCount ?? null,
       currency: createSubscriptionDto.currency || Currency.USD,
     });
     const subscription = await this.subscriptionModel.save(

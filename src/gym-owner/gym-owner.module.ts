@@ -19,7 +19,6 @@ import { TransactionModule } from '../transactions/transaction.module';
 import { GymOwnerController } from './gym-owner.controller';
 import { GymOwnerService } from './gym-owner.service';
 import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-days.entity';
-import { MemberReservationEntity } from 'src/member/entities/member-reservation.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
@@ -34,7 +33,6 @@ import { NotificationSettingEntity } from 'src/notification-settings/entities/no
       PTSessionEntity,
       ProductEntity,
       MemberAttendingDaysEntity,
-      MemberReservationEntity,
       ProductsOffersEntity,
       TwilioMessageEntity,
       NotificationSettingEntity,

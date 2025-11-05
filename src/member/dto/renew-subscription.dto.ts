@@ -48,4 +48,14 @@ export class RenewSubscriptionDto {
   @IsOptional()
   @IsNumber()
   paidAmount?: number;
+
+  // Optional: pre-seed PT sessions for this renewal based on selected/current subscription
+  @IsOptional()
+  @IsBoolean()
+  preseedPtSessions?: boolean;
+
+  // Required when preseedPtSessions is true: target trainer to assign the sessions to
+  @IsOptional()
+  @IsUUID()
+  personalTrainerId?: string;
 }

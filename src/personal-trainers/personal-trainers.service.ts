@@ -588,13 +588,15 @@ export class PersonalTrainersService {
 
     let setDateDone = false;
 
-    // Convert the date to UTC if timezone is provided
-    let sessionDate: string | Date = createSessionDto.date;
-    if (timezone && createSessionDto.date) {
+    // Convert the date to UTC if timezone is provided; allow unscheduled sessions when no date provided
+    let sessionDate: string | Date | null = null;
+    if (createSessionDto.date && timezone) {
       // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
       // We need to treat it as local time in the provided timezone and convert to UTC
       const naiveDate = new Date(createSessionDto.date);
       sessionDate = this.convertLocalToUTC(naiveDate, timezone);
+    } else if (createSessionDto.date) {
+      sessionDate = createSessionDto.date;
     }
 
     for (let i = 0; i < createSessionDto.numberOfSessions; i++) {
@@ -602,7 +604,7 @@ export class PersonalTrainersService {
         members,
         personalTrainer: checkIfPersonalTrainerInGym,
         gym: gym,
-        sessionPrice: createSessionDto.sessionPrice,
+        sessionPrice: createSessionDto.sessionPrice ?? 0,
         sessionDate: !setDateDone ? sessionDate : null,
         sessionDurationHours: createSessionDto.sessionDurationHours,
       });
@@ -613,7 +615,7 @@ export class PersonalTrainersService {
           personalTrainer: checkIfPersonalTrainerInGym,
           gym: gym,
           member,
-          amount: createSessionDto.sessionPrice,
+          amount: createSessionDto.sessionPrice ?? 0,
           willPayLater: createSessionDto.willPayLater || false,
           ptSession: createdSession,
           isTakingPtSessionsCut: createSessionDto.isTakingPtSessionsCut,

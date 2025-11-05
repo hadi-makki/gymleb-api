@@ -17,7 +17,6 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { TokenEntity } from 'src/token/token.entity';
 import { MediaEntity } from 'src/media/media.entity';
 import { MemberAttendingDaysEntity } from './member-attending-days.entity';
-import { MemberReservationEntity } from './member-reservation.entity';
 import * as bcrypt from 'bcryptjs';
 import { MemberTrainingProgramEntity } from './member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
@@ -117,15 +116,6 @@ export class MemberEntity extends PgMainEntity {
     },
   )
   attendingDays: MemberAttendingDaysEntity[];
-
-  @OneToMany(
-    () => MemberReservationEntity,
-    (reservation) => reservation.member,
-    {
-      onDelete: 'SET NULL',
-    },
-  )
-  reservations: MemberReservationEntity[];
 
   @Column('text', { default: Gender.MALE })
   gender: Gender;
@@ -234,14 +224,6 @@ export class MemberEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isBirthdayHandled: boolean;
-
-  // Allowed number of reservations for this member (0 = cannot reserve)
-  @Column('int', { default: 0, nullable: true })
-  allowedReservations: number;
-
-  // Number of reservations used within the current subscription period
-  @Column('int', { default: 0, nullable: true })
-  usedReservations: number;
 
   @Column('boolean', { default: false })
   welcomeMessageSentManually: boolean;

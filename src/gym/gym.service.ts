@@ -2740,21 +2740,6 @@ export class GymService {
     return gym;
   }
 
-  async updateAllowUserReservations(
-    gymId: string,
-    allowUserResevations: boolean,
-  ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-    gym.allowUserResevations = allowUserResevations;
-    await this.gymModel.save(gym);
-    return gym;
-  }
-
   async updateBirthdayAutomationSettings(
     gymId: string,
     settings: {
@@ -2774,25 +2759,6 @@ export class GymService {
     gym.grantBirthdaySubscription = settings.grantBirthdaySubscription;
     gym.birthdaySubscriptionId = settings.birthdaySubscriptionId || null;
 
-    await this.gymModel.save(gym);
-    return gym;
-  }
-
-  async updateMaxReservationsPerSession(
-    gymId: string,
-    allowedUserResevationsPerSession: number,
-  ) {
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-    if (
-      typeof allowedUserResevationsPerSession !== 'number' ||
-      allowedUserResevationsPerSession < 0
-    ) {
-      throw new BadRequestException('Invalid reservations per session value');
-    }
-    gym.allowedUserResevationsPerSession = allowedUserResevationsPerSession;
     await this.gymModel.save(gym);
     return gym;
   }
@@ -2867,20 +2833,6 @@ export class GymService {
     await this.gymModel.remove(gym);
 
     return { message: 'Gym deleted successfully' };
-  }
-
-  async getPublicReservationConfig(gymId: string) {
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
-    }
-
-    return {
-      allowUserResevations: gym.allowUserResevations,
-      openingDays: gym.openingDays,
-      sessionTimeInHours: gym.sessionTimeInHours,
-      allowedUserResevationsPerSession: gym.allowedUserResevationsPerSession,
-    };
   }
 
   async updateGymAddress(gymId: string, data: UpdateGymLocationDto) {
@@ -3211,7 +3163,6 @@ export class GymService {
         'description',
         'gymType',
         'allowUserSignUp',
-        'allowUserResevations',
         'allowedUserResevationsPerSession',
         'sessionTimeInHours',
         'socialMediaLinks',
@@ -3251,7 +3202,6 @@ export class GymService {
         'description',
         'gymType',
         'allowUserSignUp',
-        'allowUserResevations',
         'allowedUserResevationsPerSession',
         'sessionTimeInHours',
         'socialMediaLinks',
@@ -3287,7 +3237,6 @@ export class GymService {
       description: gym.description,
       gymType: gym.gymType,
       allowUserSignUp: gym.allowUserSignUp,
-      allowUserResevations: gym.allowUserResevations,
       allowedUserResevationsPerSession: gym.allowedUserResevationsPerSession,
       sessionTimeInHours: gym.sessionTimeInHours,
       socialMediaLinks: gym.socialMediaLinks,

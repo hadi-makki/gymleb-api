@@ -5,6 +5,7 @@ import {
   IsString,
   IsDateString,
   IsNumber,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateMemberDto {
@@ -58,4 +59,14 @@ export class CreateMemberDto {
   @IsOptional()
   @IsNumber()
   paidAmount?: number;
+
+  // Optional: pre-seed PT sessions for this member based on the selected subscription
+  @IsOptional()
+  @IsBoolean()
+  preseedPtSessions?: boolean;
+
+  // Required when preseedPtSessions is true: target trainer to assign the sessions to
+  @IsOptional()
+  @IsUUID()
+  personalTrainerId?: string;
 }
