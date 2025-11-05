@@ -425,6 +425,8 @@ export class PersonalTrainersController {
     @Res() res: Response,
     @Query('statuses') statuses?: string,
     @Query('everything') everything?: string,
+    @Query('filterByCurrentSubscription') filterByCurrentSubscription?: string,
+    @Query('dateField') dateField?: 'createdAt' | 'sessionDate',
   ) {
     const options = {
       statuses: (statuses || '')
@@ -432,7 +434,14 @@ export class PersonalTrainersController {
         .map((s) => s.trim())
         .filter((s) => !!s),
       everything: everything === 'true',
-    } as { statuses: string[]; everything: boolean };
+      filterByCurrentSubscription: filterByCurrentSubscription === 'true',
+      dateField: (dateField as any) || 'createdAt',
+    } as {
+      statuses: string[];
+      everything: boolean;
+      filterByCurrentSubscription?: boolean;
+      dateField?: 'createdAt' | 'sessionDate';
+    };
 
     const { buffer, filename } =
       await this.personalTrainersService.exportTrainerSessionsXlsx(
@@ -464,6 +473,8 @@ export class PersonalTrainersController {
     @Res() res: Response,
     @Query('statuses') statuses?: string,
     @Query('everything') everything?: string,
+    @Query('filterByCurrentSubscription') filterByCurrentSubscription?: string,
+    @Query('dateField') dateField?: 'createdAt' | 'sessionDate',
   ) {
     const options = {
       statuses: (statuses || '')
@@ -471,7 +482,14 @@ export class PersonalTrainersController {
         .map((s) => s.trim())
         .filter((s) => !!s),
       everything: everything === 'true',
-    } as { statuses: string[]; everything: boolean };
+      filterByCurrentSubscription: filterByCurrentSubscription === 'true',
+      dateField: (dateField as any) || 'createdAt',
+    } as {
+      statuses: string[];
+      everything: boolean;
+      filterByCurrentSubscription?: boolean;
+      dateField?: 'createdAt' | 'sessionDate';
+    };
 
     const { buffer, filename } =
       await this.personalTrainersService.exportTrainerMemberSessionsXlsx(

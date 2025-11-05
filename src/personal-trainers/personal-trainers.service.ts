@@ -16,6 +16,7 @@ import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { TransactionService } from 'src/transactions/transaction.service';
 import { Between, ILike, In, IsNull, Not, Repository } from 'typeorm';
+import { TransactionType } from 'src/transactions/transaction.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { Permissions } from '../decorators/roles/role.enum';
 import { NotFoundException } from '../error/not-found-error';
@@ -1861,7 +1862,12 @@ export class PersonalTrainersService {
   async exportTrainerSessionsXlsx(
     gymId: string,
     trainerId: string,
-    options: { statuses: string[]; everything: boolean },
+    options: {
+      statuses: string[];
+      everything: boolean;
+      filterByCurrentSubscription?: boolean;
+      dateField?: 'createdAt' | 'sessionDate';
+    },
   ): Promise<{ buffer: Buffer; filename: string }> {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
@@ -1881,8 +1887,60 @@ export class PersonalTrainersService {
     const wantEverything =
       options?.everything === true || statuses.length === 0;
 
+    // Build subscription windows (union across involved members) if requested
+    const filterByWindow = options?.filterByCurrentSubscription === true;
+    const dateField: 'createdAt' | 'sessionDate' =
+      options?.dateField || 'createdAt';
+    let windows: Array<{ start: Date; end: Date }> = [];
+    if (filterByWindow) {
+      const memberIds = new Set<string>();
+      sessions.forEach((s) =>
+        (s.members || []).forEach((m) => m.id && memberIds.add(m.id)),
+      );
+      if (memberIds.size > 0) {
+        const members = await this.memberEntity.find({
+          where: { id: In(Array.from(memberIds)) },
+          relations: ['transactions'],
+        });
+        const now = new Date();
+        windows = [];
+        members.forEach((m) => {
+          const tx = (m.transactions || [])
+            .filter(
+              (t) =>
+                t &&
+                t.type === TransactionType.SUBSCRIPTION &&
+                !!t.startDate &&
+                !!t.endDate &&
+                new Date(t.endDate) >= now,
+            )
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
+            )[0];
+          if (tx)
+            windows.push({
+              start: new Date(tx.startDate),
+              end: new Date(tx.endDate),
+            });
+        });
+      }
+    }
+
+    const inAnyWindow = (d?: Date | null) => {
+      if (!filterByWindow) return true;
+      if (!d) return false;
+      return windows.some((w) => d >= w.start && d <= w.end);
+    };
+
     const rows: PTSessionsExportRow[] = sessions
       .filter((s) => {
+        // Window/date filtering
+        const compareDate = s[dateField]
+          ? new Date(s[dateField] as any)
+          : undefined;
+        if (!inAnyWindow(compareDate)) return false;
         if (wantEverything) return true;
         const isCancelled = !!s.isCancelled;
         const hasDate = !!s.sessionDate;
@@ -1920,7 +1978,6 @@ export class PersonalTrainersService {
             .map((m) => m.name)
             .filter(Boolean)
             .join(', '),
-          price: s.sessionPrice ?? '',
           status,
           createdAt: s.createdAt
             ? format(new Date(s.createdAt), 'dd/MM/yyyy')
@@ -1941,7 +1998,12 @@ export class PersonalTrainersService {
     gymId: string,
     trainerId: string,
     memberId: string,
-    options: { statuses: string[]; everything: boolean },
+    options: {
+      statuses: string[];
+      everything: boolean;
+      filterByCurrentSubscription?: boolean;
+      dateField?: 'createdAt' | 'sessionDate';
+    },
   ): Promise<{ buffer: Buffer; filename: string }> {
     const gym = await this.gymEntity.findOne({ where: { id: gymId } });
     if (!gym) throw new NotFoundException('Gym not found');
@@ -1951,7 +2013,10 @@ export class PersonalTrainersService {
     });
     if (!trainer) throw new NotFoundException('Personal trainer not found');
 
-    const member = await this.memberEntity.findOne({ where: { id: memberId } });
+    const member = await this.memberEntity.findOne({
+      where: { id: memberId },
+      relations: ['transactions'],
+    });
     if (!member) throw new NotFoundException('Member not found');
 
     const sessions = await this.sessionEntity.find({
@@ -1968,8 +2033,40 @@ export class PersonalTrainersService {
     const wantEverything =
       options?.everything === true || statuses.length === 0;
 
+    const filterByWindow = options?.filterByCurrentSubscription === true;
+    const dateField: 'createdAt' | 'sessionDate' =
+      options?.dateField || 'createdAt';
+    let window: { start: Date; end: Date } | null = null;
+    if (filterByWindow) {
+      const now = new Date();
+      const tx = (member.transactions || [])
+        .filter(
+          (t) =>
+            t &&
+            t.type === TransactionType.SUBSCRIPTION &&
+            !!t.startDate &&
+            !!t.endDate &&
+            new Date(t.endDate) >= now,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
+      if (tx)
+        window = { start: new Date(tx.startDate), end: new Date(tx.endDate) };
+    }
+    const inWindow = (d?: Date | null) => {
+      if (!filterByWindow) return true;
+      if (!d || !window) return false;
+      return d >= window.start && d <= window.end;
+    };
+
     const rows: PTSessionsExportRow[] = sessions
       .filter((s) => {
+        const compareDate = s[dateField]
+          ? new Date(s[dateField] as any)
+          : undefined;
+        if (!inWindow(compareDate)) return false;
         if (wantEverything) return true;
         const isCancelled = !!s.isCancelled;
         const hasDate = !!s.sessionDate;
@@ -2007,7 +2104,6 @@ export class PersonalTrainersService {
             .map((m) => m.name)
             .filter(Boolean)
             .join(', '),
-          price: s.sessionPrice ?? '',
           status,
           createdAt: s.createdAt
             ? format(new Date(s.createdAt), 'dd/MM/yyyy')
