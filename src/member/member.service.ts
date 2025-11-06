@@ -977,6 +977,7 @@ export class MemberService {
             member: { id: In(memberIds) }, // Get for all members in one query
             endDate: MoreThan(new Date()),
             isInvalidated: false,
+            type: TransactionType.SUBSCRIPTION,
           },
           relations: { subscription: true },
           order: { endDate: 'DESC' },
@@ -984,7 +985,10 @@ export class MemberService {
 
         // Query 2: Get ALL latest transactions for ALL members at once
         this.transactionModel.find({
-          where: { member: { id: In(memberIds) } },
+          where: {
+            member: { id: In(memberIds) },
+            type: TransactionType.SUBSCRIPTION,
+          },
           relations: {},
           order: { createdAt: 'DESC' },
         }),
