@@ -202,7 +202,7 @@ export class MemberService {
     withSubscription: boolean = false,
   ) {
     const latestSubscription = await this.transactionModel.findOne({
-      where: { member: { id: memberId } },
+      where: { member: { id: memberId }, type: TransactionType.SUBSCRIPTION },
       order: { createdAt: 'DESC' },
       relations: {
         ...(withSubscription && { subscription: true }),
