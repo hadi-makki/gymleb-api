@@ -14,6 +14,7 @@ import {
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
 import {
+  PaymentStatus,
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
@@ -761,6 +762,8 @@ export class MemberService {
     gender?: Gender,
     expirationStartDate?: string,
     expirationEndDate?: string,
+    personalTrainerId?: string,
+    paymentStatus?: 'paid' | 'unpaid',
   ) {
     // Build a base query that selects only member.id to avoid pagination issues with joins
     let idsQuery = this.memberModel
@@ -849,6 +852,60 @@ export class MemberService {
           .andWhere('DATE(transactions.endDate) <= :endDate', {
             endDate: endDateStr,
           });
+      }
+    }
+
+    // Add personal trainer filter
+    if (personalTrainerId) {
+      idsQuery
+        .leftJoin('member.userPtSessions', 'ptSession')
+        .andWhere('ptSession.personalTrainerId = :personalTrainerId', {
+          personalTrainerId,
+        });
+    }
+
+    // Add payment status filter
+    if (paymentStatus) {
+      if (paymentStatus === 'paid') {
+        idsQuery.andWhere(
+          `EXISTS (
+            SELECT 1 FROM transactions t1
+            WHERE t1."memberId" = member.id
+            AND t1.type = :subscriptionType
+            AND t1.status = :paidStatus
+            AND t1."createdAt" = (
+              SELECT MAX(t2."createdAt")
+              FROM transactions t2
+              WHERE t2."memberId" = member.id
+              AND t2.type = :subscriptionType
+            )
+          )`,
+          {
+            subscriptionType: TransactionType.SUBSCRIPTION,
+            paidStatus: PaymentStatus.PAID,
+          },
+        );
+      } else if (paymentStatus === 'unpaid') {
+        idsQuery.andWhere(
+          `(
+            NOT EXISTS (
+              SELECT 1 FROM transactions t1
+              WHERE t1."memberId" = member.id
+              AND t1.type = :subscriptionType
+              AND t1.status = :paidStatus
+              AND t1."createdAt" = (
+                SELECT MAX(t2."createdAt")
+                FROM transactions t2
+                WHERE t2."memberId" = member.id
+                AND t2.type = :subscriptionType
+              )
+            )
+          )`,
+          {
+            subscriptionType: TransactionType.SUBSCRIPTION,
+            paidStatus: PaymentStatus.PAID,
+          },
+        );
       }
     }
 
@@ -1902,6 +1959,8 @@ export class MemberService {
     gender?: Gender,
     expirationStartDate?: string,
     expirationEndDate?: string,
+    personalTrainerId?: string,
+    paymentStatus?: 'paid' | 'unpaid',
   ) {
     // Reuse the base of findAll but without pagination
     let idsQuery = this.memberModel
@@ -1987,6 +2046,60 @@ export class MemberService {
       }
     }
 
+    // Add personal trainer filter
+    if (personalTrainerId) {
+      idsQuery
+        .leftJoin('member.userPtSessions', 'ptSession')
+        .andWhere('ptSession.personalTrainerId = :personalTrainerId', {
+          personalTrainerId,
+        });
+    }
+
+    // Add payment status filter
+    if (paymentStatus) {
+      if (paymentStatus === 'paid') {
+        idsQuery.andWhere(
+          `EXISTS (
+            SELECT 1 FROM transactions t1
+            WHERE t1."memberId" = member.id
+            AND t1.type = :subscriptionType
+            AND t1.status = :paidStatus
+            AND t1."createdAt" = (
+              SELECT MAX(t2."createdAt")
+              FROM transactions t2
+              WHERE t2."memberId" = member.id
+              AND t2.type = :subscriptionType
+            )
+          )`,
+          {
+            subscriptionType: TransactionType.SUBSCRIPTION,
+            paidStatus: PaymentStatus.PAID,
+          },
+        );
+      } else if (paymentStatus === 'unpaid') {
+        idsQuery.andWhere(
+          `(
+            NOT EXISTS (
+              SELECT 1 FROM transactions t1
+              WHERE t1."memberId" = member.id
+              AND t1.type = :subscriptionType
+              AND t1.status = :paidStatus
+              AND t1."createdAt" = (
+                SELECT MAX(t2."createdAt")
+                FROM transactions t2
+                WHERE t2."memberId" = member.id
+                AND t2.type = :subscriptionType
+              )
+            )
+          )`,
+          {
+            subscriptionType: TransactionType.SUBSCRIPTION,
+            paidStatus: PaymentStatus.PAID,
+          },
+        );
+      }
+    }
+
     const idsRaw = await idsQuery
       .orderBy('member.createdAt', 'DESC')
       .getRawMany();
@@ -1995,12 +2108,142 @@ export class MemberService {
     const members = memberIds.length
       ? await this.memberModel.find({
           where: { id: In(memberIds) },
-          relations: ['gym', 'subscription', 'transactions'],
+          relations: [
+            'gym',
+            'subscription',
+            'transactions',
+            'transactions.subscription',
+          ],
           order: { createdAt: 'DESC' },
         })
       : [];
 
     const dtos = await this.buildMembersDtoBatch(members);
+
+    // Create a map of memberId -> unpaid subscriptions count (including invalidated)
+    const unpaidSubscriptionsCountMap = new Map<string, number>();
+    // Create a map of memberId -> unpaid subscriptions details
+    const unpaidSubscriptionsDetailsMap = new Map<string, string>();
+
+    // Helper function to get currency symbol
+    const getCurrencySymbol = (currency: string): string => {
+      if (currency === 'USD') return '$';
+      if (currency === 'LBP') return 'L.L.';
+      return currency; // fallback to currency code
+    };
+
+    members.forEach((member) => {
+      // Include all unpaid subscriptions, whether invalidated or not
+      const unpaidSubscriptions = (member.transactions || []).filter(
+        (tx) =>
+          tx.type === TransactionType.SUBSCRIPTION &&
+          tx.status !== PaymentStatus.PAID,
+      );
+
+      const unpaidCount = unpaidSubscriptions.length;
+      unpaidSubscriptionsCountMap.set(member.id, unpaidCount);
+
+      // Build details string
+      if (unpaidCount === 0) {
+        unpaidSubscriptionsDetailsMap.set(member.id, '');
+      } else {
+        const details = unpaidSubscriptions.map((tx) => {
+          // Calculate unpaid amount: originalAmount - paidAmount
+          // For unpaid subscriptions, we need to determine the full subscription price
+          let originalAmount: number | null = tx.originalAmount;
+          const paidAmount = tx.paidAmount ?? 0;
+
+          // If originalAmount is null or undefined, try to get from subscription
+          if (originalAmount === null || originalAmount === undefined) {
+            if (tx.subscription && tx.subscription.price != null) {
+              originalAmount = tx.subscription.price;
+            }
+          }
+
+          // Calculate unpaid amount
+          let unpaidAmount = 0;
+
+          // Determine the effective original amount (subscription price)
+          let effectiveOriginalAmount: number | null = originalAmount;
+          if (
+            effectiveOriginalAmount === null ||
+            effectiveOriginalAmount === undefined
+          ) {
+            if (tx.subscription && tx.subscription.price != null) {
+              effectiveOriginalAmount = tx.subscription.price;
+            }
+          }
+
+          // Special case: if originalAmount equals paidAmount for an unpaid subscription,
+          // it means paidAmount was set as a default (when willPayLater=true), but nothing was actually paid
+          // So we should treat paidAmount as 0 for the calculation
+          let effectivePaidAmount = paidAmount;
+          if (
+            originalAmount !== null &&
+            originalAmount !== undefined &&
+            originalAmount === paidAmount
+          ) {
+            // For unpaid subscriptions where amounts are equal, nothing was actually paid
+            effectivePaidAmount = 0;
+            // Use subscription price if available to get the correct original amount
+            if (tx.subscription && tx.subscription.price != null) {
+              effectiveOriginalAmount = tx.subscription.price;
+            }
+          }
+
+          if (
+            effectiveOriginalAmount !== null &&
+            effectiveOriginalAmount !== undefined
+          ) {
+            // Normal case: originalAmount - paidAmount
+            unpaidAmount = Math.max(
+              0,
+              Number(effectiveOriginalAmount) - Number(effectivePaidAmount),
+            );
+          } else if (tx.subscription && tx.subscription.price != null) {
+            // Fallback: use subscription price if originalAmount is not available
+            unpaidAmount = Math.max(
+              0,
+              Number(tx.subscription.price) - Number(effectivePaidAmount),
+            );
+          } else {
+            // Last resort: if we can't determine the original amount,
+            // and this is an unpaid subscription, we can't calculate the unpaid amount accurately
+            // Show 0 as we don't have enough information
+            unpaidAmount = 0;
+          }
+
+          const currencySymbol = getCurrencySymbol(tx.currency || 'USD');
+          const startDate = tx.startDate
+            ? dateFnsFormat(new Date(tx.startDate), 'dd/MM/yyyy')
+            : 'N/A';
+          return {
+            unpaidAmount,
+            currency: tx.currency || 'USD',
+            detail: `${currencySymbol}${unpaidAmount.toFixed(2)} on ${startDate}`,
+          };
+        });
+
+        // Calculate total unpaid amount and determine currency
+        let totalUnpaidAmount = 0;
+        let currency = 'USD'; // Default currency
+        const detailStrings: string[] = [];
+
+        details.forEach((item) => {
+          totalUnpaidAmount += item.unpaidAmount;
+          if (currency === 'USD' && item.currency) {
+            currency = item.currency;
+          }
+          detailStrings.push(item.detail);
+        });
+
+        const currencySymbol = getCurrencySymbol(currency);
+        unpaidSubscriptionsDetailsMap.set(
+          member.id,
+          `${unpaidCount}(${currencySymbol}${totalUnpaidAmount.toFixed(2)}): ${detailStrings.join(', ')}`,
+        );
+      }
+    });
 
     const rows: MemberExportRow[] = dtos.map((m) => {
       // latest ending subscription
@@ -2019,6 +2262,10 @@ export class MemberService {
         latest?.status === 1 ||
         latest?.status === 'PAID';
       const hasActive = subs && subs.length > 0;
+      const unpaidSubscriptionsCount =
+        unpaidSubscriptionsCountMap.get(m.id) || 0;
+      const unpaidSubscriptionsDetails =
+        unpaidSubscriptionsDetailsMap.get(m.id) || '';
       return {
         name: m.name,
         gender: (m.gender as any) || '',
@@ -2027,6 +2274,8 @@ export class MemberService {
         expiresAt: endDate ? dateFnsFormat(endDate, 'dd/MM/yyyy') : null,
         status: hasActive ? 'Active' : 'Inactive',
         paymentStatus: isPaid ? 'Paid' : 'Unpaid',
+        unpaidSubscriptionsCount,
+        unpaidSubscriptionsDetails,
       };
     });
 

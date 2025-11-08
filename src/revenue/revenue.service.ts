@@ -182,6 +182,8 @@ export class RevenueService {
       },
     });
 
+    console.log(revenue);
+
     if (!revenue) throw new NotFoundException('Revenue not found');
 
     // remove transaction

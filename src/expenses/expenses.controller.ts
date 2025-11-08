@@ -27,8 +27,8 @@ export class ExpensesController {
 
   @Post()
   @ApiOperation({ summary: 'Create an expense' })
-  create(@User() user: ManagerEntity, @Body() dto: CreateExpenseDto) {
-    return this.expensesService.create(user, dto);
+  async create(@User() user: ManagerEntity, @Body() dto: CreateExpenseDto) {
+    return await this.expensesService.create(user, dto);
   }
 
   @Get('gym/:gymId')
@@ -37,33 +37,33 @@ export class ExpensesController {
   })
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
-  findAll(
+  async findAll(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.expensesService.findAll(user, start, end, gymId);
+    return await this.expensesService.findAll(user, start, end, gymId);
   }
 
   @Patch(':gymId/:id')
   @ApiOperation({ summary: 'Update an expense' })
-  update(
+  async update(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Param('id') id: string,
     @Body() dto: UpdateExpenseDto,
   ) {
-    return this.expensesService.update(user, id, dto, gymId);
+    return await this.expensesService.update(user, id, dto, gymId);
   }
 
   @Delete(':gymId/:id')
   @ApiOperation({ summary: 'Delete an expense' })
-  remove(
+  async remove(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Param('id') id: string,
   ) {
-    return this.expensesService.remove(user, id, gymId);
+    return await this.expensesService.remove(user, id, gymId);
   }
 }

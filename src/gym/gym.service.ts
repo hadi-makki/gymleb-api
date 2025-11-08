@@ -775,16 +775,20 @@ export class GymService {
     const currentMonthStart = startOfMonth(now);
 
     // Build date filter for the specified range
-    const dateFilter: any = {};
+    const dateFilter: any = { gym: { id: gym.id } };
     if (start || end) {
-      dateFilter.createdAt = {};
-      if (start) dateFilter.createdAt.$gte = new Date(start);
-      if (end) dateFilter.createdAt.$lte = new Date(end);
+      if (start && end) {
+        dateFilter.createdAt = Between(new Date(start), new Date(end));
+      } else if (start) {
+        dateFilter.createdAt = MoreThanOrEqual(new Date(start));
+      } else if (end) {
+        dateFilter.createdAt = LessThanOrEqual(new Date(end));
+      }
     }
 
     // Fetch all transactions for the gym in the specified range
     const allTransactions = await this.transactionModel.find({
-      where: { gym: { id: gym.id }, ...dateFilter },
+      where: dateFilter,
       relations: ['subscription', 'revenue', 'expense'],
     });
 

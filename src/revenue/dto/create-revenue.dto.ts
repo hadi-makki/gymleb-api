@@ -1,13 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
 } from 'class-validator';
-import { IsEnum } from 'class-validator';
 import { Currency } from 'src/common/enums/currency.enum';
 
 export class CreateRevenueDto {
@@ -43,7 +44,7 @@ export class CreateRevenueDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   numberSold?: number;
 
   @ApiProperty({ required: false })

@@ -8,6 +8,8 @@ export type MemberExportRow = {
   expiresAt?: string | null; // dd/MM/yyyy
   status: 'Active' | 'Inactive';
   paymentStatus?: 'Paid' | 'Unpaid' | '';
+  unpaidSubscriptionsCount?: number;
+  unpaidSubscriptionsDetails?: string;
 };
 
 export async function buildMembersWorkbook(
@@ -25,6 +27,8 @@ export async function buildMembersWorkbook(
     { header: 'Expires At', key: 'expiresAt', width: 16 },
     { header: 'Status', key: 'status', width: 12 },
     { header: 'Payment Status', key: 'paymentStatus', width: 16 },
+    { header: 'Unpaid Subscriptions', key: 'unpaidSubscriptionsCount', width: 20 },
+    { header: 'Unpaid Subscriptions Details', key: 'unpaidSubscriptionsDetails', width: 50 },
   ];
 
   for (const r of rows) {
@@ -36,6 +40,8 @@ export async function buildMembersWorkbook(
       expiresAt: r.expiresAt ?? '',
       status: r.status,
       paymentStatus: r.paymentStatus ?? '',
+      unpaidSubscriptionsCount: r.unpaidSubscriptionsCount ?? 0,
+      unpaidSubscriptionsDetails: r.unpaidSubscriptionsDetails ?? '',
     });
   }
 

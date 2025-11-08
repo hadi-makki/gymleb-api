@@ -141,6 +141,8 @@ export class MemberController {
     @Query('gender') gender?: Gender,
     @Query('expirationStartDate') expirationStartDate?: string,
     @Query('expirationEndDate') expirationEndDate?: string,
+    @Query('personalTrainerId') personalTrainerId?: string,
+    @Query('paymentStatus') paymentStatus?: 'paid' | 'unpaid',
   ) {
     return await this.memberService.findAll(
       manager,
@@ -152,6 +154,8 @@ export class MemberController {
       gender,
       expirationStartDate,
       expirationEndDate,
+      personalTrainerId,
+      paymentStatus,
     );
   }
 
@@ -302,6 +306,8 @@ export class MemberController {
     @Query('gender') gender?: Gender,
     @Query('expirationStartDate') expirationStartDate?: string,
     @Query('expirationEndDate') expirationEndDate?: string,
+    @Query('personalTrainerId') personalTrainerId?: string,
+    @Query('paymentStatus') paymentStatus?: 'paid' | 'unpaid',
   ) {
     const { buffer, filename } = await this.memberService.exportMembersXlsx(
       manager,
@@ -311,6 +317,8 @@ export class MemberController {
       gender,
       expirationStartDate,
       expirationEndDate,
+      personalTrainerId,
+      paymentStatus,
     );
     res.setHeader(
       'Content-Type',

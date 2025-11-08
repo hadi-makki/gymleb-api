@@ -519,11 +519,9 @@ export class TransactionService {
       },
     });
 
-    if (!getTransaction) {
-      throw new NotFoundException('revenue not found');
+    if (getTransaction) {
+      await this.transactionModel.remove(getTransaction);
     }
-
-    await this.transactionModel.remove(getTransaction);
   }
 
   async deletePtSessionTransaction(ptSessionId: string) {

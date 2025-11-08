@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
-import { Repository } from 'typeorm';
+import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { TransactionService } from '../transactions/transaction.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
@@ -56,14 +56,20 @@ export class ExpensesService {
       where: { id: gymId },
     });
     if (!gym) throw new NotFoundException('Gym not found');
-    const filter: any = { gym: { id: gymId } };
+
+    const where: any = { gym: { id: gymId } };
     if (start || end) {
-      filter.date = {};
-      if (start) filter.date.$gte = new Date(start);
-      if (end) filter.date.$lte = new Date(end);
+      if (start && end) {
+        where.date = Between(new Date(start), new Date(end));
+      } else if (start) {
+        where.date = MoreThanOrEqual(new Date(start));
+      } else if (end) {
+        where.date = LessThanOrEqual(new Date(end));
+      }
     }
+
     return this.expenseModel.find({
-      where: filter,
+      where: where,
       order: { date: 'DESC' },
       relations: ['transaction'],
     });
