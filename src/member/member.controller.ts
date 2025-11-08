@@ -160,7 +160,11 @@ export class MemberController {
   }
 
   @Get('get-member/:gymId/:memberId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.members,
+    Permissions.personalTrainers,
+  )
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()

@@ -27,8 +27,16 @@ export async function buildMembersWorkbook(
     { header: 'Expires At', key: 'expiresAt', width: 16 },
     { header: 'Status', key: 'status', width: 12 },
     { header: 'Payment Status', key: 'paymentStatus', width: 16 },
-    { header: 'Unpaid Subscriptions', key: 'unpaidSubscriptionsCount', width: 20 },
-    { header: 'Unpaid Subscriptions Details', key: 'unpaidSubscriptionsDetails', width: 50 },
+    {
+      header: 'Unpaid Subscriptions',
+      key: 'unpaidSubscriptionsCount',
+      width: 20,
+    },
+    {
+      header: 'Unpaid Subscriptions Details',
+      key: 'unpaidSubscriptionsDetails',
+      width: 50,
+    },
   ];
 
   for (const r of rows) {
