@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { addDays, addMinutes, differenceInHours } from 'date-fns';
+import { addDays, addMinutes, addSeconds, differenceInHours } from 'date-fns';
 import { Request, Response } from 'express';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -63,12 +63,12 @@ export class TokenService {
       },
       {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
-        expiresIn: accessExpirationMinutes + 'm',
+        expiresIn: accessExpirationMinutes + 's',
       },
     );
     return {
       accessToken,
-      accessExpirationDate: addMinutes(new Date(), accessExpirationMinutes),
+      accessExpirationDate: addSeconds(new Date(), accessExpirationMinutes),
     };
   }
 
