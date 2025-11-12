@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FilterOperator, paginate } from 'nestjs-paginate';
 import { ExpenseEntity } from 'src/expenses/expense.entity';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { GymEntity } from 'src/gym/entities/gym.entity';
@@ -10,13 +11,13 @@ import {
   SubscriptionEntity,
   SubscriptionType,
 } from 'src/subscription/entities/subscription.entity';
-import { ILike, Raw, Repository } from 'typeorm';
-import { FilterOperator, paginate } from 'nestjs-paginate';
+import { ILike, In, Raw, Repository } from 'typeorm';
 import { Permissions } from '../decorators/roles/role.enum';
 import { GymService } from '../gym/gym.service';
 import { MemberService } from '../member/member.service';
 import { Days } from '../seeder/gym.seeding';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { TransactionType } from '../transactions/transaction.entity';
 import { CreateGymOwnerDto } from './dto/create-gym-owner.dto';
 import { CreateGymToGymOwnerDto } from './dto/create-gym-to-gym-owner.dto';
 import { UpdateGymOwnerDto } from './dto/update-gym-owner.dto';
@@ -397,8 +398,6 @@ export class GymOwnerService {
   }
 
   async getAllGymOwners(limit: number, page: number, search?: string) {
-    console.log('getAllGymOwners with pagination', { limit, page, search });
-
     // Build custom where clause for gym name search
     let whereClause: any = {
       permissions: Raw(
@@ -421,6 +420,7 @@ export class GymOwnerService {
       ];
     }
 
+    // Get paginated gym owners without loading expensive transactions relation
     const res = await paginate(
       {
         limit,
@@ -431,9 +431,7 @@ export class GymOwnerService {
       this.gymOwnerModel,
       {
         relations: {
-          ownedGyms: {
-            transactions: true,
-          },
+          ownedGyms: true, // Only load gyms, not transactions
         },
         sortableColumns: [
           'createdAt',
@@ -455,29 +453,61 @@ export class GymOwnerService {
       },
     );
 
-    // Process each gym owner to add expired/active gym counts
-    const items = await Promise.all(
-      res.data.map(async (gymOwner: any) => {
-        let expiredGymsCount = 0;
-        let activeGymsCount = 0;
+    // Collect all gym IDs from all gym owners in the current page
+    const allGymIds = res.data.flatMap(
+      (gymOwner: any) =>
+        gymOwner.ownedGyms?.map((gym: GymEntity) => gym.id) || [],
+    );
 
+    // Batch load all gyms with their transactions in a single query
+    // Only query if there are gym IDs to avoid empty query
+    const gymsWithTransactions =
+      allGymIds.length > 0
+        ? await this.gymModel.find({
+            where: { id: In(allGymIds) },
+            relations: {
+              transactions: {
+                ownerSubscriptionType: true,
+              },
+            },
+          })
+        : [];
+
+    // Create a map of gym ID to active subscription status for O(1) lookup
+    const gymActiveStatusMap = new Map<string, boolean>();
+    const now = new Date();
+
+    for (const gym of gymsWithTransactions) {
+      const hasActiveSubscription = gym.transactions?.some(
+        (transaction) =>
+          transaction.type === TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT &&
+          new Date(transaction.endDate) > now,
+      );
+      gymActiveStatusMap.set(gym.id, !!hasActiveSubscription);
+    }
+
+    // Process each gym owner to add expired/active gym counts using the map
+    const items = res.data.map((gymOwner: any) => {
+      let expiredGymsCount = 0;
+      let activeGymsCount = 0;
+
+      if (gymOwner.ownedGyms) {
         for (const gym of gymOwner.ownedGyms) {
-          const activeSubscription =
-            await this.gymService.getGymActiveSubscription(gym);
-          if (!activeSubscription.activeSubscription) {
-            expiredGymsCount++;
-          } else {
+          const isActive = gymActiveStatusMap.get(gym.id) ?? false;
+          if (isActive) {
             activeGymsCount++;
+          } else {
+            expiredGymsCount++;
           }
         }
+      }
 
-        return {
-          ...gymOwner,
-          expiredGymsCount: expiredGymsCount,
-          activeGymsCount: activeGymsCount,
-        };
-      }),
-    );
+      return {
+        ...gymOwner,
+        expiredGymsCount,
+        activeGymsCount,
+      };
+    });
 
     return {
       ...res,
