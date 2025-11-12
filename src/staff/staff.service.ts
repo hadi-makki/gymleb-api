@@ -49,28 +49,34 @@ export class StaffService {
   }
 
   async findAll(manager: ManagerEntity, gymId: string) {
-    const gym = await this.gymService.getGymByManager(manager);
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+
+    const gym = await this.gymModel.findOne({
+      where: {
+        id: gymId,
+        owner: { id: manager.id },
+      },
+    });
+
     if (!gym) {
       throw new NotFoundException('Gym not found');
     }
 
-    console.log('gymId', gymId);
+    const staffMembers = await this.managerModel
+      .createQueryBuilder('manager')
+      .innerJoin('manager.gyms', 'gym', 'gym.id = :gymId', { gymId })
+      .orderBy('manager.createdAt', 'DESC')
+      .getMany();
 
-    const staff = await this.managerModel
-      .find({
-        where: {
-          gyms: { id: gym.id },
-        },
-        order: {
-          createdAt: 'DESC',
-        },
-      })
-      .then((staff) => {
-        return staff.filter(
-          (m) => !m.permissions.includes(Permissions.GymOwner),
-        );
-      });
-    return staff.map((m) => returnManager(m));
+    return staffMembers
+      .filter(
+        (member) =>
+          member.id !== manager.id &&
+          !member.permissions.includes(Permissions.GymOwner),
+      )
+      .map((member) => returnManager(member));
   }
 
   async findOne(id: string, manager: ManagerEntity) {
