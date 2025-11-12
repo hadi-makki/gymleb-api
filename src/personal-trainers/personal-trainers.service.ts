@@ -669,13 +669,24 @@ export class PersonalTrainersService {
       order: { createdAt: 'DESC' },
     });
 
-    // Filter managers who have personal-trainers permission
-    const personalTrainers = allManagers.filter(
-      (manager) =>
-        manager.permissions &&
-        Array.isArray(manager.permissions) &&
-        manager.permissions.includes(Permissions.personalTrainers),
-    );
+    // Filter managers who have either only the 'personal-trainers' permission
+    // or only 'personal-trainers' and 'revenue' permission (no other permissions)
+    const personalTrainers = allManagers.filter((manager) => {
+      const perms = manager.permissions;
+      // perms must be ['personal-trainers'] or ['personal-trainers', 'revenue'] (any order)
+      if (!perms.includes(Permissions.personalTrainers)) return false;
+      if (perms.length === 1 && perms[0] === Permissions.personalTrainers) {
+        return true;
+      }
+      if (
+        perms.length === 2 &&
+        perms.includes(Permissions.personalTrainers) &&
+        perms.includes(Permissions.revenue)
+      ) {
+        return true;
+      }
+      return false;
+    });
 
     const sessionsResult: {
       personalTrainer: ManagerEntity;

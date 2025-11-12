@@ -56,18 +56,20 @@ export class StaffService {
 
     console.log('gymId', gymId);
 
-    const staff = await this.managerModel.find({
-      where: {
-        gyms: { id: gym.id },
-        // permissions is jsonb[]; exclude owners via jsonb containment
-        permissions: Raw(
-          (alias) => `NOT (${alias} @> '["${Permissions.GymOwner}"]'::jsonb)`,
-        ),
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+    const staff = await this.managerModel
+      .find({
+        where: {
+          gyms: { id: gym.id },
+        },
+        order: {
+          createdAt: 'DESC',
+        },
+      })
+      .then((staff) => {
+        return staff.filter(
+          (m) => !m.permissions.includes(Permissions.GymOwner),
+        );
+      });
     return staff.map((m) => returnManager(m));
   }
 
