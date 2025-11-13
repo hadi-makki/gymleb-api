@@ -140,6 +140,7 @@ export class TwilioController {
     @Param('gymId') gymId: string,
     @Param('memberId') memberId: string,
   ) {
+    console.log('we are in notifyExpiredMember');
     return await this.twilioService.notifyExpiredMember(memberId, gymId);
   }
 

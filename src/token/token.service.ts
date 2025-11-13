@@ -6,7 +6,7 @@ import { addDays, addMinutes, differenceInHours } from 'date-fns';
 import { Request, Response } from 'express';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { UnauthorizedException } from '../error/unauthorized-error';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
@@ -229,6 +229,32 @@ export class TokenService {
     }
     return {
       message: 'Tokens deleted successfully',
+    };
+  }
+
+  async deleteAllTokensExceptCurrentDevice(
+    managerId: string,
+    currentDeviceId: string,
+  ): Promise<SuccessMessageReturn> {
+    console.log('these are the current device id', currentDeviceId);
+    console.log('these are the manager id', managerId);
+    const tokensToDelete = await this.tokenRepository.find({
+      where: [
+        {
+          manager: { id: managerId },
+          deviceId: Not(currentDeviceId),
+        },
+      ],
+    });
+
+    console.log('these are the tokens to delete', tokensToDelete);
+
+    if (tokensToDelete.length > 0) {
+      await this.tokenRepository.remove(tokensToDelete);
+    }
+
+    return {
+      message: 'Logged out from other devices successfully',
     };
   }
 

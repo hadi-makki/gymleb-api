@@ -133,6 +133,20 @@ export class ManagerController {
     return this.ManagerService.logout(user, deviceId);
   }
 
+  @Post('logout-all-other-devices')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(Permissions.Any)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  async logoutAllOtherDevices(
+    @User() user: ManagerEntity,
+    @GetDeviceId() deviceId: string,
+  ) {
+    return this.ManagerService.logoutFromAllOtherDevices(user, deviceId);
+  }
+
   @Get('get/me')
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.Any)

@@ -263,6 +263,20 @@ export class ManagerService {
     };
   }
 
+  async logoutFromAllOtherDevices(
+    user: ManagerEntity,
+    deviceId: string,
+  ): Promise<SuccessMessageReturn> {
+    if (!deviceId) {
+      throw new BadRequestException('Device id not found');
+    }
+
+    return await this.tokenService.deleteAllTokensExceptCurrentDevice(
+      user.id,
+      deviceId,
+    );
+  }
+
   async getAdminAnalytics(
     start?: string,
     end?: string,
