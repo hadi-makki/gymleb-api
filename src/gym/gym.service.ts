@@ -176,6 +176,7 @@ export class GymService {
       totalMembers,
     ] = await Promise.all([
       // Total subscription revenue for selected period (or current month by default)
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
@@ -183,7 +184,9 @@ export class GymService {
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
           from: filterFrom,
@@ -192,6 +195,7 @@ export class GymService {
         .getRawOne<{ sum: string }>(),
 
       // Personal trainer session revenue for selected period (gym share logic)
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(
@@ -210,7 +214,9 @@ export class GymService {
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
           from: filterFrom,
           to: filterTo,
@@ -219,6 +225,7 @@ export class GymService {
         .getRawOne<{ sum: string }>(),
 
       // Additional revenue (explicit REVENUE type only; PT share handled above)
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
@@ -226,7 +233,9 @@ export class GymService {
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.type = :type', { type: TransactionType.REVENUE })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
           from: filterFrom,
@@ -235,6 +244,7 @@ export class GymService {
         .getRawOne<{ sum: string }>(),
 
       // Total expenses in selected period
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
@@ -242,7 +252,9 @@ export class GymService {
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.type = :type', { type: TransactionType.EXPENSE })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
           from: filterFrom,
@@ -251,16 +263,18 @@ export class GymService {
         .getRawOne<{ sum: string }>(),
 
       // Total transactions count in selected period
+      // Includes both fully paid and partially paid transactions
       this.transactionModel.count({
         where: {
           gym: { id: gymId },
-          status: PaymentStatus.PAID,
+          status: In([PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID]),
           currency: currency || Currency.USD,
           paidAt: Between(filterFrom, filterTo),
         },
       }),
 
       // Last month subscription revenue
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
@@ -268,7 +282,9 @@ export class GymService {
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
           from: lastMonthStart,
@@ -277,16 +293,20 @@ export class GymService {
         .getRawOne<{ sum: string }>(),
 
       // Current month subscription revenue
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
         .where('t.gymId = :gymId', { gymId })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt >= :from', { from: currentMonthStart })
         .getRawOne<{ sum: string }>(),
 
       // Current month PT session revenue (gym share)
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(
@@ -302,17 +322,22 @@ export class GymService {
           'sum',
         )
         .where('t.gymId = :gymId', { gymId })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.paidAt >= :from', { from: currentMonthStart })
         .setParameters({ pt: TransactionType.PERSONAL_TRAINER_SESSION })
         .getRawOne<{ sum: string }>(),
 
       // Current month owner subscription assignment total
+      // Includes both fully paid and partially paid transactions
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
         .where('t.gymId = :gymId', { gymId })
-        .andWhere('t.status = :status', { status: PaymentStatus.PAID })
+        .andWhere('t.status IN (:...statuses)', {
+          statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
+        })
         .andWhere('t.type = :type', {
           type: TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT,
         })
@@ -320,10 +345,11 @@ export class GymService {
         .getRawOne<{ sum: string }>(),
 
       // Current month subscription transactions count
+      // Includes both fully paid and partially paid transactions
       this.transactionModel.count({
         where: {
           gym: { id: gymId },
-          status: PaymentStatus.PAID,
+          status: In([PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID]),
           type: TransactionType.SUBSCRIPTION,
           paidAt: MoreThanOrEqual(currentMonthStart),
         },
