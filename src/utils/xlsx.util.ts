@@ -153,6 +153,45 @@ export async function buildUnpaidTransactionsByMemberWorkbook(
     });
   }
 
+  // Calculate totals by currency
+  const totalsByCurrency = new Map<string, number>();
+  for (const r of rows) {
+    const currency = r.currency || 'USD';
+    const currentTotal = totalsByCurrency.get(currency) || 0;
+    totalsByCurrency.set(currency, currentTotal + (r.totalAmountOwed || 0));
+  }
+
+  // Add empty row before totals
+  sheet.addRow({});
+
+  // Add total row(s)
+  if (totalsByCurrency.size === 1) {
+    // Single currency - simple total row
+    const [currency, total] = Array.from(totalsByCurrency.entries())[0];
+    const totalRow = sheet.addRow({
+      memberName: 'TOTAL',
+      unpaidItemsSummary: '',
+      totalAmountOwed: total,
+      currency: currency,
+    });
+    totalRow.font = { bold: true };
+    totalRow.getCell(1).font = { bold: true };
+    totalRow.getCell(3).font = { bold: true };
+  } else {
+    // Multiple currencies - add a total row for each currency
+    for (const [currency, total] of totalsByCurrency.entries()) {
+      const totalRow = sheet.addRow({
+        memberName: `TOTAL (${currency})`,
+        unpaidItemsSummary: '',
+        totalAmountOwed: total,
+        currency: currency,
+      });
+      totalRow.font = { bold: true };
+      totalRow.getCell(1).font = { bold: true };
+      totalRow.getCell(3).font = { bold: true };
+    }
+  }
+
   // Style header
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true };
