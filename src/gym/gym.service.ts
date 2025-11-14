@@ -763,7 +763,7 @@ export class GymService {
       ? [
           { ...baseWhere, title: ILike(`%${search}%`) },
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
-          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
+
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
           ...(isUUID(search) ? [{ id: search }] : []),
           {
@@ -836,8 +836,6 @@ export class GymService {
       ? [
           { ...baseWhere, title: ILike(`%${search}%`) },
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
-          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
-          { ...baseWhere, member: { email: ILike(`%${search}%`) } },
           ...(isUUID(search) ? [{ id: search }] : []),
           {
             ...baseWhere,
