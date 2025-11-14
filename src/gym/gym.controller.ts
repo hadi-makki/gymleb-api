@@ -374,6 +374,8 @@ export class GymController {
     @Query('type') type: TransactionType,
     @Param('gymId') gymId: string,
     @Query('status') status: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.gymService.getTransactionHistory(
       user,
@@ -383,6 +385,8 @@ export class GymController {
       type,
       gymId,
       status,
+      startDate,
+      endDate,
     );
   }
 

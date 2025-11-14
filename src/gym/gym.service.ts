@@ -731,6 +731,8 @@ export class GymService {
     type: TransactionType,
     gymId: string,
     status: string,
+    startDate?: string,
+    endDate?: string,
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -753,11 +755,31 @@ export class GymService {
       }
     }
 
+    // Build date filter
+    let dateFilter: FindOptionsWhere<TransactionEntity> = {};
+    if (startDate && endDate) {
+      dateFilter = {
+        createdAt: Between(
+          startOfDay(new Date(startDate)),
+          endOfDay(new Date(endDate)),
+        ),
+      };
+    } else if (startDate) {
+      dateFilter = {
+        createdAt: MoreThanOrEqual(startOfDay(new Date(startDate))),
+      };
+    } else if (endDate) {
+      dateFilter = {
+        createdAt: LessThanOrEqual(endOfDay(new Date(endDate))),
+      };
+    }
+
     // Build where clause supporting search across title, member name, and personal trainer name
     const baseWhere: FindOptionsWhere<TransactionEntity> = {
       gym: { id: gym.id },
       ...(type ? { type: type as TransactionType } : {}),
       ...statusFilter,
+      ...dateFilter,
     };
 
     // OR conditions for search
