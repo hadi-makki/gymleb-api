@@ -34,6 +34,14 @@ export const navItems: NavItem[] = [
     roles: [Permissions.GymOwner],
   },
   {
+    title: 'Performance Overview',
+    url: '/performance-overview',
+    icon: 'barChart',
+    isActive: false,
+    items: [],
+    roles: [Permissions.GymOwner],
+  },
+  {
     title: 'My Gym',
     url: '/my-gym',
     icon: 'building',

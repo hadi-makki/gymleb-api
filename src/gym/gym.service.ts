@@ -35,6 +35,7 @@ import {
   MoreThan,
   Not,
   Repository,
+  FindOptionsWhere,
 } from 'typeorm';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
@@ -722,7 +723,7 @@ export class GymService {
     search: string,
     type: TransactionType,
     gymId: string,
-    status: PaymentStatus,
+    status: string,
   ) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -731,11 +732,25 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
+    // Parse comma-separated statuses for multi-status filtering
+    let statusFilter: FindOptionsWhere<TransactionEntity> = {};
+    if (status) {
+      const statuses = status
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (statuses.length > 1) {
+        statusFilter = { status: In(statuses as PaymentStatus[]) };
+      } else if (statuses.length === 1) {
+        statusFilter = { status: statuses[0] as PaymentStatus };
+      }
+    }
+
     // Build where clause supporting search across title, member name, and personal trainer name
-    const baseWhere: any = {
+    const baseWhere: FindOptionsWhere<TransactionEntity> = {
       gym: { id: gym.id },
       ...(type ? { type: type as TransactionType } : {}),
-      ...(status ? { status: status as PaymentStatus } : {}),
+      ...statusFilter,
     };
 
     // OR conditions for search

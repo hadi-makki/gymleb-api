@@ -370,7 +370,7 @@ export class GymController {
     @Query('search') search: string,
     @Query('type') type: TransactionType,
     @Param('gymId') gymId: string,
-    @Query('status') status: PaymentStatus,
+    @Query('status') status: string,
   ) {
     return this.gymService.getTransactionHistory(
       user,
