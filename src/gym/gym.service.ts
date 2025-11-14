@@ -774,19 +774,6 @@ export class GymService {
       };
     }
 
-    // Fetch member ids matching search query (by name) to include in search results
-    let memberSearchIds: string[] = [];
-    if (search) {
-      const matchingMembers = await this.memberModel.find({
-        where: {
-          name: ILike(`%${search}%`),
-          gym: { id: gym.id },
-        },
-        select: ['id'],
-      });
-      memberSearchIds = matchingMembers.map((member) => member.id);
-    }
-
     // Build where clause supporting search across title, member name, and personal trainer name
     const baseWhere: FindOptionsWhere<TransactionEntity> = {
       gym: { id: gym.id },
@@ -807,9 +794,6 @@ export class GymService {
             personalTrainer: { firstName: ILike(`%${search}%`) },
           },
           { ...baseWhere, personalTrainer: { lastName: ILike(`%${search}%`) } },
-          ...(memberSearchIds.length > 0
-            ? [{ ...baseWhere, member: { id: In(memberSearchIds) } }]
-            : []),
         ]
       : baseWhere;
 
@@ -859,19 +843,6 @@ export class GymService {
       throw new NotFoundException('Gym not found');
     }
 
-    // Fetch member ids matching search query (by name) to include in search results
-    let memberSearchIds: string[] = [];
-    if (search) {
-      const matchingMembers = await this.memberModel.find({
-        where: {
-          name: ILike(`%${search}%`),
-          gym: { id: gym.id },
-        },
-        select: ['id'],
-      });
-      memberSearchIds = matchingMembers.map((member) => member.id);
-    }
-
     // Build where clause similar to getTransactionHistory
     let statusFilter: FindOptionsWhere<TransactionEntity> = {};
     if (status) {
@@ -889,15 +860,13 @@ export class GymService {
       ? [
           { ...baseWhere, title: ILike(`%${search}%`) },
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
+          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
           ...(isUUID(search) ? [{ id: search }] : []),
           {
             ...baseWhere,
             personalTrainer: { firstName: ILike(`%${search}%`) },
           },
           { ...baseWhere, personalTrainer: { lastName: ILike(`%${search}%`) } },
-          ...(memberSearchIds.length > 0
-            ? [{ ...baseWhere, member: { id: In(memberSearchIds) } }]
-            : []),
         ]
       : baseWhere;
 
