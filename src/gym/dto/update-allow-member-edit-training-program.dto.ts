@@ -9,4 +9,3 @@ export class UpdateAllowMemberEditTrainingProgramDto {
   @IsBoolean()
   allowMemberEditTrainingProgram: boolean;
 }
-

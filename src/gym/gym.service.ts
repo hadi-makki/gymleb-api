@@ -56,6 +56,11 @@ import { ProductEntity } from 'src/products/products.entity';
 import { MediaService } from 'src/media/media.service';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 import { Currency } from 'src/common/enums/currency.enum';
+import {
+  buildTransactionsWorkbook,
+  TransactionExportRow,
+} from 'src/utils/xlsx.util';
+import { format as dateFnsFormat } from 'date-fns';
 @Injectable()
 export class GymService {
   constructor(
@@ -759,6 +764,8 @@ export class GymService {
           { ...baseWhere, title: ILike(`%${search}%`) },
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
           { ...baseWhere, member: { name: ILike(`%${search}%`) } },
+          { ...baseWhere, paidBy: ILike(`%${search}%`) },
+          ...(isUUID(search) ? [{ id: search }] : []),
           {
             ...baseWhere,
             personalTrainer: { firstName: ILike(`%${search}%`) },
@@ -796,6 +803,102 @@ export class GymService {
         maxLimit: 100,
       },
     );
+  }
+
+  async exportTransactionsXlsx(
+    manager: ManagerEntity,
+    gymId: string,
+    search?: string,
+    type?: TransactionType,
+    status?: PaymentStatus,
+  ) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Build where clause similar to getTransactionHistory
+    let statusFilter: FindOptionsWhere<TransactionEntity> = {};
+    if (status) {
+      statusFilter = { status: status };
+    }
+
+    const baseWhere: FindOptionsWhere<TransactionEntity> = {
+      gym: { id: gym.id },
+      ...(type ? { type: type } : {}),
+      ...statusFilter,
+    };
+
+    // OR conditions for search
+    const whereConditions = search
+      ? [
+          { ...baseWhere, title: ILike(`%${search}%`) },
+          { ...baseWhere, paidBy: ILike(`%${search}%`) },
+          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
+          { ...baseWhere, member: { email: ILike(`%${search}%`) } },
+          ...(isUUID(search) ? [{ id: search }] : []),
+          {
+            ...baseWhere,
+            personalTrainer: { firstName: ILike(`%${search}%`) },
+          },
+          { ...baseWhere, personalTrainer: { lastName: ILike(`%${search}%`) } },
+        ]
+      : baseWhere;
+
+    // Fetch all transactions matching filters (no pagination)
+    const transactions = await this.transactionModel.find({
+      where: whereConditions,
+      relations: [
+        'subscription',
+        'member',
+        'gym',
+        'product',
+        'revenue',
+        'expense',
+        'relatedPtSession',
+        'personalTrainer',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Map transactions to export rows
+    const rows: TransactionExportRow[] = transactions.map((tx) => {
+      const memberName = tx.member?.name || null;
+      const personalTrainerName = tx.personalTrainer
+        ? `${tx.personalTrainer.firstName || ''} ${tx.personalTrainer.lastName || ''}`.trim() ||
+          null
+        : null;
+      const subscriptionType =
+        tx.subscription?.title || tx.subscriptionType || null;
+      const date = tx.date || tx.createdAt;
+      const startDate = tx.startDate;
+      const endDate = tx.endDate;
+
+      return {
+        date: date ? dateFnsFormat(new Date(date), 'dd/MM/yyyy') : '',
+        title: tx.title || null,
+        memberName,
+        type: tx.type || '',
+        amount: tx.paidAmount || 0,
+        currency: tx.currency || Currency.USD,
+        status: tx.status || PaymentStatus.PAID,
+        paidBy: tx.paidBy || null,
+        personalTrainer: personalTrainerName,
+        subscriptionType,
+        startDate: startDate
+          ? dateFnsFormat(new Date(startDate), 'dd/MM/yyyy')
+          : null,
+        endDate: endDate
+          ? dateFnsFormat(new Date(endDate), 'dd/MM/yyyy')
+          : null,
+      };
+    });
+
+    const buffer = await buildTransactionsWorkbook(rows, 'Transactions');
+    const filename = `transactions-${dateFnsFormat(new Date(), 'yyyyMMdd')}.xlsx`;
+    return { buffer, filename };
   }
 
   async getGymAnalyticsByOwnerId(

@@ -9,8 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ValidateGymRelatedToManagerOrManagerInGym } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
@@ -1184,5 +1186,33 @@ export class GymController {
       gymId,
       body.allowMembersSetPtTimes,
     );
+  }
+
+  @Get('transactions/export/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Export transactions to Excel' })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner, Permissions.transactions)
+  async exportTransactions(
+    @User() user: ManagerEntity,
+    @Param('gymId') gymId: string,
+    @Res() res: Response,
+    @Query('search') search?: string,
+    @Query('type') type?: TransactionType,
+    @Query('status') status?: PaymentStatus,
+  ) {
+    const { buffer, filename } = await this.gymService.exportTransactionsXlsx(
+      user,
+      gymId,
+      search,
+      type,
+      status,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
   }
 }

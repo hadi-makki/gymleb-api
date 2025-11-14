@@ -60,3 +60,65 @@ export async function buildMembersWorkbook(
   const buf = await workbook.xlsx.writeBuffer();
   return Buffer.from(buf);
 }
+
+export type TransactionExportRow = {
+  date: string; // dd/MM/yyyy
+  title?: string | null;
+  memberName?: string | null;
+  type: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paidBy?: string | null;
+  personalTrainer?: string | null;
+  subscriptionType?: string | null;
+  startDate?: string | null; // dd/MM/yyyy
+  endDate?: string | null; // dd/MM/yyyy
+};
+
+export async function buildTransactionsWorkbook(
+  rows: TransactionExportRow[],
+  sheetName: string = 'Transactions',
+): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName);
+
+  sheet.columns = [
+    { header: 'Date', key: 'date', width: 16 },
+    { header: 'Title', key: 'title', width: 30 },
+    { header: 'Member', key: 'memberName', width: 25 },
+    { header: 'Type', key: 'type', width: 25 },
+    { header: 'Amount', key: 'amount', width: 15 },
+    { header: 'Currency', key: 'currency', width: 12 },
+    { header: 'Status', key: 'status', width: 15 },
+    { header: 'Paid By', key: 'paidBy', width: 20 },
+    { header: 'Personal Trainer', key: 'personalTrainer', width: 25 },
+    { header: 'Subscription Type', key: 'subscriptionType', width: 20 },
+    { header: 'Start Date', key: 'startDate', width: 16 },
+    { header: 'End Date', key: 'endDate', width: 16 },
+  ];
+
+  for (const r of rows) {
+    sheet.addRow({
+      date: r.date ?? '',
+      title: r.title ?? '',
+      memberName: r.memberName ?? '',
+      type: r.type ?? '',
+      amount: r.amount ?? 0,
+      currency: r.currency ?? '',
+      status: r.status ?? '',
+      paidBy: r.paidBy ?? '',
+      personalTrainer: r.personalTrainer ?? '',
+      subscriptionType: r.subscriptionType ?? '',
+      startDate: r.startDate ?? '',
+      endDate: r.endDate ?? '',
+    });
+  }
+
+  // Style header
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true };
+
+  const buf = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
