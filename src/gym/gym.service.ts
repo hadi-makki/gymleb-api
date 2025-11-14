@@ -787,8 +787,7 @@ export class GymService {
       ? [
           { ...baseWhere, title: ILike(`%${search}%`) },
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
-
-          { ...baseWhere, paidBy: ILike(`%${search}%`) },
+          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
           ...(isUUID(search) ? [{ id: search }] : []),
           {
             ...baseWhere,
@@ -822,6 +821,7 @@ export class GymService {
         sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
         searchableColumns: ['title', 'paidBy'],
         defaultSortBy: [['createdAt', 'DESC']],
+
         where: whereConditions,
         filterableColumns: { type: [FilterOperator.EQ] },
         maxLimit: 100,
@@ -860,6 +860,7 @@ export class GymService {
       ? [
           { ...baseWhere, title: ILike(`%${search}%`) },
           { ...baseWhere, paidBy: ILike(`%${search}%`) },
+          { ...baseWhere, member: { name: ILike(`%${search}%`) } },
           ...(isUUID(search) ? [{ id: search }] : []),
           {
             ...baseWhere,
