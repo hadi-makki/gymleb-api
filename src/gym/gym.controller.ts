@@ -1215,4 +1215,25 @@ export class GymController {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.end(buffer);
   }
+
+  @Get('unpaid-transactions/export/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({ summary: 'Export unpaid transactions by member to Excel' })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner, Permissions.transactions)
+  async exportUnpaidTransactions(
+    @User() user: ManagerEntity,
+    @Param('gymId') gymId: string,
+    @Res() res: Response,
+    @Query('currency') currency?: Currency,
+  ) {
+    const { buffer, filename } =
+      await this.gymService.exportUnpaidTransactionsXlsx(user, gymId, currency);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
+  }
 }

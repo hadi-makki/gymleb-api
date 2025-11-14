@@ -122,3 +122,41 @@ export async function buildTransactionsWorkbook(
   const buf = await workbook.xlsx.writeBuffer();
   return Buffer.from(buf);
 }
+
+export type UnpaidTransactionsByMemberExportRow = {
+  memberName: string;
+  unpaidItemsSummary: string; // e.g., "2 PT sessions, 3 subscriptions"
+  totalAmountOwed: number;
+  currency: string;
+};
+
+export async function buildUnpaidTransactionsByMemberWorkbook(
+  rows: UnpaidTransactionsByMemberExportRow[],
+  sheetName: string = 'Unpaid Transactions by Member',
+): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName);
+
+  sheet.columns = [
+    { header: 'Member Name', key: 'memberName', width: 30 },
+    { header: 'Unpaid Items', key: 'unpaidItemsSummary', width: 50 },
+    { header: 'Total Amount Owed', key: 'totalAmountOwed', width: 20 },
+    { header: 'Currency', key: 'currency', width: 12 },
+  ];
+
+  for (const r of rows) {
+    sheet.addRow({
+      memberName: r.memberName ?? '',
+      unpaidItemsSummary: r.unpaidItemsSummary ?? '',
+      totalAmountOwed: r.totalAmountOwed ?? 0,
+      currency: r.currency ?? '',
+    });
+  }
+
+  // Style header
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true };
+
+  const buf = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}

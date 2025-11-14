@@ -59,6 +59,8 @@ import { Currency } from 'src/common/enums/currency.enum';
 import {
   buildTransactionsWorkbook,
   TransactionExportRow,
+  buildUnpaidTransactionsByMemberWorkbook,
+  UnpaidTransactionsByMemberExportRow,
 } from 'src/utils/xlsx.util';
 import { format as dateFnsFormat } from 'date-fns';
 @Injectable()
@@ -896,6 +898,153 @@ export class GymService {
 
     const buffer = await buildTransactionsWorkbook(rows, 'Transactions');
     const filename = `transactions-${dateFnsFormat(new Date(), 'yyyyMMdd')}.xlsx`;
+    return { buffer, filename };
+  }
+
+  async exportUnpaidTransactionsXlsx(
+    manager: ManagerEntity,
+    gymId: string,
+    currency?: Currency,
+  ) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Build where clause for unpaid/partially_paid transactions
+    const baseWhere: FindOptionsWhere<TransactionEntity> = {
+      gym: { id: gym.id },
+      status: In([PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID]),
+      ...(currency ? { currency } : {}),
+    };
+
+    // Fetch all unpaid transactions with relations
+    const transactions = await this.transactionModel.find({
+      where: baseWhere,
+      relations: [
+        'subscription',
+        'member',
+        'gym',
+        'product',
+        'revenue',
+        'expense',
+        'relatedPtSession',
+        'personalTrainer',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Group transactions by member
+    const memberGroups = new Map<
+      string,
+      {
+        memberName: string;
+        transactions: TransactionEntity[];
+        totalAmountOwed: number;
+        currency: Currency;
+      }
+    >();
+
+    for (const tx of transactions) {
+      const memberId = tx.member?.id || 'no-member';
+      const memberName = tx.member?.name || tx.paidBy || 'Unknown Member';
+
+      // Calculate remaining amount owed
+      const originalAmount = tx.originalAmount || tx.paidAmount || 0;
+      const paidAmount = tx.paidAmount || 0;
+      const remainingAmount = Math.max(0, originalAmount - paidAmount);
+
+      if (!memberGroups.has(memberId)) {
+        memberGroups.set(memberId, {
+          memberName,
+          transactions: [],
+          totalAmountOwed: 0,
+          currency: tx.currency || Currency.USD,
+        });
+      }
+
+      const group = memberGroups.get(memberId)!;
+      group.transactions.push(tx);
+      group.totalAmountOwed += remainingAmount;
+      // Use the currency from the first transaction or keep existing
+      if (!group.currency) {
+        group.currency = tx.currency || Currency.USD;
+      }
+    }
+
+    // Build summary strings and export rows
+    const rows: UnpaidTransactionsByMemberExportRow[] = Array.from(
+      memberGroups.values(),
+    ).map((group) => {
+      // Count items by type
+      const typeCounts = new Map<string, number>();
+      for (const tx of group.transactions) {
+        let typeLabel = '';
+        switch (tx.type) {
+          case TransactionType.SUBSCRIPTION:
+            typeLabel = 'subscription';
+            break;
+          case TransactionType.PERSONAL_TRAINER_SESSION:
+            typeLabel = 'PT session';
+            break;
+          case TransactionType.PRODUCTS_TRANSFER:
+            typeLabel = 'product transfer';
+            break;
+          case TransactionType.PRODUCTS_RECEIVE:
+            typeLabel = 'product receive';
+            break;
+          case TransactionType.PRODUCTS_RETURN:
+            typeLabel = 'product return';
+            break;
+          case TransactionType.REVENUE:
+            typeLabel = 'revenue';
+            break;
+          case TransactionType.EXPENSE:
+            typeLabel = 'expense';
+            break;
+          case TransactionType.OWNER_SUBSCRIPTION_ASSIGNMENT:
+            typeLabel = 'owner subscription';
+            break;
+          default:
+            typeLabel =
+              (tx.type as string)?.replace(/_/g, ' ').toLowerCase() || 'item';
+        }
+
+        const count = typeCounts.get(typeLabel) || 0;
+        typeCounts.set(typeLabel, count + 1);
+      }
+
+      // Build summary string
+      const summaryParts: string[] = [];
+      for (const [typeLabel, count] of typeCounts.entries()) {
+        if (count === 1) {
+          summaryParts.push(`1 ${typeLabel}`);
+        } else {
+          summaryParts.push(`${count} ${typeLabel}s`);
+        }
+      }
+
+      const unpaidItemsSummary =
+        summaryParts.length > 0 ? summaryParts.join(', ') : 'No unpaid items';
+
+      return {
+        memberName: group.memberName,
+        unpaidItemsSummary,
+        totalAmountOwed: group.totalAmountOwed,
+        currency: group.currency,
+      };
+    });
+
+    // Sort by total amount owed (descending)
+    rows.sort((a, b) => b.totalAmountOwed - a.totalAmountOwed);
+
+    const buffer = await buildUnpaidTransactionsByMemberWorkbook(
+      rows,
+      'Unpaid Transactions by Member',
+    );
+    const filename = `unpaid-transactions-${dateFnsFormat(new Date(), 'yyyyMMdd')}.xlsx`;
     return { buffer, filename };
   }
 
