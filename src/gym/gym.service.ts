@@ -876,12 +876,25 @@ export class GymService {
       const startDate = tx.startDate;
       const endDate = tx.endDate;
 
+      // Calculate amount: for paid transactions, show paidAmount
+      // For unpaid, show originalAmount
+      // For partially paid, show remaining amount (originalAmount - paidAmount)
+      const originalAmount = tx.originalAmount || tx.paidAmount || 0;
+      const paidAmount = tx.paidAmount || 0;
+      let amount = paidAmount; // Default to paid amount for paid transactions
+
+      if (tx.status === PaymentStatus.UNPAID) {
+        amount = originalAmount;
+      } else if (tx.status === PaymentStatus.PARTIALLY_PAID) {
+        amount = Math.max(0, originalAmount - paidAmount);
+      }
+
       return {
         date: date ? dateFnsFormat(new Date(date), 'dd/MM/yyyy') : '',
         title: tx.title || null,
         memberName,
         type: tx.type || '',
-        amount: tx.paidAmount || 0,
+        amount,
         currency: tx.currency || Currency.USD,
         status: tx.status || PaymentStatus.PAID,
         paidBy: tx.paidBy || null,
@@ -954,7 +967,13 @@ export class GymService {
       // Calculate remaining amount owed
       const originalAmount = tx.originalAmount || tx.paidAmount || 0;
       const paidAmount = tx.paidAmount || 0;
-      const remainingAmount = Math.max(0, originalAmount - paidAmount);
+
+      // If fully unpaid, use original amount as is
+      // If partially paid, subtract paid amount from original amount
+      const remainingAmount =
+        tx.status === PaymentStatus.UNPAID
+          ? originalAmount
+          : Math.max(0, originalAmount - paidAmount);
 
       if (!memberGroups.has(memberId)) {
         memberGroups.set(memberId, {
