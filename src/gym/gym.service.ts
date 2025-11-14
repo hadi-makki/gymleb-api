@@ -2773,6 +2773,21 @@ export class GymService {
     return gym;
   }
 
+  async updateAllowMemberEditTrainingProgram(
+    gymId: string,
+    allowMemberEditTrainingProgram: boolean,
+  ) {
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+    gym.allowMemberEditTrainingProgram = allowMemberEditTrainingProgram;
+    await this.gymModel.save(gym);
+    return gym;
+  }
+
   async updateAllowUserSignUp(gymId: string, allowUserSignUp: boolean) {
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
@@ -3216,6 +3231,7 @@ export class GymService {
         'offers',
         'showPersonalTrainers',
         'restrictPublicProgramsToActiveMembers',
+        'allowMemberEditTrainingProgram',
         'messagesLanguage',
         'createdAt',
         'updatedAt',
@@ -3255,6 +3271,7 @@ export class GymService {
         'offers',
         'showPersonalTrainers',
         'restrictPublicProgramsToActiveMembers',
+        'allowMemberEditTrainingProgram',
         'messagesLanguage',
         'createdAt',
         'updatedAt',
@@ -3291,6 +3308,7 @@ export class GymService {
       showPersonalTrainers: gym.showPersonalTrainers,
       restrictPublicProgramsToActiveMembers:
         gym.restrictPublicProgramsToActiveMembers,
+      allowMemberEditTrainingProgram: gym.allowMemberEditTrainingProgram,
       messagesLanguage: gym.messagesLanguage,
       createdAt: gym.createdAt.toISOString(),
       updatedAt: gym.updatedAt.toISOString(),

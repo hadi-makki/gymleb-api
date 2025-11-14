@@ -74,6 +74,9 @@ export class PublicGymDto {
   restrictPublicProgramsToActiveMembers: boolean;
 
   @ApiProperty()
+  allowMemberEditTrainingProgram: boolean;
+
+  @ApiProperty()
   messagesLanguage: MessageLanguage;
 
   @ApiProperty()

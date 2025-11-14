@@ -266,6 +266,9 @@ export class GymEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   allowMembersSetPtTimes: boolean;
 
+  @Column('boolean', { default: true })
+  allowMemberEditTrainingProgram: boolean;
+
   // Desktop license key fields
   @Column('text', { nullable: true })
   licenseKey: string | null;

@@ -46,6 +46,7 @@ import { UpdateOpeningDayDto } from './dto/update-opening-day.dto';
 import { UpdatePTPercentageDto } from './dto/update-pt-percentage.dto';
 import { UpdateSocialMediaDto } from './dto/update-social-media.dto';
 import { UpdateShowPersonalTrainersDto } from './dto/update-show-personal-trainers.dto';
+import { UpdateAllowMemberEditTrainingProgramDto } from './dto/update-allow-member-edit-training-program.dto';
 import { UpdateAllowUserSignupDto } from './dto/update-allow-user-signup.dto';
 import { UpdateBirthdayAutomationDto } from './dto/update-birthday-automation.dto';
 import { UpdateAllowMembersSetPtTimesDto } from './dto/update-allow-members-set-pt-times.dto';
@@ -802,6 +803,25 @@ export class GymController {
     return this.gymService.updateShowPersonalTrainers(
       gymId,
       updateShowPersonalTrainersDto.showPersonalTrainers,
+    );
+  }
+
+  @Patch('allow-member-edit-training-program/:gymId')
+  @UseGuards(ManagerAuthGuard)
+  @ApiOperation({
+    summary: 'Update gym allow member edit training program setting',
+  })
+  @ValidateGymRelatedToOwner()
+  @Roles(Permissions.GymOwner)
+  @ApiBody({ type: UpdateAllowMemberEditTrainingProgramDto })
+  updateAllowMemberEditTrainingProgram(
+    @Param('gymId') gymId: string,
+    @Body()
+    updateAllowMemberEditTrainingProgramDto: UpdateAllowMemberEditTrainingProgramDto,
+  ) {
+    return this.gymService.updateAllowMemberEditTrainingProgram(
+      gymId,
+      updateAllowMemberEditTrainingProgramDto.allowMemberEditTrainingProgram,
     );
   }
 
