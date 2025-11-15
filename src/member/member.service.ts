@@ -1775,30 +1775,53 @@ export class MemberService {
         { now },
       );
 
-    // Exclude members who have active PT sessions
-    // Check ManyToMany relation (userPtSessions)
-    idsQb = idsQb
-      .leftJoin(
-        'pt_session_members',
-        'pt_session_members_m2m',
-        'pt_session_members_m2m."memberId" = m.id',
-      )
-      .leftJoin(
-        'pt_sessions',
-        'pt_session_m2m',
-        'pt_session_m2m.id = pt_session_members_m2m."ptSessionId" AND pt_session_m2m."isCancelled" = false AND (pt_session_m2m."sessionDate" IS NULL OR pt_session_m2m."sessionDate" > :now)',
-        { now },
-      )
-      // Check OneToMany relation (ptSessions)
-      .leftJoin(
-        'pt_sessions',
-        'pt_session_o2m',
-        'pt_session_o2m."memberId" = m.id AND pt_session_o2m."isCancelled" = false AND (pt_session_o2m."sessionDate" IS NULL OR pt_session_o2m."sessionDate" > :now)',
-        { now },
-      )
-      // Exclude members with active sessions
-      .andWhere('pt_session_m2m.id IS NULL')
-      .andWhere('pt_session_o2m.id IS NULL');
+    // Exclude members who have active PT sessions using NOT EXISTS subqueries
+    // Active session = not cancelled AND (no sessionDate OR sessionDate in future)
+
+    // Get member IDs that have active sessions (using the same logic as checkMemberHasActiveSessions)
+    const membersWithActiveSessions = await this.ptSessionRepository
+      .createQueryBuilder('session')
+      .innerJoin('session.members', 'member')
+      .select('DISTINCT member.id', 'memberId')
+      .where('session.isCancelled = false')
+      .andWhere('(session.sessionDate IS NULL OR session.sessionDate > :now)', {
+        now,
+      })
+      .getRawMany();
+
+    const memberIdsWithActiveSessionsM2M = membersWithActiveSessions.map(
+      (r) => r.memberId,
+    );
+
+    // Also check OneToMany relation
+    const membersWithActiveSessionsO2M = await this.ptSessionRepository
+      .createQueryBuilder('session')
+      .select('DISTINCT session.memberId', 'memberId')
+      .where('session.memberId IS NOT NULL')
+      .andWhere('session.isCancelled = false')
+      .andWhere('(session.sessionDate IS NULL OR session.sessionDate > :now)', {
+        now,
+      })
+      .getRawMany();
+
+    const memberIdsWithActiveSessionsO2M = membersWithActiveSessionsO2M.map(
+      (r) => r.memberId,
+    );
+
+    // Combine both sets
+    const allMemberIdsWithActiveSessions = [
+      ...new Set([
+        ...memberIdsWithActiveSessionsM2M,
+        ...memberIdsWithActiveSessionsO2M,
+      ]),
+    ];
+
+    // Exclude members with active sessions
+    if (allMemberIdsWithActiveSessions.length > 0) {
+      idsQb = idsQb.andWhere('m.id NOT IN (:...memberIdsWithSessions)', {
+        memberIdsWithSessions: allMemberIdsWithActiveSessions,
+      });
+    }
 
     // Count distinct members
     const totalItems = await idsQb.distinct(true).getCount();
