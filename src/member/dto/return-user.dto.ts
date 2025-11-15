@@ -49,6 +49,7 @@ export class ReturnUserDto {
   notificationSetting?: NotificationSettingEntity;
   phoneNumberISOCode?: string;
   welcomeMessageSentManually?: boolean;
+  hasActiveSessions?: boolean;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

@@ -90,6 +90,43 @@ export class MemberService {
     return activeSubscription;
   }
 
+  /**
+   * Check if a member has active PT sessions
+   * A session is considered active if:
+   * - It is not cancelled
+   * - AND (it has no sessionDate OR sessionDate is in the future)
+   */
+  async checkMemberHasActiveSessions(memberId: string): Promise<boolean> {
+    const now = new Date();
+
+    // Check sessions where member is in the ManyToMany relation (userPtSessions)
+    const sessionsInManyToMany = await this.ptSessionRepository
+      .createQueryBuilder('session')
+      .innerJoin('session.members', 'member')
+      .where('member.id = :memberId', { memberId })
+      .andWhere('session.isCancelled = false')
+      .andWhere('(session.sessionDate IS NULL OR session.sessionDate > :now)', {
+        now,
+      })
+      .getCount();
+
+    if (sessionsInManyToMany > 0) {
+      return true;
+    }
+
+    // Check sessions where member is in the OneToMany relation (ptSessions)
+    const sessionsInOneToMany = await this.ptSessionRepository
+      .createQueryBuilder('session')
+      .where('session.memberId = :memberId', { memberId })
+      .andWhere('session.isCancelled = false')
+      .andWhere('(session.sessionDate IS NULL OR session.sessionDate > :now)', {
+        now,
+      })
+      .getCount();
+
+    return sessionsInOneToMany > 0;
+  }
+
   async processBirthdayAutomationForGym(gym: GymEntity) {
     // Ensure gym includes ownerSubscriptionType
     const gymWithSettings = await this.gymModel.findOne({
@@ -308,6 +345,7 @@ export class MemberService {
       lastSubscription,
       attendingDays,
       notificationSetting,
+      hasActiveSessions,
     ] = await Promise.all([
       // Get active subscription using SQL
       this.checkIfUserHasActiveSubscription(member.id),
@@ -324,6 +362,8 @@ export class MemberService {
       this.notificationSettingModel.findOne({
         where: { id: member.notificationSettingId },
       }),
+      // Check if member has active PT sessions
+      this.checkMemberHasActiveSessions(member.id),
     ]);
 
     return {
@@ -369,6 +409,7 @@ export class MemberService {
       notificationSetting: notificationSetting,
       phoneNumberISOCode: member.phoneNumberISOCode,
       welcomeMessageSentManually: member.welcomeMessageSentManually,
+      hasActiveSessions: hasActiveSessions,
     };
   }
 
@@ -1024,51 +1065,83 @@ export class MemberService {
      * STEP 1: Batch Fetch All Related Data in Parallel
      *
      * Instead of making individual queries for each member, we fetch ALL data
-     * for ALL members in just 5 parallel database calls.
+     * for ALL members in just 6 parallel database calls.
      */
-    const [activeSubs, latestSubs, attendingDays, notificationSettings] =
-      await Promise.all([
-        // Query 1: Get ALL active subscriptions for ALL members at once
-        this.transactionModel.find({
-          where: {
-            member: { id: In(memberIds) }, // Get for all members in one query
-            endDate: MoreThan(new Date()),
-            isInvalidated: false,
-            type: TransactionType.SUBSCRIPTION,
-          },
-          relations: { subscription: true },
-          order: { endDate: 'DESC' },
-        }),
+    const now = new Date();
+    const [
+      activeSubs,
+      latestSubs,
+      attendingDays,
+      notificationSettings,
+      activeSessionsManyToMany,
+      activeSessionsOneToMany,
+    ] = await Promise.all([
+      // Query 1: Get ALL active subscriptions for ALL members at once
+      this.transactionModel.find({
+        where: {
+          member: { id: In(memberIds) }, // Get for all members in one query
+          endDate: MoreThan(new Date()),
+          isInvalidated: false,
+          type: TransactionType.SUBSCRIPTION,
+        },
+        relations: { subscription: true },
+        order: { endDate: 'DESC' },
+      }),
 
-        // Query 2: Get ALL latest transactions for ALL members at once
-        this.transactionModel.find({
-          where: {
-            member: { id: In(memberIds) },
-            type: TransactionType.SUBSCRIPTION,
-          },
-          relations: {},
-          order: { createdAt: 'DESC' },
-        }),
+      // Query 2: Get ALL latest transactions for ALL members at once
+      this.transactionModel.find({
+        where: {
+          member: { id: In(memberIds) },
+          type: TransactionType.SUBSCRIPTION,
+        },
+        relations: {},
+        order: { createdAt: 'DESC' },
+      }),
 
-        // Query 3: Get ALL attending days for ALL members at once
-        this.attendingDaysModel.find({
-          where: { member: { id: In(memberIds) } },
-          order: { dayOfWeek: 'ASC' },
-        }),
+      // Query 3: Get ALL attending days for ALL members at once
+      this.attendingDaysModel.find({
+        where: { member: { id: In(memberIds) } },
+        order: { dayOfWeek: 'ASC' },
+      }),
 
-        // Query 5: Get notification settings (only for members that have them)
-        (async () => {
-          const nsIds = Array.from(
-            new Set(
-              members.map((m) => m.notificationSettingId).filter((id) => !!id),
-            ),
-          );
-          if (nsIds.length === 0) return [];
-          return this.notificationSettingModel.find({
-            where: { id: In(nsIds) },
-          });
-        })(),
-      ]);
+      // Query 4: Get notification settings (only for members that have them)
+      (async () => {
+        const nsIds = Array.from(
+          new Set(
+            members.map((m) => m.notificationSettingId).filter((id) => !!id),
+          ),
+        );
+        if (nsIds.length === 0) return [];
+        return this.notificationSettingModel.find({
+          where: { id: In(nsIds) },
+        });
+      })(),
+
+      // Query 5: Get ALL active sessions for ALL members (ManyToMany relation)
+      this.ptSessionRepository
+        .createQueryBuilder('session')
+        .innerJoin('session.members', 'member')
+        .select('DISTINCT member.id', 'memberId')
+        .where('member.id IN (:...memberIds)', { memberIds })
+        .andWhere('session.isCancelled = false')
+        .andWhere(
+          '(session.sessionDate IS NULL OR session.sessionDate > :now)',
+          { now },
+        )
+        .getRawMany(),
+
+      // Query 6: Get ALL active sessions for ALL members (OneToMany relation)
+      this.ptSessionRepository
+        .createQueryBuilder('session')
+        .select('DISTINCT session.memberId', 'memberId')
+        .where('session.memberId IN (:...memberIds)', { memberIds })
+        .andWhere('session.isCancelled = false')
+        .andWhere(
+          '(session.sessionDate IS NULL OR session.sessionDate > :now)',
+          { now },
+        )
+        .getRawMany(),
+    ]);
 
     /**
      * STEP 2: Group Results by MemberId for O(1) Lookup
@@ -1111,6 +1184,19 @@ export class MemberService {
     const notificationById = new Map<string, any>();
     for (const ns of notificationSettings) {
       notificationById.set(ns.id, ns);
+    }
+
+    // Map: memberId -> hasActiveSessions (true if member has any active sessions)
+    const hasActiveSessionsByMember = new Set<string>();
+    for (const row of activeSessionsManyToMany) {
+      if (row.memberId) {
+        hasActiveSessionsByMember.add(row.memberId);
+      }
+    }
+    for (const row of activeSessionsOneToMany) {
+      if (row.memberId) {
+        hasActiveSessionsByMember.add(row.memberId);
+      }
     }
 
     /**
@@ -1178,6 +1264,7 @@ export class MemberService {
         notificationSetting: notificationSetting,
         phoneNumberISOCode: member.phoneNumberISOCode,
         welcomeMessageSentManually: member.welcomeMessageSentManually,
+        hasActiveSessions: hasActiveSessionsByMember.has(mId),
       };
 
       return dto;
@@ -1687,6 +1774,31 @@ export class MemberService {
         '(tx.id IS NULL OR tx."endDate" <= :now OR tx."isInvalidated" = true)',
         { now },
       );
+
+    // Exclude members who have active PT sessions
+    // Check ManyToMany relation (userPtSessions)
+    idsQb = idsQb
+      .leftJoin(
+        'pt_session_members',
+        'pt_session_members_m2m',
+        'pt_session_members_m2m."memberId" = m.id',
+      )
+      .leftJoin(
+        'pt_sessions',
+        'pt_session_m2m',
+        'pt_session_m2m.id = pt_session_members_m2m."ptSessionId" AND pt_session_m2m."isCancelled" = false AND (pt_session_m2m."sessionDate" IS NULL OR pt_session_m2m."sessionDate" > :now)',
+        { now },
+      )
+      // Check OneToMany relation (ptSessions)
+      .leftJoin(
+        'pt_sessions',
+        'pt_session_o2m',
+        'pt_session_o2m."memberId" = m.id AND pt_session_o2m."isCancelled" = false AND (pt_session_o2m."sessionDate" IS NULL OR pt_session_o2m."sessionDate" > :now)',
+        { now },
+      )
+      // Exclude members with active sessions
+      .andWhere('pt_session_m2m.id IS NULL')
+      .andWhere('pt_session_o2m.id IS NULL');
 
     // Count distinct members
     const totalItems = await idsQb.distinct(true).getCount();
