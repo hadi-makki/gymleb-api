@@ -20,6 +20,7 @@ import { MemberAttendingDaysEntity } from './member-attending-days.entity';
 import * as bcrypt from 'bcryptjs';
 import { MemberTrainingProgramEntity } from './member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
+import { PersonalScheduleEntity } from 'src/personal-schedule/entities/personal-schedule.entity';
 
 export enum TrainingLevel {
   BEGINNER = 'beginner',
@@ -231,4 +232,7 @@ export class MemberEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   @Index('idx_isExpired')
   isExpired: boolean;
+
+  @OneToMany(() => PersonalScheduleEntity, (schedule) => schedule.member)
+  personalSchedules: PersonalScheduleEntity[];
 }

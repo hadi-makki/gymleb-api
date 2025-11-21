@@ -52,6 +52,8 @@ import { WhishTransactionsModule } from './whish-transactions/whish-transactions
 import { DatabaseMigration } from './database.migration';
 import { LicenseModule } from './license/license.module';
 import { AppUpdateModule } from './app-update/app-update.module';
+import { PersonalScheduleModule } from './personal-schedule/personal-schedule.module';
+import { PersonalScheduleEntity } from './personal-schedule/entities/personal-schedule.entity';
 
 @Module({
   imports: [
@@ -78,6 +80,7 @@ import { AppUpdateModule } from './app-update/app-update.module';
       PTSessionEntity,
       AiChatEntity,
       RequestLogEntity,
+      PersonalScheduleEntity,
     ]),
     ConfigModule,
     DatabaseModule,
@@ -108,6 +111,7 @@ import { AppUpdateModule } from './app-update/app-update.module';
     RequestLogsModule,
     LicenseModule,
     AppUpdateModule,
+    PersonalScheduleModule,
   ],
   controllers: [AppController],
   providers: [

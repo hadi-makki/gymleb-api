@@ -1,13 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
-import { addDays, endOfDay, isBefore, isSameDay, startOfDay } from 'date-fns';
+import {
+  addDays,
+  format as dateFnsFormat,
+  endOfDay,
+  format,
+  isSameDay,
+  startOfDay,
+} from 'date-fns';
 import { Response } from 'express';
-import { FilterOperator, paginate } from 'nestjs-paginate';
+import { CountryCode, isValidPhoneNumber } from 'libphonenumber-js';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
-import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
+import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
 import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
 import {
   SubscriptionEntity,
@@ -20,35 +28,36 @@ import {
 } from 'src/transactions/transaction.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
-import { Between, In, LessThan, MoreThan, Not, Repository } from 'typeorm';
+import { buildMembersWorkbook, MemberExportRow } from 'src/utils/xlsx.util';
+import {
+  Between,
+  In,
+  IsNull,
+  LessThan,
+  MoreThan,
+  Not,
+  Repository,
+} from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
 import { MediaService } from '../media/media.service';
 import { TokenService } from '../token/token.service';
 import { TransactionService } from '../transactions/transaction.service';
+import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
 import { ReturnUserDto } from './dto/return-user.dto';
-import { UpdateMemberDto } from './dto/update-member.dto';
 import { SignupMemberDto } from './dto/signup-member.dto';
-import { Gender, MemberEntity } from './entities/member.entity';
-import {
-  MemberAttendingDaysEntity,
-  DayOfWeek,
-} from './entities/member-attending-days.entity';
-import {
-  AttendingDayDto,
-  UpdateAttendingDaysDto,
-} from './dto/attending-day.dto';
-import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
-import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
-import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
-import { format } from 'date-fns';
-import { IsNull } from 'typeorm';
-import { buildMembersWorkbook, MemberExportRow } from 'src/utils/xlsx.util';
-import { format as dateFnsFormat } from 'date-fns';
+import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
+import {
+  DayOfWeek,
+  MemberAttendingDaysEntity,
+} from './entities/member-attending-days.entity';
+import { Gender, MemberEntity } from './entities/member.entity';
 
 @Injectable()
 export class MemberService {
@@ -419,7 +428,31 @@ export class MemberService {
     gymId: string,
     image?: Express.Multer.File,
   ) {
-    console.log('this is the paid amount', createMemberDto.paidAmount);
+    if (createMemberDto.phoneNumber) {
+      if (!createMemberDto.phoneNumberISOCode) {
+        throw new BadRequestException('Phone number ISO code is required');
+      }
+      console.log('this is the phone number', createMemberDto.phoneNumber);
+      console.log(
+        'this is the phone number ISO code',
+        createMemberDto.phoneNumberISOCode,
+      );
+      console.log(
+        'this is the isValidPhoneNumber',
+        isValidPhoneNumber(
+          createMemberDto.phoneNumber,
+          createMemberDto.phoneNumberISOCode as CountryCode,
+        ),
+      );
+      if (
+        !isValidPhoneNumber(
+          createMemberDto.phoneNumber,
+          createMemberDto.phoneNumberISOCode as CountryCode,
+        )
+      ) {
+        throw new BadRequestException('Invalid phone number');
+      }
+    }
     const gym = await this.gymModel.findOne({
       where: { id: gymId },
     });

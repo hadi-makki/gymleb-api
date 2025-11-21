@@ -19,6 +19,7 @@ import { PgMainEntity } from '../main-classes/mainEntity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
+import { PersonalScheduleEntity } from 'src/personal-schedule/entities/personal-schedule.entity';
 
 @Entity('managers')
 export class ManagerEntity extends PgMainEntity {
@@ -90,6 +91,9 @@ export class ManagerEntity extends PgMainEntity {
 
   @OneToMany(() => RevenueEntity, (revenue) => revenue.createdBy)
   createdRevenues: RevenueEntity[];
+
+  @OneToMany(() => PersonalScheduleEntity, (schedule) => schedule.manager)
+  personalSchedules: PersonalScheduleEntity[];
 
   @Column('decimal', { default: 1 })
   ptSessionDurationHours: number;

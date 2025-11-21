@@ -3,6 +3,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.entity';
+import { PersonalScheduleEntity } from 'src/personal-schedule/entities/personal-schedule.entity';
 import { ProductEntity } from 'src/products/products.entity';
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
@@ -148,6 +149,9 @@ export class GymEntity extends PgMainEntity {
 
   @OneToMany(() => GymPresetEntity, (preset) => preset.gym)
   presets: GymPresetEntity[];
+
+  @OneToMany(() => PersonalScheduleEntity, (schedule) => schedule.gym)
+  personalSchedules: PersonalScheduleEntity[];
 
   @Column('text', { nullable: true, default: GymTypeEnum.FITNESS })
   gymType: GymTypeEnum;
