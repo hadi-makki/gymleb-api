@@ -77,4 +77,15 @@ export class PTSessionEntity extends PgMainEntity {
 
   @RelationId((ptSession: PTSessionEntity) => ptSession.transactions)
   transactionIds: string[] | null;
+
+  // sometimes we need to relate the ptsession to a transaction
+  // no need to make it 2 way relation, just one way
+  @ManyToOne(() => TransactionEntity, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'subscriptionTransactionId' })
+  subscriptionTransaction: TransactionEntity;
+
+  @RelationId((ptSession: PTSessionEntity) => ptSession.subscriptionTransaction)
+  subscriptionTransactionId: string | null;
 }

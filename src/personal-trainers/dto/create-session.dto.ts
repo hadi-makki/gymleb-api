@@ -77,4 +77,13 @@ export class CreateSessionDto {
   @IsOptional()
   @IsNumber()
   sessionDurationHours?: number;
+
+  @ApiProperty({
+    description: 'ID of the subscription transaction to link sessions to',
+    example: '6621b0a9b547942bc1111111',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  subscriptionTransactionId?: string;
 }

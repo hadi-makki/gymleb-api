@@ -607,6 +607,11 @@ export class PersonalTrainersService {
         sessionPrice: createSessionDto.sessionPrice ?? 0,
         sessionDate: !setDateDone ? sessionDate : null,
         sessionDurationHours: createSessionDto.sessionDurationHours,
+        ...(createSessionDto.subscriptionTransactionId && {
+          subscriptionTransaction: {
+            id: createSessionDto.subscriptionTransactionId,
+          },
+        }),
       });
       const createdSession = await this.sessionEntity.save(createSessionModel);
       // Create a separate transaction per member for this session

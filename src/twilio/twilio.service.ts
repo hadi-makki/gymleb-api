@@ -1,34 +1,31 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException } from '../error/bad-request-error';
-import { GymService } from '../gym/gym.service';
-import { MemberService } from '../member/member.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { isPhoneNumber } from 'class-validator';
 import { addDays, format, isBefore, startOfDay } from 'date-fns';
-import {
-  checkNodeEnv,
-  AllowSendTwilioMessages,
-} from 'src/config/helper/helper-functions';
-import { ManagerEntity } from 'src/manager/manager.entity';
-import { MemberEntity } from 'src/member/entities/member.entity';
-import { Twilio } from 'twilio';
-import { Repository, ILike, MoreThan } from 'typeorm';
-import { GymEntity, GymTypeEnum } from 'src/gym/entities/gym.entity';
-import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
-import { isValidPhoneUsingISO } from 'src/utils/validations';
 import { CountryCode } from 'libphonenumber-js';
 import {
-  TwilioMessageEntity,
-  TwilioMessageType,
-} from './entities/twilio-message.entity';
-import { NotFoundException } from 'src/error/not-found-error';
-import { SubscriptionType } from 'src/subscription/entities/subscription.entity';
+  AllowSendTwilioMessages,
+  checkNodeEnv,
+} from 'src/config/helper/helper-functions';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { MemberEntity } from 'src/member/entities/member.entity';
+import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import {
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
 import { TransactionService } from 'src/transactions/transaction.service';
+import { isValidPhoneUsingISO } from 'src/utils/validations';
+import { Twilio } from 'twilio';
+import { MoreThan, Repository } from 'typeorm';
+import { BadRequestException } from '../error/bad-request-error';
+import { GymService } from '../gym/gym.service';
+import { MemberService } from '../member/member.service';
+import {
+  TwilioMessageEntity,
+  TwilioMessageType,
+} from './entities/twilio-message.entity';
 
 export const TwilioWhatsappTemplates = {
   expiaryReminder: {
@@ -44,9 +41,9 @@ export const TwilioWhatsappTemplates = {
   },
 
   gymPaymentConfirmation: {
-    en: 'HXf72f4d4997fc3a2d1f579e3406520f1b',
-    ar: 'HXb1c5bb824a6cd79d86257128a746511f',
-    numberOfVariables: 5,
+    en: 'HXceafa10f6719bf07b371ffba33737404',
+    ar: 'HX70f21000553b5d749fdfc6547c41708f',
+    numberOfVariables: 4,
   },
   memberExpiredReminder: {
     en: 'HX4b8dbc53b74686f97214505b0fd85434',
@@ -348,18 +345,18 @@ export class TwilioService {
     memberPhone,
     memberPhoneISOCode,
     gym,
-    amountPaid,
-    paymentFor,
-    paymentDate,
+    subscriptionTitle,
+    startDate,
+    endDate,
     activeSubscription,
   }: {
     memberName: string;
     memberPhone: string;
     memberPhoneISOCode: string;
     gym: GymEntity;
-    amountPaid: string;
-    paymentFor: string;
-    paymentDate: string;
+    subscriptionTitle: string;
+    startDate: string;
+    endDate: string;
     activeSubscription: OwnerSubscriptionTypeEntity;
   }) {
     if (!gym.sendInvoiceMessages) {
@@ -369,10 +366,9 @@ export class TwilioService {
 
     const data = {
       1: memberName,
-      2: gym.name,
-      3: `$${amountPaid}`,
-      4: paymentFor,
-      5: paymentDate,
+      2: subscriptionTitle,
+      3: startDate,
+      4: endDate,
     };
 
     const res = await this.sendWhatsappMessage({
@@ -405,7 +401,7 @@ export class TwilioService {
       (await this.checkIfGymCanSendMessages(gym, activeSubscription))
     ) {
       const mockRes = {
-        body: `Mock payment confirmation for ${memberName} at ${gym.name}. Payment of $${amountPaid} for ${paymentFor} received on ${paymentDate}. Thank you!`,
+        body: `Mock payment confirmation for ${memberName} at ${gym.name}. Subscription: ${subscriptionTitle}, Start Date: ${startDate}, End Date: ${endDate}. Thank you!`,
         sid: `mock_payment_sid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
 
@@ -789,10 +785,9 @@ export class TwilioService {
     } else if (messageType === 'gymPaymentConfirmation') {
       contentVariables = {
         1: 'Hadi', // Member name
-        2: gym.name, // Gym name
-        3: '$50.00', // Amount paid
-        4: 'Monthly Membership', // Payment for
-        5: '15/01/2024', // Payment date
+        2: 'Monthly Membership', // Subscription title
+        3: '01/01/2024', // Start date
+        4: '31/01/2024', // End date
       };
     }
 

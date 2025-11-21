@@ -529,6 +529,7 @@ export class MemberService {
         sessionPrice: 0,
         willPayLater: false,
         isTakingPtSessionsCut: false,
+        subscriptionTransactionId: subscriptionInstance.id,
       });
     }
 
@@ -570,9 +571,9 @@ export class MemberService {
         memberPhone: member.phone,
         memberPhoneISOCode: member.phoneNumberISOCode,
         gym,
-        amountPaid: subscription.price.toString(),
-        paymentFor: subscription.title,
-        paymentDate: format(new Date(), 'dd/MM/yyyy'),
+        subscriptionTitle: subscription.title,
+        startDate: format(subscriptionInstance.startDate, 'dd/MM/yyyy'),
+        endDate: format(subscriptionInstance.endDate, 'dd/MM/yyyy'),
       });
     }
 
@@ -1474,6 +1475,7 @@ export class MemberService {
         sessionPrice: 0,
         willPayLater: false,
         isTakingPtSessionsCut: false,
+        subscriptionTransactionId: createSubscriptionInstance.id,
       });
     }
 
@@ -1485,9 +1487,9 @@ export class MemberService {
       memberPhone: member.phone,
       memberPhoneISOCode: member.phoneNumberISOCode,
       gym: member.gym,
-      amountPaid: createSubscriptionInstance.paidAmount.toString(),
-      paymentFor: checkSubscription.title,
-      paymentDate: format(new Date(), 'dd/MM/yyyy'),
+      subscriptionTitle: checkSubscription.title,
+      startDate: format(createSubscriptionInstance.startDate, 'dd/MM/yyyy'),
+      endDate: format(createSubscriptionInstance.endDate, 'dd/MM/yyyy'),
       activeSubscription:
         getLatestGymSubscription.activeSubscription?.ownerSubscriptionType,
     });
