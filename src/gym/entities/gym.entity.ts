@@ -9,6 +9,7 @@ import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 import { TransactionEntity } from 'src/transactions/transaction.entity';
 import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
+import { BillEntity } from 'src/bills/entities/bill.entity';
 import {
   Column,
   Entity,
@@ -143,6 +144,9 @@ export class GymEntity extends PgMainEntity {
 
   @OneToMany(() => ExpenseEntity, (expense) => expense.gym)
   expenses: ExpenseEntity[];
+
+  @OneToMany(() => BillEntity, (bill) => bill.gym)
+  bills: BillEntity[];
 
   @OneToMany(() => PTSessionEntity, (session) => session.gym)
   ptSessions: PTSessionEntity[];

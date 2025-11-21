@@ -54,6 +54,8 @@ import { LicenseModule } from './license/license.module';
 import { AppUpdateModule } from './app-update/app-update.module';
 import { PersonalScheduleModule } from './personal-schedule/personal-schedule.module';
 import { PersonalScheduleEntity } from './personal-schedule/entities/personal-schedule.entity';
+import { BillsModule } from './bills/bills.module';
+import { BillEntity } from './bills/entities/bill.entity';
 
 @Module({
   imports: [
@@ -81,6 +83,7 @@ import { PersonalScheduleEntity } from './personal-schedule/entities/personal-sc
       AiChatEntity,
       RequestLogEntity,
       PersonalScheduleEntity,
+      BillEntity,
     ]),
     ConfigModule,
     DatabaseModule,
@@ -112,6 +115,7 @@ import { PersonalScheduleEntity } from './personal-schedule/entities/personal-sc
     LicenseModule,
     AppUpdateModule,
     PersonalScheduleModule,
+    BillsModule,
   ],
   controllers: [AppController],
   providers: [
