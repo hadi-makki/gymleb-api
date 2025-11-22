@@ -260,9 +260,10 @@ export class TwilioService {
     memberPhoneISOCode: string,
     gym: GymEntity,
     activeSubscription: OwnerSubscriptionTypeEntity,
+    memberId: string,
   ) {
     const member = await this.memberModel.findOne({
-      where: { phone: memberPhone },
+      where: { id: memberId },
       relations: {
         notificationSetting: true,
       },

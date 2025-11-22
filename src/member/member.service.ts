@@ -589,6 +589,7 @@ export class MemberService {
         newMember.phoneNumberISOCode,
         gym,
         getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
+        newMember.id,
       );
     }
 
@@ -680,6 +681,7 @@ export class MemberService {
       savedMember.phoneNumberISOCode,
       gym,
       getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
+      savedMember.id,
     );
 
     // Return member without token if no password (they'll need to set it later)
@@ -1063,6 +1065,7 @@ export class MemberService {
           member.phoneNumberISOCode,
           member.gym,
           getLatestGymSubscription.activeSubscription.ownerSubscriptionType,
+          member.id,
         );
       }
     }
