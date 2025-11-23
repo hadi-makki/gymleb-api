@@ -84,7 +84,6 @@ export class ManagerAuthGuard implements CanActivate {
 
     const manager = await this.managerRepository.findOne({
       where: { id: userId },
-      select: ['id', 'permissions'],
     });
 
     if (
