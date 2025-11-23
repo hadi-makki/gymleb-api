@@ -594,7 +594,7 @@ export class PersonalTrainersService {
       // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
       // We need to treat it as local time in the provided timezone and convert to UTC
       const naiveDate = new Date(createSessionDto.date);
-      sessionDate = this.convertLocalToUTC(naiveDate, timezone);
+      sessionDate = naiveDate;
     } else if (createSessionDto.date) {
       sessionDate = createSessionDto.date;
     }
@@ -812,17 +812,7 @@ export class PersonalTrainersService {
 
     // Update session date if provided
     if (updateSessionDto.date) {
-      let sessionDate: string | Date = updateSessionDto.date;
-
-      // Convert the date to UTC if timezone is provided
-      if (timezone) {
-        // The date comes as a naive string (e.g., "2025-10-04T19:39:00")
-        // We need to treat it as local time in the provided timezone and convert to UTC
-        const naiveDate = new Date(updateSessionDto.date);
-        sessionDate = this.convertLocalToUTC(naiveDate, timezone);
-      }
-
-      updateData.sessionDate = sessionDate;
+      updateData.sessionDate = new Date(updateSessionDto.date);
     }
 
     // Update session price if provided
@@ -1099,28 +1089,6 @@ export class PersonalTrainersService {
     return candidate;
   }
 
-  /**
-   * Convert a local date/time to UTC using timezone offset calculation
-   * This follows the same pattern as the DateTimePicker component and createSession method
-   */
-  convertLocalToUTC(localDate: Date, timezone?: string): Date {
-    if (!timezone) {
-      return localDate;
-    }
-
-    // Get the timezone offset for this date
-    const utcDate = new Date(
-      localDate.toLocaleString('en-US', { timeZone: 'UTC' }),
-    );
-    const targetDate = new Date(
-      localDate.toLocaleString('en-US', { timeZone: timezone }),
-    );
-    const offsetMs = targetDate.getTime() - utcDate.getTime();
-
-    // Apply the offset to get the correct UTC timestamp
-    return new Date(localDate.getTime() - offsetMs);
-  }
-
   async bulkUpdateSessionDates(
     dto: BulkUpdateSessionDatesDto,
     timezone?: string,
@@ -1153,9 +1121,7 @@ export class PersonalTrainersService {
     let nextDate = this.getNextOccurrence(weekdayIndex, time, timezone);
 
     for (const session of orderedSessions) {
-      // Apply UTC conversion using the helper method
-      const sessionDate = this.convertLocalToUTC(nextDate, timezone);
-      session.sessionDate = sessionDate;
+      session.sessionDate = nextDate;
 
       // next week
       nextDate = new Date(nextDate.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -1327,6 +1293,7 @@ export class PersonalTrainersService {
           personalTrainer: true,
           gym: true,
           transactions: true,
+          subscriptionTransaction: true,
         },
       });
 
@@ -1668,7 +1635,12 @@ export class PersonalTrainersService {
           personalTrainer: { id: personalTrainer.id },
           members: { id: In(targetIds) },
         },
-        relations: ['members', 'personalTrainer', 'gym'],
+        relations: [
+          'members',
+          'personalTrainer',
+          'gym',
+          'subscriptionTransaction',
+        ],
       });
       return this.attachTimezoneDate(
         sessions.sort((a, b) => this.compareBySessionDateAsc(a, b, timezone)),
@@ -1683,7 +1655,12 @@ export class PersonalTrainersService {
         personalTrainer: { id: personalTrainer.id },
         members: { id: In(targetIds) },
       },
-      relations: ['members', 'personalTrainer', 'gym'],
+      relations: [
+        'members',
+        'personalTrainer',
+        'gym',
+        'subscriptionTransaction',
+      ],
     });
 
     const targetKey = [...new Set(targetIds)].sort().join('|');
@@ -1897,7 +1874,12 @@ export class PersonalTrainersService {
 
     const sessions = await this.sessionEntity.find({
       where: { gym: { id: gymId }, personalTrainer: { id: trainerId } },
-      relations: ['members', 'personalTrainer', 'gym'],
+      relations: [
+        'members',
+        'personalTrainer',
+        'gym',
+        'subscriptionTransaction',
+      ],
       order: { sessionDate: 'ASC' },
     });
 
@@ -1996,6 +1978,7 @@ export class PersonalTrainersService {
             .map((m) => m.name)
             .filter(Boolean)
             .join(', '),
+          subscription: s.subscriptionTransaction?.title || null,
           status,
           createdAt: s.createdAt
             ? format(new Date(s.createdAt), 'dd/MM/yyyy')
@@ -2043,7 +2026,12 @@ export class PersonalTrainersService {
         personalTrainer: { id: trainerId },
         members: { id: memberId },
       },
-      relations: ['members', 'personalTrainer', 'gym'],
+      relations: [
+        'members',
+        'personalTrainer',
+        'gym',
+        'subscriptionTransaction',
+      ],
       order: { sessionDate: 'ASC' },
     });
 
@@ -2122,6 +2110,7 @@ export class PersonalTrainersService {
             .map((m) => m.name)
             .filter(Boolean)
             .join(', '),
+          subscription: s.subscriptionTransaction?.title || null,
           status,
           createdAt: s.createdAt
             ? format(new Date(s.createdAt), 'dd/MM/yyyy')

@@ -5,6 +5,7 @@ export interface PTSessionsExportRow {
   time?: string | null; // HH:mm or hh:mm a
   trainer?: string | null;
   members?: string | null;
+  subscription?: string | null;
   status: 'Upcoming' | 'Completed' | 'No date' | 'Cancelled';
   createdAt?: string | null; // dd/MM/yyyy
 }
@@ -21,6 +22,7 @@ export async function buildPtSessionsWorkbook(
     { header: 'Time', key: 'time', width: 12 },
     { header: 'Trainer', key: 'trainer', width: 24 },
     { header: 'Members', key: 'members', width: 36 },
+    { header: 'Subscription', key: 'subscription', width: 30 },
     { header: 'Status', key: 'status', width: 14 },
     { header: 'Created At', key: 'createdAt', width: 16 },
   ];
@@ -31,6 +33,7 @@ export async function buildPtSessionsWorkbook(
       time: r.time ?? '',
       trainer: r.trainer ?? '',
       members: r.members ?? '',
+      subscription: r.subscription ?? '',
       status: r.status,
       createdAt: r.createdAt ?? '',
     });
