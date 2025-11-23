@@ -283,6 +283,7 @@ export class MemberController {
     @Query('limit') limit = '5',
     @Query('search') search: string,
     @Param('gymId') gymId: string,
+    @User() manager: ManagerEntity,
     @Query('gender') gender?: Gender,
   ) {
     return await this.memberService.getExpiredMembers(
@@ -292,6 +293,7 @@ export class MemberController {
       gymId,
       false,
       gender,
+      manager,
     );
   }
 

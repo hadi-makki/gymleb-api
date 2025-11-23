@@ -50,6 +50,7 @@ export class TransactionController {
     @Param('gymId') gymId: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
+    @User() manager: ManagerEntity,
     @Headers('currency') currency: Currency = Currency.USD,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -66,6 +67,7 @@ export class TransactionController {
       currency,
       startDate,
       endDate,
+      manager,
     );
   }
 

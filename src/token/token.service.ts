@@ -314,28 +314,6 @@ export class TokenService {
       isTokenExpired = true;
     }
 
-    // Check if token exists in database and is not expired
-    const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
-      req.cookies[CookieNames.DeviceId],
-      tokenToUse,
-    );
-
-    if (!checkToken) {
-      // Token not found in database
-      this.logger.warn(
-        `Access token not found in DB. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
-      );
-      isTokenExpired = true;
-    } else if (
-      differenceInHours(new Date(), checkToken.accessExpirationDate) > 0
-    ) {
-      // Check if token is expired by date
-      this.logger.warn(
-        `Access token expired by date. deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'} accessExpirationDate=${this.formatToBeirut(checkToken.accessExpirationDate)}`,
-      );
-      isTokenExpired = true;
-    }
-
     // If token is expired (or rotated), try to recover gracefully
     if (isTokenExpired) {
       // Concurrency-safe fallback: if another request already rotated the token,

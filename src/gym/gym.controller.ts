@@ -203,6 +203,7 @@ export class GymController {
   @Roles(Permissions.GymOwner)
   @ValidateGymRelatedToOwner()
   async getGymAnalyticsByOwnerIdAndGymId(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -211,6 +212,7 @@ export class GymController {
       gymId,
       start,
       end,
+      user,
     );
   }
 
@@ -436,6 +438,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin)
   getGymTransactions(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
@@ -446,6 +449,7 @@ export class GymController {
       Number(limit),
       Number(page),
       search,
+      user,
     );
   }
 
@@ -453,6 +457,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.SuperAdmin)
   getGymMembers(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
@@ -463,6 +468,7 @@ export class GymController {
       Number(limit),
       Number(page),
       search,
+      user,
     );
   }
 
@@ -539,6 +545,7 @@ export class GymController {
     },
   })
   async getGymRevenueGraphData(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -550,6 +557,7 @@ export class GymController {
         start,
         end,
         isMobile,
+        user,
       );
     } catch (error) {
       throw new BadRequestException('Failed to fetch revenue graph data');
@@ -575,6 +583,7 @@ export class GymController {
     },
   })
   async getGymMemberGrowthGraphData(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -586,6 +595,7 @@ export class GymController {
         start,
         end,
         isMobile,
+        user,
       );
     } catch (error) {
       throw new BadRequestException('Failed to fetch member growth graph data');
@@ -613,6 +623,7 @@ export class GymController {
     },
   })
   async getGymTransactionTrendsGraphData(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -624,6 +635,7 @@ export class GymController {
         start,
         end,
         isMobile,
+        user,
       );
     } catch (error) {
       throw new BadRequestException(
@@ -640,6 +652,7 @@ export class GymController {
     description: 'Churn graph data retrieved successfully.',
   })
   async getGymChurnGraphData(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -651,6 +664,7 @@ export class GymController {
         start,
         end,
         isMobile,
+        user,
       );
     } catch (error) {
       throw new BadRequestException('Failed to fetch churn graph data');
@@ -665,6 +679,7 @@ export class GymController {
     summary: 'New vs Returning members (last 30 days by default)',
   })
   async getNewVsReturningMembers(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
@@ -675,6 +690,7 @@ export class GymController {
       start,
       end,
       isMobile,
+      user,
     );
   }
 
@@ -685,11 +701,12 @@ export class GymController {
     summary: 'Active vs Inactive members (last 30 days default window)',
   })
   async getActiveVsInactiveMembers(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getActiveVsInactiveMembers(gymId, start, end);
+    return this.gymService.getActiveVsInactiveMembers(gymId, start, end, user);
   }
 
   @Get('admin/analytics/members/membership-type-breakdown/:gymId')
@@ -699,11 +716,12 @@ export class GymController {
     summary: 'Membership type breakdown (last 30 days default window)',
   })
   async getMembershipTypeBreakdown(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getMembershipTypeBreakdown(gymId, start, end);
+    return this.gymService.getMembershipTypeBreakdown(gymId, start, end, user);
   }
 
   @Get('admin/analytics/members/average-membership-duration/:gymId')
@@ -711,11 +729,17 @@ export class GymController {
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
   @ApiOperation({ summary: 'Average membership duration within window' })
   async getAverageMembershipDuration(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getAverageMembershipDuration(gymId, start, end);
+    return this.gymService.getAverageMembershipDuration(
+      gymId,
+      start,
+      end,
+      user,
+    );
   }
 
   @Get('admin/analytics/members/demographics/:gymId')
@@ -725,11 +749,12 @@ export class GymController {
     summary: 'Member demographics (gender, age buckets) within window',
   })
   async getMemberDemographics(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getMemberDemographics(gymId, start, end);
+    return this.gymService.getMemberDemographics(gymId, start, end, user);
   }
 
   @Get('admin/analytics/revenue/by-source/:gymId')
@@ -740,12 +765,19 @@ export class GymController {
       'Revenue by source (subscriptions, PT, products, revenue categories)',
   })
   async getRevenueBySource(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
     @Headers('currency') currency?: Currency,
   ) {
-    return this.gymService.getRevenueBySource(gymId, start, end, currency);
+    return this.gymService.getRevenueBySource(
+      gymId,
+      start,
+      end,
+      currency,
+      user,
+    );
   }
 
   @Get('admin/analytics/revenue/arpu/:gymId')
@@ -753,11 +785,12 @@ export class GymController {
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
   @ApiOperation({ summary: 'Average Revenue Per User within window' })
   async getArpu(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getArpu(gymId, start, end);
+    return this.gymService.getArpu(gymId, start, end, user);
   }
 
   @Get('admin/analytics/revenue/outstanding-payments/:gymId')
@@ -767,11 +800,12 @@ export class GymController {
     summary: 'Outstanding payments totals and count within window',
   })
   async getOutstandingPayments(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getOutstandingPayments(gymId, start, end);
+    return this.gymService.getOutstandingPayments(gymId, start, end, user);
   }
 
   @Get('admin/analytics/revenue/recurring-vs-onetime/:gymId')
@@ -779,11 +813,12 @@ export class GymController {
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
   @ApiOperation({ summary: 'Recurring vs One-Time income within window' })
   async getRecurringVsOnetime(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.gymService.getRecurringVsOnetime(gymId, start, end);
+    return this.gymService.getRecurringVsOnetime(gymId, start, end, user);
   }
 
   @Get('admin/analytics/revenue/forecast/:gymId')
@@ -791,13 +826,14 @@ export class GymController {
   @Roles(Permissions.SuperAdmin, Permissions.GymOwner)
   @ApiOperation({ summary: 'Monthly revenue forecast based on recent trend' })
   async getRevenueForecast(
+    @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
     @Query('horizonMonths') horizonMonths?: string,
   ) {
     const horizon = horizonMonths ? parseInt(horizonMonths) : 3;
-    return this.gymService.getRevenueForecast(gymId, start, end, horizon);
+    return this.gymService.getRevenueForecast(gymId, start, end, horizon, user);
   }
 
   @Patch('show-personal-trainers/:gymId')

@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  forwardRef,
   ForbiddenException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -31,6 +33,7 @@ import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { WhishTransaction } from 'src/whish-transactions/entities/whish-transaction.entity';
 import { Currency } from 'src/common/enums/currency.enum';
+import { GymService } from 'src/gym/gym.service';
 @Injectable()
 export class TransactionService {
   constructor(
@@ -56,6 +59,8 @@ export class TransactionService {
     private readonly expenseModel: Repository<ExpenseEntity>,
     @InjectRepository(PTSessionEntity)
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
+    @Inject(forwardRef(() => GymService))
+    private readonly gymService: GymService,
   ) {}
   async createSubscriptionInstance(paymentDetails: PaymentDetails) {
     // Use custom dates if provided, otherwise calculate based on subscription type
@@ -232,6 +237,25 @@ export class TransactionService {
     return transactions;
   }
 
+  public async resolveGymIds(
+    gymId: string,
+    manager?: ManagerEntity,
+  ): Promise<string[]> {
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      const gyms = await this.gymRepository.find({
+        where: { owner: { id: manager.id } },
+        select: ['id'],
+      });
+      return gyms.map((gym) => gym.id);
+    }
+    return [gymId];
+  }
+
   /**
    * OPTIMIZATION: Optimized getTodayPaidTransactionsForGymPaginated with parallel execution
    *
@@ -254,9 +278,12 @@ export class TransactionService {
     currency: Currency,
     startDate?: string,
     endDate?: string,
+    manager?: ManagerEntity,
   ): Promise<any> {
     const start = startDate ? new Date(startDate) : startOfDay(new Date());
     const end = endDate ? endOfDay(new Date(endDate)) : addDays(start, 1);
+
+    const resolveGymIds = await this.resolveGymIds(gymId, manager);
 
     // OPTIMIZATION: Run pagination and totals calculation in parallel
     const [res, totalsRaw] = await Promise.all([
@@ -268,7 +295,11 @@ export class TransactionService {
           relations: ['member', 'gym'],
           sortableColumns: ['paidAt', 'createdAt', 'title'],
           defaultSortBy: [['paidAt', 'DESC']],
-          where: { gym: { id: gymId }, paidAt: Between(start, end), currency },
+          where: {
+            gym: { id: In(resolveGymIds) },
+            paidAt: Between(start, end),
+            currency,
+          },
         },
       ),
 
@@ -283,7 +314,7 @@ export class TransactionService {
           `COALESCE(SUM(CASE WHEN t."type" <> :expense AND t."type" <> :ownerSubAssign THEN t."paidAmount" ELSE 0 END), 0)`,
           'revenue',
         )
-        .where('t."gymId" = :gymId', { gymId })
+        .where('t."gymId" IN (:...gymIds)', { gymIds: resolveGymIds })
         .andWhere('t."currency" = :currency', { currency })
         .andWhere('t."paidAt" BETWEEN :start AND :end', { start, end })
         .setParameters({

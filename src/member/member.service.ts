@@ -853,13 +853,17 @@ export class MemberService {
     personalTrainerId?: string,
     paymentStatus?: 'paid' | 'unpaid',
   ) {
+    const gymIds = await this.gymService.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
     // Build a base query that selects only member.id to avoid pagination issues with joins
     let idsQuery = this.memberModel
       .createQueryBuilder('member')
       .select('member.id', 'id')
       .addSelect('member.createdAt', 'createdAt')
       .leftJoin('member.gym', 'gym')
-      .where('gym.id = :gymId', { gymId: gymId });
+      .where('gym.id IN (:...gymIds)', { gymIds });
 
     // Add search filter
     if (search) {
@@ -1841,7 +1845,12 @@ export class MemberService {
     gymId: string,
     onlyNotNotified: boolean = false,
     gender?: Gender,
+    manager?: ManagerEntity,
   ) {
+    const gymIds = await this.gymService.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
     // SAFER METHOD: Determine expiration via transactions (no active subscription)
     // Phase 1: Build a subquery to get latest subscription tx per member
     const now = new Date();
@@ -1851,7 +1860,7 @@ export class MemberService {
       .createQueryBuilder('m')
       .select(['m.id AS id', 'm.createdAt AS createdAt'])
       .leftJoin('m.gym', 'gym')
-      .where('gym.id = :gymId', { gymId });
+      .where('gym.id IN (:...gymIds)', { gymIds });
 
     if (onlyNotNotified) {
       idsQb = idsQb.andWhere('m.isNotified = false');

@@ -2,12 +2,19 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
-import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  Between,
+  In,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { TransactionService } from '../transactions/transaction.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseEntity } from './expense.entity';
 import { Currency } from 'src/common/enums/currency.enum';
+import { BadRequestException } from 'src/error/bad-request-error';
 
 @Injectable()
 export class ExpensesService {
@@ -18,6 +25,24 @@ export class ExpensesService {
     private gymModel: Repository<GymEntity>,
     private readonly transactionService: TransactionService,
   ) {}
+  public async resolveGymIds(
+    gymId: string,
+    manager?: ManagerEntity,
+  ): Promise<string[]> {
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      const gyms = await this.gymModel.find({
+        where: { owner: { id: manager.id } },
+        select: ['id'],
+      });
+      return gyms.map((gym) => gym.id);
+    }
+    return [gymId];
+  }
 
   async create(manager: ManagerEntity, dto: CreateExpenseDto) {
     const gym = await this.gymModel.findOne({
@@ -52,12 +77,12 @@ export class ExpensesService {
     end?: string,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) throw new NotFoundException('Gym not found');
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
 
-    const where: any = { gym: { id: gymId } };
+    const where: any = { gym: { id: In(gymIds) } };
     if (start || end) {
       if (start && end) {
         where.date = Between(new Date(start), new Date(end));

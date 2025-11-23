@@ -24,14 +24,15 @@ import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 export class BillsController {
   constructor(private readonly billsService: BillsService) {}
 
-  @Post()
+  @Post('gym/:gymId')
   @Roles(Permissions.GymOwner, Permissions.create_bills)
   @ApiOperation({ summary: 'Create a bill' })
   async create(
     @User() user: ManagerEntity,
+    @Param('gymId') gymId: string,
     @Body() createBillDto: CreateBillDto,
   ) {
-    return await this.billsService.create(user, createBillDto);
+    return await this.billsService.create(user, gymId, createBillDto);
   }
 
   @Get('gym/:gymId')

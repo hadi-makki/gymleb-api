@@ -324,8 +324,11 @@ export class ProductsController {
   @UseGuards(ManagerAuthGuard)
   @Roles(Permissions.GymOwner, Permissions.read_products)
   @ValidateGymRelatedToOwner()
-  async getProductsOffers(@Param('gymId') gymId: string) {
-    return await this.productsService.getProductsOffers(gymId);
+  async getProductsOffers(
+    @Param('gymId') gymId: string,
+    @User() user: ManagerEntity,
+  ) {
+    return await this.productsService.getProductsOffers(gymId, user);
   }
 
   @Get('offers/:gymId/:id')
@@ -345,8 +348,9 @@ export class ProductsController {
   async getProductsOfferById(
     @Param('id') id: string,
     @Param('gymId') gymId: string,
+    @User() user: ManagerEntity,
   ) {
-    return await this.productsService.getProductsOfferById(id, gymId);
+    return await this.productsService.getProductsOfferById(id, gymId, user);
   }
 
   @Post('offers/create/:gymId')

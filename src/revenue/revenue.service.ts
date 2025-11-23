@@ -7,7 +7,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { RevenueEntity } from './revenue.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ProductEntity } from 'src/products/products.entity';
-import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  Between,
+  In,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ProductsOffersEntity } from 'src/products/products-offers.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
@@ -27,6 +33,24 @@ export class RevenueService {
     @InjectRepository(ManagerEntity)
     private managerModel: Repository<ManagerEntity>,
   ) {}
+  public async resolveGymIds(
+    gymId: string,
+    manager?: ManagerEntity,
+  ): Promise<string[]> {
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      const gyms = await this.gymModel.find({
+        where: { owner: { id: manager.id } },
+        select: ['id'],
+      });
+      return gyms.map((gym) => gym.id);
+    }
+    return [gymId];
+  }
 
   async create(
     manager: ManagerEntity,
@@ -122,8 +146,10 @@ export class RevenueService {
       });
     }
 
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) throw new NotFoundException('Gym not found');
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
 
     const filter: any = {};
 
@@ -140,7 +166,7 @@ export class RevenueService {
     return await this.revenueModel.find({
       where: {
         ...filter,
-        gym: { id: gym.id },
+        gym: { id: In(gymIds) },
         ...(createdBy && { createdBy: { id: createdBy.id } }),
       },
       relations: ['transaction'],
@@ -200,10 +226,12 @@ export class RevenueService {
     end?: Date,
     gymId?: string,
   ) {
-    const gym = await this.gymModel.findOne({ where: { id: gymId } });
-    if (!gym) throw new NotFoundException('Gym not found');
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
 
-    const filter: any = { gym: { id: gym.id } };
+    const filter: any = { gym: { id: In(gymIds) } };
 
     if (start && end) {
       filter.date = Between(start, end);

@@ -37,9 +37,4 @@ export class CreateBillDto {
   @ApiProperty({ enum: BillType, default: BillType.FIXED })
   @IsEnum(BillType)
   billType: BillType;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  gymId: string;
 }

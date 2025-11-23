@@ -18,8 +18,12 @@ export function returnManager(manager: ManagerEntity) {
     delete managerObject.password;
   }
   console.log('these are the permissions', manager.permissions);
+
+  // filter pt sessions if the manager is a personal trainer
   return {
     ...managerObject,
-    navItems: getNavItems(manager.permissions),
+    navItems: getNavItems(manager.permissions).filter(
+      (item) => item.url !== '/pt-sessions',
+    ),
   };
 }

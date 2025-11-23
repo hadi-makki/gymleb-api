@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { FilterOperator, paginate } from 'nestjs-paginate';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { GymService } from '../gym/gym.service';
 import { MediaService } from '../media/media.service';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
@@ -492,20 +492,29 @@ export class ProductsService {
     return await this.productsOfferRepository.save(productsOffer);
   }
 
-  async getProductsOffers(gymId: string) {
+  async getProductsOffers(gymId: string, manager: ManagerEntity) {
+    const gymIds = await this.gymService.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
     return await this.productsOfferRepository.find({
-      where: { gym: { id: gymId } },
+      where: { gym: { id: In(gymIds) } },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async getProductsOfferById(id: string, gymId: string) {
-    if (!isUUID(id)) {
-      throw new BadRequestException('Invalid offer ID format');
+  async getProductsOfferById(
+    id: string,
+    gymId: string,
+    manager: ManagerEntity,
+  ) {
+    const gymIds = await this.gymService.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
     }
 
     const offer = await this.productsOfferRepository.findOne({
-      where: { id, gym: { id: gymId } },
+      where: { id, gym: { id: In(gymIds) } },
       relations: ['gym'],
     });
 

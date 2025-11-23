@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -76,11 +78,37 @@ export class GymService {
     private managerModel: Repository<ManagerEntity>,
     @InjectRepository(TransactionEntity)
     private transactionModel: Repository<TransactionEntity>,
+    @Inject(forwardRef(() => TransactionService))
     private transactionService: TransactionService,
     @InjectRepository(ProductEntity)
     private productModel: Repository<ProductEntity>,
     private mediaService: MediaService,
   ) {}
+
+  /**
+   * Helper method to resolve gym IDs from gymId parameter.
+   * If gymId is "all", returns all gym IDs owned by the manager.
+   * Otherwise, returns the single gym ID.
+   * If manager is not provided and gymId is not "all", gets manager from gym.
+   */
+  public async resolveGymIds(
+    gymId: string,
+    manager?: ManagerEntity,
+  ): Promise<string[]> {
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      const gyms = await this.gymModel.find({
+        where: { owner: { id: manager.id } },
+        select: ['id'],
+      });
+      return gyms.map((gym) => gym.id);
+    }
+    return [gymId];
+  }
 
   async create(createGymDto: CreateGymDto) {
     const checkGym = await this.gymModel.findOne({
@@ -107,6 +135,9 @@ export class GymService {
   }
 
   async findOne(id: string) {
+    if (id === 'all') {
+      return;
+    }
     if (!isUUID(id)) {
       throw new BadRequestException('Gym ID is required');
     }
@@ -144,6 +175,16 @@ export class GymService {
     gymId?: string,
     currency?: Currency,
   ) {
+    if (!gymId) {
+      throw new BadRequestException('Gym ID is required');
+    }
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
+
     const now = new Date();
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
@@ -188,7 +229,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
@@ -218,7 +259,7 @@ export class GymService {
           ), 0)`,
           'sum',
         )
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
@@ -237,7 +278,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
@@ -256,7 +297,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
@@ -274,7 +315,7 @@ export class GymService {
       // Includes both fully paid and partially paid transactions
       this.transactionModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           status: In([PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID]),
           currency: currency || Currency.USD,
           paidAt: Between(filterFrom, filterTo),
@@ -286,7 +327,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.currency = :currency', {
           currency: currency || Currency.USD,
         })
@@ -305,7 +346,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status IN (:...statuses)', {
           statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
         })
@@ -329,7 +370,7 @@ export class GymService {
           ), 0)`,
           'sum',
         )
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status IN (:...statuses)', {
           statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
         })
@@ -342,7 +383,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status IN (:...statuses)', {
           statuses: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID],
         })
@@ -356,7 +397,7 @@ export class GymService {
       // Includes both fully paid and partially paid transactions
       this.transactionModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           status: In([PaymentStatus.PAID, PaymentStatus.PARTIALLY_PAID]),
           type: TransactionType.SUBSCRIPTION,
           paidAt: MoreThanOrEqual(currentMonthStart),
@@ -368,17 +409,17 @@ export class GymService {
       // with their subscriptions and transactions just to count them
       this.memberModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           createdAt: Between(lastMonthStart, lastMonthEnd),
         },
       }),
       this.memberModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           createdAt: MoreThanOrEqual(currentMonthStart),
         },
       }),
-      this.memberModel.count({ where: { gym: { id: gymId } } }),
+      this.memberModel.count({ where: { gym: { id: In(gymIds) } } }),
     ]);
 
     // Parse aggregate rows
@@ -562,7 +603,7 @@ export class GymService {
   }
 
   async updateGymName(gymId: string, gymName: string) {
-    if (!isUUID(gymId)) {
+    if (!isUUID(gymId) && gymId !== 'all') {
       throw new BadRequestException('Gym ID is required');
     }
     const gym = await this.gymModel.findOne({
@@ -734,11 +775,9 @@ export class GymService {
     startDate?: string,
     endDate?: string,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
     }
 
     // Parse comma-separated statuses for multi-status filtering
@@ -776,7 +815,7 @@ export class GymService {
 
     // Build where clause supporting search across title, member name, and personal trainer name
     const baseWhere: FindOptionsWhere<TransactionEntity> = {
-      gym: { id: gym.id },
+      gym: { id: In(gymIds) },
       ...(type ? { type: type as TransactionType } : {}),
       ...statusFilter,
       ...dateFilter,
@@ -836,11 +875,10 @@ export class GymService {
     type?: TransactionType,
     status?: PaymentStatus,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     // Build where clause similar to getTransactionHistory
@@ -850,7 +888,7 @@ export class GymService {
     }
 
     const baseWhere: FindOptionsWhere<TransactionEntity> = {
-      gym: { id: gym.id },
+      gym: { id: In(gymIds) },
       ...(type ? { type: type } : {}),
       ...statusFilter,
     };
@@ -942,16 +980,15 @@ export class GymService {
     gymId: string,
     currency?: Currency,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     // Build where clause for unpaid/partially_paid transactions
     const baseWhere: FindOptionsWhere<TransactionEntity> = {
-      gym: { id: gym.id },
+      gym: { id: In(gymIds) },
       status: In([PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID]),
       ...(currency ? { currency } : {}),
     };
@@ -1460,12 +1497,36 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ) {
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    let managerToUse: ManagerEntity | undefined = manager;
+
+    if (gymId === 'all') {
+      if (!managerToUse) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    } else {
+      const gym = await this.gymModel.findOne({
+        where: { id: gymId },
+        relations: ['owner'],
+      });
+      if (!gym) {
+        throw new NotFoundException('Gym not found');
+      }
+      // Get manager from gym if not provided
+      if (!managerToUse && gym.owner) {
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     const now = new Date();
@@ -1502,7 +1563,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type IN (:...types)', {
           types: [TransactionType.SUBSCRIPTION, TransactionType.REVENUE],
@@ -1517,7 +1578,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.EXPENSE })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -1529,7 +1590,7 @@ export class GymService {
       // Selected period total transactions count
       this.transactionModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           status: PaymentStatus.PAID,
           paidAt: Between(filterFrom, filterTo),
         },
@@ -1539,7 +1600,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -1551,7 +1612,7 @@ export class GymService {
       // Last month members count
       this.memberModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           createdAt: Between(lastMonthStart, lastMonthEnd),
         },
       }),
@@ -1560,7 +1621,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt >= :from', { from: currentMonthStart })
@@ -1569,7 +1630,7 @@ export class GymService {
       // Current month members count
       this.memberModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           createdAt: MoreThanOrEqual(currentMonthStart),
         },
       }),
@@ -1577,7 +1638,7 @@ export class GymService {
       // Current month subscription transactions count
       this.transactionModel.count({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           status: PaymentStatus.PAID,
           type: TransactionType.SUBSCRIPTION,
           paidAt: MoreThanOrEqual(currentMonthStart),
@@ -1586,7 +1647,7 @@ export class GymService {
 
       // Total members count
       this.memberModel.count({
-        where: { gym: { id: gymId } },
+        where: { gym: { id: In(gymIds) } },
       }),
     ]);
 
@@ -1622,7 +1683,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -1634,7 +1695,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select(`COALESCE(SUM(t."paidAmount"), 0)`, 'sum')
-        .where('t.gymId = :gymId', { gymId })
+        .where('t.gymId IN (:...gymIds)', { gymIds })
         .andWhere('t.status = :status', { status: PaymentStatus.PAID })
         .andWhere('t.type = :type', { type: TransactionType.REVENUE })
         .andWhere('t.paidAt BETWEEN :from AND :to', {
@@ -1648,6 +1709,19 @@ export class GymService {
       ? new Date(start)
       : startOfMonth(subMonths(now, 1));
     const analyticsEndDate = end ? new Date(end) : now;
+
+    // Get gym for return value (use first gym if "all", otherwise use the specific gym)
+    let gymForReturn: GymEntity | null = null;
+    if (gymId !== 'all') {
+      gymForReturn = await this.gymModel.findOne({
+        where: { id: gymId },
+      });
+    } else if (gymIds.length > 0) {
+      // If "all", return the first gym as representative
+      gymForReturn = await this.gymModel.findOne({
+        where: { id: gymIds[0] },
+      });
+    }
 
     return {
       totalRevenue,
@@ -1663,7 +1737,7 @@ export class GymService {
       currentMonthRevenue: currentMonthSubscriptionRevenueAmount,
       currentMonthTransactions,
       dateRange: { startDate: analyticsStartDate, endDate: analyticsEndDate },
-      gym,
+      gym: gymForReturn,
     };
   }
 
@@ -1672,12 +1746,12 @@ export class GymService {
     limit: number = 20,
     page: number = 1,
     search?: string,
+    manager?: ManagerEntity,
   ) {
-    const checkGym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!checkGym) {
-      throw new NotFoundException('Gym not found');
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     const res = await paginate(
@@ -1693,7 +1767,7 @@ export class GymService {
         sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
         searchableColumns: ['title', 'paidBy'],
         defaultSortBy: [['createdAt', 'DESC']],
-        where: { gym: { id: checkGym.id } },
+        where: { gym: { id: In(gymIds) } },
         filterableColumns: { type: [FilterOperator.EQ] },
         maxLimit: 100,
       },
@@ -1706,7 +1780,14 @@ export class GymService {
     limit: number = 20,
     page: number = 1,
     search?: string,
+    manager?: ManagerEntity,
   ) {
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     return paginate(
       {
         page,
@@ -1721,7 +1802,7 @@ export class GymService {
         searchableColumns: ['name', 'phone', 'email'],
         defaultSortBy: [['createdAt', 'DESC']],
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           ...(search ? { name: Like(`%${search}%`) } : {}),
         },
         filterableColumns: {
@@ -1878,6 +1959,7 @@ export class GymService {
     start?: string,
     end?: string,
     isMobile?: boolean,
+    manager?: ManagerEntity,
   ): Promise<{
     data: {
       date: string;
@@ -1889,6 +1971,35 @@ export class GymService {
   }> {
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
+    }
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, manager);
+    } else {
+      // Get manager from gym if not provided
+      let managerToUse = manager;
+      if (!managerToUse) {
+        const gym = await this.gymModel.findOne({
+          where: { id: gymId },
+          relations: ['owner'],
+        });
+        if (!gym) {
+          throw new NotFoundException('Gym not found');
+        }
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     // Use date-fns for consistent date handling
@@ -1935,7 +2046,7 @@ export class GymService {
         ) as revenue`,
         `COUNT(*) as transactions`,
       ])
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."createdAt" >= :startDate', { startDate: startOfRange })
       .andWhere('t."createdAt" <= :endDate', { endDate: endOfRange })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
@@ -1966,6 +2077,7 @@ export class GymService {
     start?: string,
     end?: string,
     isMobile?: boolean,
+    manager?: ManagerEntity,
   ): Promise<{
     data: {
       date: string;
@@ -1979,11 +2091,33 @@ export class GymService {
       throw new BadRequestException('Gym ID is required');
     }
 
-    const gym = await this.gymModel.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) {
-      throw new NotFoundException('Gym not found');
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, manager);
+    } else {
+      // Get manager from gym if not provided
+      let managerToUse = manager;
+      if (!managerToUse) {
+        const gym = await this.gymModel.findOne({
+          where: { id: gymId },
+          relations: ['owner'],
+        });
+        if (!gym) {
+          throw new NotFoundException('Gym not found');
+        }
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     const endDate = end ? new Date(end) : new Date();
@@ -1993,7 +2127,7 @@ export class GymService {
 
     const members = await this.memberModel.find({
       where: {
-        gym: { id: gym.id },
+        gym: { id: In(gymIds) },
         createdAt: Between(startDate, endDate),
       },
 
@@ -2061,6 +2195,7 @@ export class GymService {
     start?: string,
     end?: string,
     isMobile?: boolean,
+    manager?: ManagerEntity,
   ): Promise<{
     data: {
       date: string;
@@ -2074,6 +2209,35 @@ export class GymService {
   }> {
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
+    }
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, manager);
+    } else {
+      // Get manager from gym if not provided
+      let managerToUse = manager;
+      if (!managerToUse) {
+        const gym = await this.gymModel.findOne({
+          where: { id: gymId },
+          relations: ['owner'],
+        });
+        if (!gym) {
+          throw new NotFoundException('Gym not found');
+        }
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     // Use date-fns for consistent date handling
@@ -2125,7 +2289,7 @@ export class GymService {
         `COUNT(CASE WHEN t."type" = :expenseType THEN 1 END) as expenses`,
         `COUNT(*) as total`,
       ])
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."createdAt" >= :startDate', { startDate: startOfRange })
       .andWhere('t."createdAt" <= :endDate', { endDate: endOfRange })
       .setParameters({
@@ -2188,6 +2352,7 @@ export class GymService {
     start?: string,
     end?: string,
     isMobile?: boolean,
+    manager?: ManagerEntity,
   ): Promise<{
     data: { date: string; newMembers: number; returningMembers: number }[];
     startDate: Date;
@@ -2195,6 +2360,36 @@ export class GymService {
     isMobile?: boolean;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, manager);
+    } else {
+      // Get manager from gym if not provided
+      let managerToUse = manager;
+      if (!managerToUse) {
+        const gym = await this.gymModel.findOne({
+          where: { id: gymId },
+          relations: ['owner'],
+        });
+        if (!gym) {
+          throw new NotFoundException('Gym not found');
+        }
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
@@ -2220,7 +2415,7 @@ export class GymService {
       .createQueryBuilder('m')
       .select(`TO_CHAR(m."createdAt", 'YYYY-MM-DD')`, 'date')
       .addSelect('COUNT(*)', 'count')
-      .where('m."gymId" = :gymId', { gymId })
+      .where('m."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('m."createdAt" BETWEEN :start AND :end', {
         start: startOfRange,
         end: endOfRange,
@@ -2238,7 +2433,7 @@ export class GymService {
       .leftJoin('t.member', 'm')
       .select(`TO_CHAR(t."paidAt", 'YYYY-MM-DD')`, 'date')
       .addSelect('COUNT(DISTINCT t."memberId")', 'count')
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."type" = :type', { type: TransactionType.SUBSCRIPTION })
       .andWhere('t."paidAt" BETWEEN :start AND :end', {
@@ -2260,6 +2455,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     active: number;
     inactive: number;
@@ -2268,10 +2464,40 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, manager);
+    } else {
+      // Get manager from gym if not provided
+      let managerToUse = manager;
+      if (!managerToUse) {
+        const gym = await this.gymModel.findOne({
+          where: { id: gymId },
+          relations: ['owner'],
+        });
+        if (!gym) {
+          throw new NotFoundException('Gym not found');
+        }
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { endOfRange, startDate, endDate } = this.resolveWindow(start, end);
 
     const total = await this.memberModel.count({
-      where: { gym: { id: gymId } },
+      where: { gym: { id: In(gymIds) } },
     });
 
     // Active at endOfRange: has a latest subscription tx with endDate >= endOfRange and not invalidated
@@ -2279,7 +2505,7 @@ export class GymService {
       .createQueryBuilder('t')
       .select('t."memberId"', 'memberId')
       .addSelect('MAX(t."endDate")', 'lastEnd')
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."type" = :type', { type: TransactionType.SUBSCRIPTION })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."isInvalidated" = false')
@@ -2304,12 +2530,43 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     breakdown: { type: SubscriptionType; amount: number; count: number }[];
     startDate: Date;
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    let gymIds: string[];
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      gymIds = await this.resolveGymIds(gymId, manager);
+    } else {
+      // Get manager from gym if not provided
+      let managerToUse = manager;
+      if (!managerToUse) {
+        const gym = await this.gymModel.findOne({
+          where: { id: gymId },
+          relations: ['owner'],
+        });
+        if (!gym) {
+          throw new NotFoundException('Gym not found');
+        }
+        managerToUse = gym.owner;
+      }
+      gymIds = await this.resolveGymIds(gymId, managerToUse);
+    }
+
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
@@ -2321,7 +2578,7 @@ export class GymService {
       .select('COALESCE(t."subscriptionType", s."type")', 'type')
       .addSelect('COUNT(*)', 'count')
       .addSelect('COALESCE(SUM(t."paidAmount"), 0)', 'amount')
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."type" = :type', { type: TransactionType.SUBSCRIPTION })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."paidAt" BETWEEN :start AND :end', {
@@ -2349,6 +2606,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     averageDays: number;
     samples: number;
@@ -2356,6 +2614,13 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
@@ -2363,7 +2628,7 @@ export class GymService {
 
     const subs = await this.transactionModel.find({
       where: {
-        gym: { id: gymId },
+        gym: { id: In(gymIds) },
         type: TransactionType.SUBSCRIPTION,
         status: PaymentStatus.PAID,
         paidAt: Between(startOfRange, endOfRange),
@@ -2394,6 +2659,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     gender: { male: number; female: number; other: number };
     ageBuckets: { bucket: string; count: number }[];
@@ -2401,11 +2667,21 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { endOfRange, startDate, endDate } = this.resolveWindow(start, end);
 
     // Only consider members created up to the end of the selected range
     const members = await this.memberModel.find({
-      where: { gym: { id: gymId }, createdAt: LessThanOrEqual(endOfRange) },
+      where: {
+        gym: { id: In(gymIds) },
+        createdAt: LessThanOrEqual(endOfRange),
+      },
       select: ['gender', 'birthday', 'createdAt'],
     });
 
@@ -2457,6 +2733,7 @@ export class GymService {
     start?: string,
     end?: string,
     currency?: Currency,
+    manager?: ManagerEntity,
   ): Promise<{
     sources: {
       subscriptions: number;
@@ -2469,12 +2746,17 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
     );
-
-    console.log('this is the currency', currency);
 
     // Get all transactions and categorize them properly
     const transactions = await this.transactionModel
@@ -2485,7 +2767,7 @@ export class GymService {
       .addSelect('t."personalTrainerId"', 'personalTrainerId')
       .addSelect('t."subscriptionId"', 'subscriptionId')
       .addSelect('t."currency"', 'currency')
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."paidAt" BETWEEN :start AND :end', {
         start: startOfRange,
@@ -2555,6 +2837,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     arpu: number;
     totalRevenue: number;
@@ -2563,6 +2846,13 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     // Default to last 30 days when no start/end provided
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
@@ -2573,7 +2863,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select('COALESCE(SUM(t."paidAmount"), 0)', 'sum')
-        .where('t."gymId" = :gymId', { gymId })
+        .where('t."gymId" IN (:...gymIds)', { gymIds })
         .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
         .andWhere('(t."type" = :subType OR t."type" = :ptType)', {
           subType: TransactionType.SUBSCRIPTION,
@@ -2587,7 +2877,7 @@ export class GymService {
       this.transactionModel
         .createQueryBuilder('t')
         .select('COUNT(DISTINCT t."memberId")', 'count')
-        .where('t."gymId" = :gymId', { gymId })
+        .where('t."gymId" IN (:...gymIds)', { gymIds })
         .andWhere('t."memberId" IS NOT NULL')
         .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
         .andWhere('(t."type" = :subType OR t."type" = :ptType)', {
@@ -2611,6 +2901,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     totalOutstanding: number;
     count: number;
@@ -2618,6 +2909,13 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
@@ -2631,7 +2929,7 @@ export class GymService {
         'outstanding',
       )
       .addSelect('COUNT(*)', 'count')
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."status" IN (:...statuses)', {
         statuses: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID],
       })
@@ -2653,6 +2951,7 @@ export class GymService {
     gymId: string,
     start?: string,
     end?: string,
+    manager?: ManagerEntity,
   ): Promise<{
     recurring: number;
     onetime: number;
@@ -2660,6 +2959,13 @@ export class GymService {
     endDate: Date;
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
@@ -2672,7 +2978,7 @@ export class GymService {
       .addSelect('t."isSubscription"', 'isSubscription')
       .addSelect('t."paidAmount"', 'paidAmount')
       .addSelect('t."subscriptionId"', 'subscriptionId')
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."paidAt" BETWEEN :start AND :end', {
         start: startOfRange,
@@ -2715,6 +3021,7 @@ export class GymService {
     start?: string,
     end?: string,
     horizonMonths = 3,
+    manager?: ManagerEntity,
   ): Promise<{
     forecastMonthly: { month: string; projectedRevenue: number }[];
     forecastTotal: number;
@@ -2727,6 +3034,13 @@ export class GymService {
     };
   }> {
     if (!gymId) throw new BadRequestException('Gym ID is required');
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
+    }
+
     const { startOfRange, endOfRange, startDate, endDate } = this.resolveWindow(
       start,
       end,
@@ -2740,7 +3054,7 @@ export class GymService {
         `SUM(CASE WHEN t."type" = :expense THEN -t."paidAmount" ELSE t."paidAmount" END)`,
         'revenue',
       )
-      .where('t."gymId" = :gymId', { gymId })
+      .where('t."gymId" IN (:...gymIds)', { gymIds })
       .andWhere('t."status" = :status', { status: PaymentStatus.PAID })
       .andWhere('t."paidAt" BETWEEN :start AND :end', {
         start: startOfRange,
@@ -2833,6 +3147,7 @@ export class GymService {
     start?: string,
     end?: string,
     isMobile?: boolean,
+    manager?: ManagerEntity,
   ): Promise<{
     data: {
       date: string;
@@ -2852,6 +3167,12 @@ export class GymService {
   }> {
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
+    }
+
+    // Resolve gym IDs (support "all" for all manager's gyms)
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found');
     }
 
     const endDate = end ? new Date(end) : new Date();
@@ -2891,7 +3212,7 @@ export class GymService {
       .createQueryBuilder('t')
       .select('t.memberId', 'memberId')
       .addSelect('MAX(t.endDate)', 'lastEnd')
-      .where('t.gymId = :gymId', { gymId })
+      .where('t.gymId IN (:...gymIds)', { gymIds })
       .andWhere('t.status = :status', { status: PaymentStatus.PAID })
       .andWhere('t.isInvalidated = false')
       .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })
@@ -2909,7 +3230,7 @@ export class GymService {
       // Find the earliest subscription in the gym to estimate needed days
       const earliestSub = await this.transactionModel.findOne({
         where: {
-          gym: { id: gymId },
+          gym: { id: In(gymIds) },
           status: PaymentStatus.PAID,
           isInvalidated: false,
           type: TransactionType.SUBSCRIPTION,
@@ -3001,7 +3322,7 @@ export class GymService {
       .createQueryBuilder('t')
       .select('t.memberId', 'memberId')
       .addSelect('MAX(t.endDate)', 'lastEnd')
-      .where('t.gymId = :gymId', { gymId })
+      .where('t.gymId IN (:...gymIds)', { gymIds })
       .andWhere('t.status = :status', { status: PaymentStatus.PAID })
       .andWhere('t.isInvalidated = false')
       .andWhere('t.type = :type', { type: TransactionType.SUBSCRIPTION })

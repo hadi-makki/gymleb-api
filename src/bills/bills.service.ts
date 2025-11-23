@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateBillDto } from './dto/create-bill.dto';
 import { UpdateBillDto } from './dto/update-bill.dto';
 import { MarkBillPaidDto } from './dto/mark-bill-paid.dto';
@@ -27,27 +27,48 @@ export class BillsService {
     private readonly expensesService: ExpensesService,
   ) {}
 
-  async create(manager: ManagerEntity, createBillDto: CreateBillDto) {
+  public async resolveGymIds(
+    gymId: string,
+    manager?: ManagerEntity,
+  ): Promise<string[]> {
+    if (gymId === 'all') {
+      if (!manager) {
+        throw new BadRequestException(
+          'Manager is required when gymId is "all"',
+        );
+      }
+      const gyms = await this.gymRepository.find({
+        where: { owner: { id: manager.id } },
+        select: ['id'],
+      });
+      return gyms.map((gym) => gym.id);
+    }
+    return [gymId];
+  }
+
+  async create(
+    manager: ManagerEntity,
+    gymId: string,
+    createBillDto: CreateBillDto,
+  ) {
     // Validate gym exists and manager has access to it
     const gym = await this.gymRepository.findOne({
-      where: { id: createBillDto.gymId },
+      where: { id: gymId },
       relations: ['owner'],
     });
     if (!gym) throw new NotFoundException('Gym not found');
 
     // Check if manager owns the gym
     const isOwner = gym.owner?.id === manager.id;
-    
+
     // Check if manager is a staff member in the gym
     const managerInGym = await this.managerRepository.findOne({
-      where: { id: manager.id, gyms: { id: createBillDto.gymId } },
+      where: { id: manager.id, gyms: { id: gymId } },
     });
     const isStaffInGym = !!managerInGym;
-    
+
     // Check if manager is super admin
-    const isSuperAdmin = manager.permissions?.includes(
-      Permissions.SuperAdmin,
-    );
+    const isSuperAdmin = manager.permissions?.includes(Permissions.SuperAdmin);
 
     if (!isOwner && !isStaffInGym && !isSuperAdmin) {
       throw new ForbiddenException(
@@ -63,20 +84,20 @@ export class BillsService {
     const bill = this.billRepository.create({
       ...createBillDto,
       amount: createBillDto.amount ?? 0, // Default to 0 for dynamic bills
-      gym: { id: createBillDto.gymId },
+      gym: { id: gymId },
     });
 
     return await this.billRepository.save(bill);
   }
 
   async findAll(manager: ManagerEntity, gymId: string) {
-    const gym = await this.gymRepository.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) throw new NotFoundException('Gym not found');
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
 
     return this.billRepository.find({
-      where: { gym: { id: gymId } },
+      where: { gym: { id: In(gymIds) } },
       order: { dueDate: 'ASC', createdAt: 'DESC' },
     });
   }
@@ -100,10 +121,7 @@ export class BillsService {
     });
     if (!bill) throw new NotFoundException('Bill not found');
 
-    await this.billRepository.update(id, {
-      ...updateBillDto,
-      ...(updateBillDto.gymId ? { gym: { id: updateBillDto.gymId } } : {}),
-    });
+    await this.billRepository.update(id, updateBillDto);
 
     return await this.billRepository.findOne({ where: { id } });
   }
@@ -166,10 +184,10 @@ export class BillsService {
   }
 
   async getUpcomingBill(manager: ManagerEntity, gymId: string) {
-    const gym = await this.gymRepository.findOne({
-      where: { id: gymId },
-    });
-    if (!gym) throw new NotFoundException('Gym not found');
+    const gymIds = await this.resolveGymIds(gymId, manager);
+    if (gymIds.length === 0) {
+      throw new NotFoundException('No gyms found for this manager');
+    }
 
     const now = new Date();
     const currentDay = now.getDate();
@@ -178,7 +196,7 @@ export class BillsService {
 
     // Get all bills for the gym
     const bills = await this.billRepository.find({
-      where: { gym: { id: gymId } },
+      where: { gym: { id: In(gymIds) } },
       order: { dueDate: 'ASC' },
     });
 

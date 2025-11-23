@@ -84,6 +84,7 @@ export class ManagerAuthGuard implements CanActivate {
 
     const manager = await this.managerRepository.findOne({
       where: { id: userId },
+      select: ['id', 'permissions'],
     });
 
     if (
@@ -122,6 +123,10 @@ export class ManagerAuthGuard implements CanActivate {
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
 
+    if (gymId === 'all') {
+      return true;
+    }
+
     if (!isUUID(gymId)) {
       throw new BadRequestException('Invalid gym id');
     }
@@ -158,6 +163,10 @@ export class ManagerAuthGuard implements CanActivate {
   ) {
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
+
+    if (gymId === 'all') {
+      return true;
+    }
 
     if (!isUUID(gymId)) {
       throw new BadRequestException('Invalid gym id');
@@ -201,6 +210,10 @@ export class ManagerAuthGuard implements CanActivate {
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
 
+    if (gymId === 'all') {
+      return true;
+    }
+
     if (!isUUID(memberId)) {
       throw new BadRequestException('Invalid member id');
     }
@@ -232,6 +245,10 @@ export class ManagerAuthGuard implements CanActivate {
 
     const gymId =
       request.params?.gymId || request.body?.gymId || request.query?.gymId;
+
+    if (gymId === 'all') {
+      return true;
+    }
 
     if (!isUUID(personalTrainerId)) {
       throw new BadRequestException('Invalid personal trainer id');

@@ -174,6 +174,10 @@ export class ManagerService {
   ): Promise<ManagerCreatedWithTokenDto> {
     const manager = await this.managerEntity.findOne({
       where: [{ username: body.username }, { email: body.username }],
+      relations: {
+        ownedGyms: true,
+        gyms: true,
+      },
     });
     if (!manager) {
       throw new NotFoundException('User not found');
