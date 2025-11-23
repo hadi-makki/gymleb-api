@@ -123,7 +123,7 @@ export class ProductsController {
     description: 'Product code assigned successfully',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.update_products)
   async assignCodeToProduct(
     @Param('gymId') gymId: string,
     @Param('productId') productId: string,
@@ -154,7 +154,7 @@ export class ProductsController {
   })
   @UseInterceptors(FileInterceptor('file'))
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.create_products)
   async createProduct(
     @Param('gymId') gymId: string,
     @UploadedFile(
@@ -198,7 +198,7 @@ export class ProductsController {
   })
   @UseInterceptors(FileInterceptor('file'))
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.update_products)
   async updateProduct(
     @Param('gymId') gymId: string,
     @Param('id') id: string,
@@ -243,7 +243,7 @@ export class ProductsController {
     description: 'Product not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.delete_products)
   async deleteProduct(
     @Param('gymId') gymId: string,
     @Param('id') id: string,
@@ -265,7 +265,7 @@ export class ProductsController {
     description: 'Product or gym not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.update_products)
   async transferProduct(
     @Param('productId') productId: string,
     @Body() transferProductDto: TransferProductDto,
@@ -296,7 +296,7 @@ export class ProductsController {
     description: 'Product or gym not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.update_products)
   async returnProduct(
     @Param('productId') productId: string,
     @Body() returnProductDto: ReturnProductDto,
@@ -313,24 +313,25 @@ export class ProductsController {
   }
 
   // Product Offers endpoints
-  @Get('offers/all')
+  @Get('offers/gym/:gymId')
   @ApiOperation({
-    summary: 'Get all product offers',
-    description: 'Retrieve all product offers',
+    summary: 'Get all product offers for a gym',
+    description: 'Retrieve all product offers for a specific gym',
   })
   @ApiOkResponse({
     description: 'Product offers retrieved successfully',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
-  async getProductsOffers() {
-    return await this.productsService.getProductsOffers();
+  @Roles(Permissions.GymOwner, Permissions.read_products)
+  @ValidateGymRelatedToOwner()
+  async getProductsOffers(@Param('gymId') gymId: string) {
+    return await this.productsService.getProductsOffers(gymId);
   }
 
-  @Get('offers/:id')
+  @Get('offers/:gymId/:id')
   @ApiOperation({
     summary: 'Get product offer by ID',
-    description: 'Retrieve a specific product offer by its ID',
+    description: 'Retrieve a specific product offer by its ID for a gym',
   })
   @ApiOkResponse({
     description: 'Product offer retrieved successfully',
@@ -339,31 +340,40 @@ export class ProductsController {
     description: 'Product offer not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
-  async getProductsOfferById(@Param('id') id: string) {
-    return await this.productsService.getProductsOfferById(id);
+  @Roles(Permissions.GymOwner, Permissions.read_products)
+  @ValidateGymRelatedToOwner()
+  async getProductsOfferById(
+    @Param('id') id: string,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.productsService.getProductsOfferById(id, gymId);
   }
 
-  @Post('offers/create')
+  @Post('offers/create/:gymId')
   @ApiOperation({
     summary: 'Create product offer',
-    description: 'Create a new product offer',
+    description: 'Create a new product offer for a gym',
   })
   @ApiCreatedResponse({
     type: SuccessMessageReturn,
     description: 'Product offer created successfully',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.create_products)
+  @ValidateGymRelatedToOwner()
   async createProductsOffer(
+    @Param('gymId') gymId: string,
+    @User() user: ManagerEntity,
     @Body() createProductsOfferDto: CreateProductsOfferDto,
   ) {
     return await this.productsService.createProductsOffer(
+      user,
       createProductsOfferDto,
+      gymId,
     );
   }
 
-  @Put('offers/:id')
+  @Put('offers/:gymId/:id')
   @ApiOperation({
     summary: 'Update product offer',
     description: 'Update an existing product offer',
@@ -376,18 +386,23 @@ export class ProductsController {
     description: 'Product offer not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.update_products)
+  @ValidateGymRelatedToOwner()
   async updateProductsOffer(
     @Param('id') id: string,
+    @Param('gymId') gymId: string,
+    @User() user: ManagerEntity,
     @Body() updateProductsOfferDto: UpdateProductsOfferDto,
   ) {
     return await this.productsService.updateProductsOffer(
+      user,
       id,
+      gymId,
       updateProductsOfferDto,
     );
   }
 
-  @Delete('offers/delete/:offerId')
+  @Delete('offers/delete/:gymId/:offerId')
   @ApiOperation({
     summary: 'Delete product offer',
     description: 'Delete a product offer by ID',
@@ -400,9 +415,14 @@ export class ProductsController {
     description: 'Product offer not found',
   })
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
-  async deleteProductsOffer(@Param('offerId') id: string) {
-    return await this.productsService.deleteProductsOffer(id);
+  @Roles(Permissions.GymOwner, Permissions.delete_products)
+  @ValidateGymRelatedToOwner()
+  async deleteProductsOffer(
+    @Param('offerId') id: string,
+    @Param('gymId') gymId: string,
+    @User() user: ManagerEntity,
+  ) {
+    return await this.productsService.deleteProductsOffer(user, id, gymId);
   }
 
   @Put('show-in-public-page/:gymId/:productId')
@@ -416,7 +436,7 @@ export class ProductsController {
   })
   @ValidateGymRelatedToOwner()
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.update_products)
   async showProductInPublicPage(
     @Param('gymId') gymId: string,
     @Param('productId') productId: string,

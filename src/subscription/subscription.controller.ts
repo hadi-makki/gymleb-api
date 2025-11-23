@@ -25,7 +25,7 @@ export class SubscriptionController {
 
   @Post('create/:gymId')
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.subscriptions)
+  @Roles(Permissions.GymOwner, Permissions.create_subscriptions)
   async create(
     @Body() createSubscriptionDto: CreateSubscriptionDto,
     @User() manager: ManagerEntity,
@@ -81,7 +81,7 @@ export class SubscriptionController {
 
   @Delete('delete/subscription-instance/:gymId/:id')
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.subscriptions)
+  @Roles(Permissions.GymOwner, Permissions.delete_subscriptions)
   async deleteSubscriptionInstance(
     @Param('id') id: string,
     @User() manager: ManagerEntity,

@@ -14,9 +14,14 @@ import { User } from 'src/decorators/users.decorator';
 import { UseGuards } from '@nestjs/common';
 import { ManagerAuthGuard } from 'src/guards/manager-auth.guard';
 import { Roles } from 'src/decorators/roles/Role';
-import { Permissions, returnAllRoles } from 'src/decorators/roles/role.enum';
+import {
+  Permissions,
+  returnAllRoles,
+  getStructuredPermissions,
+} from 'src/decorators/roles/role.enum';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { EntityPermissionsDto } from './dto/permission-option.dto';
 
 @Controller('staff')
 @ApiTags('Staff')
@@ -83,5 +88,14 @@ export class StaffController {
   @Roles(Permissions.GymOwner)
   getAllPermissions() {
     return returnAllRoles();
+  }
+
+  @Get('permissions/structured')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @Roles(Permissions.GymOwner)
+  @ApiOkResponse({ type: [EntityPermissionsDto] })
+  getStructuredPermissionsEndpoint() {
+    return getStructuredPermissions();
   }
 }

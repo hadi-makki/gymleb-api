@@ -17,6 +17,7 @@ export function returnManager(manager: ManagerEntity) {
   if (managerObject.password) {
     delete managerObject.password;
   }
+  console.log('these are the permissions', manager.permissions);
   return {
     ...managerObject,
     navItems: getNavItems(manager.permissions),

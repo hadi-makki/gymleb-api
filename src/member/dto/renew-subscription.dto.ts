@@ -10,13 +10,11 @@ import { Transform } from 'class-transformer';
 
 export class RenewSubscriptionDto {
   /**
-   * Optional subscription ID to change the member's subscription.
-   * If not provided, the member's current subscription will be renewed.
+   * Required subscription ID to add/renew for the member.
    */
-  @IsOptional()
   @IsString({ message: 'Subscription ID must be a string' })
   @IsUUID()
-  subscriptionId?: string;
+  subscriptionId: string;
 
   /**
    * For daily subscriptions only: whether to give a full 24 hours

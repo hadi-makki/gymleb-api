@@ -154,7 +154,11 @@ export class GymController {
 
   @Get('analytics/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_dashboard,
+  )
   @ApiOperation({ summary: 'Get gym analytics' })
   @ValidateGymRelatedToOwner()
   getGymAnalytics(
@@ -263,7 +267,7 @@ export class GymController {
 
   @Patch('day/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiOperation({ summary: 'Update a gym day' })
   @ValidateGymRelatedToOwner()
   @ApiOkResponse({
@@ -289,7 +293,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym name' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   updateGymName(
     @Param('gymId') gymId: string,
     @Body() updateGymNameDto: UpdateGymNameDto,
@@ -301,7 +305,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Set gym finished page setup' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   async setGymFinishedPageSetup(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
@@ -315,7 +319,7 @@ export class GymController {
     summary: 'Toggle restrict public programs to active members',
   })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateRestrictPublicProgramsDto })
   async setRestrictPublicPrograms(
     @User() user: ManagerEntity,
@@ -331,7 +335,7 @@ export class GymController {
 
   @Patch('womens-times/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiOperation({ summary: "Update women's-only times" })
   @ValidateGymRelatedToOwner()
   @ApiBody({ type: UpdateWomensTimesDto })
@@ -349,7 +353,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym note' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   updateGymNote(
     @Param('gymId') gymId: string,
     @Body() updateGymNoteDto: UpdateGymNoteDto,
@@ -359,7 +363,7 @@ export class GymController {
 
   @Get('get-transaction-history/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.transactions)
+  @Roles(Permissions.GymOwner, Permissions.read_transactions)
   @ApiOperation({ summary: 'Get transaction history' })
   @ApiOkResponse({
     description: 'The transaction history has been successfully retrieved.',
@@ -393,7 +397,7 @@ export class GymController {
   @Post('add-offer/:gymId')
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Add a gym offer' })
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiOkResponse({
     description: 'The gym offer has been successfully added.',
     type: GymEntity,
@@ -405,7 +409,7 @@ export class GymController {
 
   @Patch('pt-percentage/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiOperation({ summary: "Update gym's PT session cut percentage" })
   @ApiOkResponse({ description: 'Updated gym', type: GymEntity })
   @ValidateGymRelatedToOwner()
@@ -423,7 +427,7 @@ export class GymController {
     description: 'The gyms have been successfully retrieved.',
     type: [GymEntity],
   })
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin, Permissions.read_gyms)
   getGymsByOwner(@Param('ownerId') ownerId: string) {
     return this.gymService.getGymsByOwner(ownerId);
   }
@@ -800,7 +804,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym show personal trainers setting' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateShowPersonalTrainersDto })
   updateShowPersonalTrainers(
     @Param('gymId') gymId: string,
@@ -818,7 +822,7 @@ export class GymController {
     summary: 'Update gym allow member edit training program setting',
   })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateAllowMemberEditTrainingProgramDto })
   updateAllowMemberEditTrainingProgram(
     @Param('gymId') gymId: string,
@@ -835,7 +839,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym allow user signup setting' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateAllowUserSignupDto })
   updateAllowUserSignUp(
     @Param('gymId') gymId: string,
@@ -851,7 +855,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym birthday automation settings' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateBirthdayAutomationDto })
   updateBirthdayAutomation(
     @Param('gymId') gymId: string,
@@ -867,7 +871,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym session time in hours (0.25 steps)' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateSessionTimeDto })
   updateSessionTime(
     @Param('gymId') gymId: string,
@@ -890,7 +894,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym location' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin, Permissions.update_gyms)
   async updateGymAddress(
     @Param('gymId') gymId: string,
     @Body() body: UpdateGymLocationDto,
@@ -902,7 +906,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym social media links' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin, Permissions.update_gyms)
   async updateSocialMediaLinks(
     @Param('gymId') gymId: string,
     @Body() body: UpdateSocialMediaDto,
@@ -994,7 +998,7 @@ export class GymController {
 
   @Patch('update/message-language/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiOperation({ summary: 'Update gym message language' })
   @ApiOkResponse({ description: 'Message language updated successfully' })
   @ValidateGymRelatedToOwner()
@@ -1013,7 +1017,7 @@ export class GymController {
   @ApiOperation({ summary: 'Update gym description' })
   @ApiOkResponse({ description: 'Gym description updated successfully' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateGymDescriptionDto })
   async updateGymDescription(
     @Param('gymId') gymId: string,
@@ -1032,7 +1036,7 @@ export class GymController {
     description: 'Welcome message automation status updated successfully',
   })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   @ApiBody({ type: UpdateWelcomeMessageAutomationDto })
   async updateWelcomeMessageAutomation(
     @Param('gymId') gymId: string,
@@ -1050,7 +1054,7 @@ export class GymController {
   @ApiOperation({ summary: 'Update gym phone number' })
   @ApiOkResponse({ description: 'Gym phone number updated successfully' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.update_gyms)
   async updateGymPhone(
     @Param('gymId') gymId: string,
     @Body() updateGymPhoneDto: UpdateGymPhoneDto,
@@ -1090,7 +1094,7 @@ export class GymController {
     description: 'Returns all gyms for the owner of the specified gym',
     type: [GymEntity],
   })
-  @Roles(Permissions.GymOwner, Permissions.products)
+  @Roles(Permissions.GymOwner, Permissions.Any)
   @ValidateGymRelatedToOwner()
   async getOwnerGyms(@Param('gymId') gymId: string) {
     return await this.gymService.getOwnerGyms(gymId);
@@ -1100,7 +1104,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update monthly reminder setting' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin, Permissions.update_gyms)
   @ApiOkResponse({ type: SuccessMessageReturn })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
@@ -1121,7 +1125,7 @@ export class GymController {
   @ApiOperation({
     summary: 'Update manual messages permission (Super Admin only)',
   })
-  @Roles(Permissions.SuperAdmin)
+  @Roles(Permissions.SuperAdmin, Permissions.update_gyms)
   @ApiOkResponse({ type: SuccessMessageReturn })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
@@ -1143,7 +1147,7 @@ export class GymController {
   @ApiOkResponse({ type: SuccessMessageReturn })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
-  @Roles(Permissions.SuperAdmin)
+  @Roles(Permissions.SuperAdmin, Permissions.update_gyms)
   updateAllowDuplicateMemberPhones(
     @Param('gymId') gymId: string,
     @Body() body: UpdateAllowDuplicateMemberPhonesDto,
@@ -1162,7 +1166,7 @@ export class GymController {
   @ApiOkResponse({ type: SuccessMessageReturn })
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
-  @Roles(Permissions.SuperAdmin)
+  @Roles(Permissions.SuperAdmin, Permissions.update_gyms)
   updateAllowUserWithoutPhoneNumber(
     @Param('gymId') gymId: string,
     @Body() body: UpdateAllowUserWithoutPhoneNumberDto,
@@ -1177,7 +1181,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Update gym allow members set PT times setting' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(Permissions.GymOwner, Permissions.SuperAdmin, Permissions.update_gyms)
   @ApiBody({ type: UpdateAllowMembersSetPtTimesDto })
   @ApiOkResponse({ type: SuccessMessageReturn })
   @ApiBadRequestResponse()
@@ -1196,7 +1200,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Export transactions to Excel' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.transactions)
+  @Roles(Permissions.GymOwner, Permissions.read_transactions)
   async exportTransactions(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
@@ -1224,7 +1228,7 @@ export class GymController {
   @UseGuards(ManagerAuthGuard)
   @ApiOperation({ summary: 'Export unpaid transactions by member to Excel' })
   @ValidateGymRelatedToOwner()
-  @Roles(Permissions.GymOwner, Permissions.transactions)
+  @Roles(Permissions.GymOwner, Permissions.read_transactions)
   async exportUnpaidTransactions(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,

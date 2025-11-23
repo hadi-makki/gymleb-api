@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MediaEntity } from 'src/media/media.entity';
 import { UserEntity } from 'src/user/user.entity';
+import { ManagerEntity } from 'src/manager/manager.entity';
+import { GymEntity } from 'src/gym/entities/gym.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { MediaService } from '../media/media.service';
 import { S3Service } from '../s3/s3.service';
@@ -21,6 +23,8 @@ import { ProductsOffersEntity } from './products-offers.entity';
       UserEntity,
       MediaEntity,
       ProductsOffersEntity,
+      ManagerEntity,
+      GymEntity,
     ]),
     AuthenticationModule,
     TransactionModule,

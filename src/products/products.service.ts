@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
@@ -22,6 +23,7 @@ import { UserEntity } from 'src/user/user.entity';
 import { TransactionService } from 'src/transactions/transaction.service';
 import { ProductsOffersEntity } from './products-offers.entity';
 import { Currency } from 'src/common/enums/currency.enum';
+import { Permissions } from 'src/decorators/roles/role.enum';
 
 @Injectable()
 export class ProductsService {
@@ -32,6 +34,8 @@ export class ProductsService {
     private readonly gymService: GymService,
     @InjectRepository(GymEntity)
     private readonly gymModel: Repository<GymEntity>,
+    @InjectRepository(ManagerEntity)
+    private readonly managerRepository: Repository<ManagerEntity>,
     private readonly transactionService: TransactionService,
     @InjectRepository(ProductsOffersEntity)
     private readonly productsOfferRepository: Repository<ProductsOffersEntity>,
@@ -450,27 +454,59 @@ export class ProductsService {
     };
   }
 
-  async createProductsOffer(createProductsOfferDto: CreateProductsOfferDto) {
-    const productsOffer = this.productsOfferRepository.create(
-      createProductsOfferDto,
-    );
+  async createProductsOffer(
+    manager: ManagerEntity,
+    createProductsOfferDto: CreateProductsOfferDto,
+    gymId: string,
+  ) {
+    // Validate gym exists and manager has access to it
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: ['owner'],
+    });
+    if (!gym) throw new NotFoundException('Gym not found');
+
+    // Check if manager owns the gym
+    const isOwner = gym.owner?.id === manager.id;
+
+    // Check if manager is a staff member in the gym
+    const managerInGym = await this.managerRepository.findOne({
+      where: { id: manager.id, gyms: { id: gymId } },
+    });
+    const isStaffInGym = !!managerInGym;
+
+    // Check if manager is super admin
+    const isSuperAdmin = manager.permissions?.includes(Permissions.SuperAdmin);
+
+    if (!isOwner && !isStaffInGym && !isSuperAdmin) {
+      throw new ForbiddenException(
+        'You do not have permission to create offers for this gym',
+      );
+    }
+
+    const productsOffer = this.productsOfferRepository.create({
+      name: createProductsOfferDto.name,
+      discountPercentage: createProductsOfferDto.discountPercentage,
+      gym: { id: gymId },
+    });
     return await this.productsOfferRepository.save(productsOffer);
   }
 
-  async getProductsOffers() {
+  async getProductsOffers(gymId: string) {
     return await this.productsOfferRepository.find({
+      where: { gym: { id: gymId } },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async getProductsOfferById(id: string) {
-    console.log('this is the id get products offer by id  ', id);
+  async getProductsOfferById(id: string, gymId: string) {
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid offer ID format');
     }
 
     const offer = await this.productsOfferRepository.findOne({
-      where: { id },
+      where: { id, gym: { id: gymId } },
+      relations: ['gym'],
     });
 
     if (!offer) {
@@ -481,20 +517,42 @@ export class ProductsService {
   }
 
   async updateProductsOffer(
+    manager: ManagerEntity,
     id: string,
+    gymId: string,
     updateProductsOfferDto: UpdateProductsOfferDto,
   ) {
-    console.log('this is the id update products offer by id  ', id);
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid offer ID format');
     }
 
     const offer = await this.productsOfferRepository.findOne({
-      where: { id },
+      where: { id, gym: { id: gymId } },
+      relations: ['gym'],
     });
 
     if (!offer) {
       throw new NotFoundException('Product offer not found');
+    }
+
+    // Validate gym access
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: ['owner'],
+    });
+    if (!gym) throw new NotFoundException('Gym not found');
+
+    const isOwner = gym.owner?.id === manager.id;
+    const managerInGym = await this.managerRepository.findOne({
+      where: { id: manager.id, gyms: { id: gymId } },
+    });
+    const isStaffInGym = !!managerInGym;
+    const isSuperAdmin = manager.permissions?.includes(Permissions.SuperAdmin);
+
+    if (!isOwner && !isStaffInGym && !isSuperAdmin) {
+      throw new ForbiddenException(
+        'You do not have permission to update offers for this gym',
+      );
     }
 
     // Update only provided fields
@@ -508,18 +566,38 @@ export class ProductsService {
     return await this.productsOfferRepository.save(offer);
   }
 
-  async deleteProductsOffer(id: string) {
-    console.log('this is the id delete products offer by id  ', id);
+  async deleteProductsOffer(manager: ManagerEntity, id: string, gymId: string) {
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid offer ID format');
     }
 
     const offer = await this.productsOfferRepository.findOne({
-      where: { id },
+      where: { id, gym: { id: gymId } },
+      relations: ['gym'],
     });
 
     if (!offer) {
       throw new NotFoundException('Product offer not found');
+    }
+
+    // Validate gym access
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: ['owner'],
+    });
+    if (!gym) throw new NotFoundException('Gym not found');
+
+    const isOwner = gym.owner?.id === manager.id;
+    const managerInGym = await this.managerRepository.findOne({
+      where: { id: manager.id, gyms: { id: gymId } },
+    });
+    const isStaffInGym = !!managerInGym;
+    const isSuperAdmin = manager.permissions?.includes(Permissions.SuperAdmin);
+
+    if (!isOwner && !isStaffInGym && !isSuperAdmin) {
+      throw new ForbiddenException(
+        'You do not have permission to delete offers for this gym',
+      );
     }
 
     await this.productsOfferRepository.delete(id);

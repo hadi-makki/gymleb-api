@@ -41,6 +41,11 @@ export enum PaymentStatus {
   PARTIALLY_PAID = 'partially_paid',
 }
 
+export enum SubscriptionStatus {
+  FREEZED = 'freezed',
+  ON_GOING = 'on_going',
+}
+
 @Entity('transactions')
 export class TransactionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
@@ -249,4 +254,10 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   subscriptionReminderSentManually: boolean;
+
+  @Column('text', { default: SubscriptionStatus.ON_GOING })
+  subscriptionStatus: SubscriptionStatus;
+
+  @Column('timestamp without time zone', { nullable: true })
+  freezedAt: Date;
 }

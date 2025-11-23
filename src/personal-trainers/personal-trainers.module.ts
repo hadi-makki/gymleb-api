@@ -8,6 +8,7 @@ import { PTSessionEntity } from './entities/pt-sessions.entity';
 import { PersonalTrainersController } from './personal-trainers.controller';
 import { PersonalTrainersService } from './personal-trainers.service';
 import { PtSessionsSeed } from './pt-sessions.seed';
+import { PersonalTrainersMigrationSeed } from './seed/personal-trainers-migration.seed';
 
 @Module({
   imports: [
@@ -17,7 +18,11 @@ import { PtSessionsSeed } from './pt-sessions.seed';
     TransactionModule,
   ],
   controllers: [PersonalTrainersController],
-  providers: [PersonalTrainersService, PtSessionsSeed],
+  providers: [
+    PersonalTrainersService,
+    PtSessionsSeed,
+    PersonalTrainersMigrationSeed,
+  ],
   exports: [PersonalTrainersService, TypeOrmModule],
 })
 export class PersonalTrainersModule {}

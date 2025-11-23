@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +13,7 @@ import { BillEntity, BillType } from './entities/bill.entity';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ExpensesService } from 'src/expenses/expenses.service';
+import { Permissions } from 'src/decorators/roles/role.enum';
 
 @Injectable()
 export class BillsService {
@@ -20,14 +22,38 @@ export class BillsService {
     private billRepository: Repository<BillEntity>,
     @InjectRepository(GymEntity)
     private gymRepository: Repository<GymEntity>,
+    @InjectRepository(ManagerEntity)
+    private managerRepository: Repository<ManagerEntity>,
     private readonly expensesService: ExpensesService,
   ) {}
 
   async create(manager: ManagerEntity, createBillDto: CreateBillDto) {
+    // Validate gym exists and manager has access to it
     const gym = await this.gymRepository.findOne({
       where: { id: createBillDto.gymId },
+      relations: ['owner'],
     });
     if (!gym) throw new NotFoundException('Gym not found');
+
+    // Check if manager owns the gym
+    const isOwner = gym.owner?.id === manager.id;
+    
+    // Check if manager is a staff member in the gym
+    const managerInGym = await this.managerRepository.findOne({
+      where: { id: manager.id, gyms: { id: createBillDto.gymId } },
+    });
+    const isStaffInGym = !!managerInGym;
+    
+    // Check if manager is super admin
+    const isSuperAdmin = manager.permissions?.includes(
+      Permissions.SuperAdmin,
+    );
+
+    if (!isOwner && !isStaffInGym && !isSuperAdmin) {
+      throw new ForbiddenException(
+        'You do not have permission to create bills for this gym',
+      );
+    }
 
     // For fixed bills, amount is required
     if (createBillDto.billType === BillType.FIXED && !createBillDto.amount) {

@@ -31,7 +31,7 @@ export const navItems: NavItem[] = [
     isActive: false,
     shortcut: ['d', 'd'],
     items: [],
-    roles: [Permissions.GymOwner],
+    roles: [Permissions.GymOwner, Permissions.read_dashboard],
   },
   {
     title: 'Performance Overview',
@@ -39,15 +39,15 @@ export const navItems: NavItem[] = [
     icon: 'barChart',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner],
+    roles: [Permissions.GymOwner, Permissions.read_dashboard],
   },
   {
-    title: 'My Gym',
+    title: 'Gym Settings',
     url: '/my-gym',
     icon: 'building',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.gyms],
+    roles: [Permissions.GymOwner, Permissions.read_gyms],
   },
   {
     title: 'Calendar',
@@ -55,7 +55,7 @@ export const navItems: NavItem[] = [
     icon: 'calendar',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner],
+    roles: [Permissions.GymOwner, Permissions.read_pt_sessions],
   },
 
   // Member Management
@@ -65,7 +65,7 @@ export const navItems: NavItem[] = [
     icon: 'users',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.members],
+    roles: [Permissions.GymOwner, Permissions.read_members],
   },
   {
     title: 'Expired Memberships',
@@ -73,7 +73,7 @@ export const navItems: NavItem[] = [
     icon: 'user-x',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.members],
+    roles: [Permissions.GymOwner, Permissions.read_members],
   },
 
   // Staff & Training
@@ -91,7 +91,7 @@ export const navItems: NavItem[] = [
     icon: 'dumbbell',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner],
+    roles: [Permissions.GymOwner, Permissions.read_personal_trainers],
   },
   {
     title: 'PT Sessions',
@@ -99,7 +99,11 @@ export const navItems: NavItem[] = [
     icon: 'clock',
     isActive: false,
     items: [],
-    roles: [Permissions.personalTrainers],
+    roles: [
+      Permissions.GymOwner,
+      Permissions.read_pt_sessions,
+      Permissions.personalTrainers,
+    ],
   },
 
   // Business & Finance
@@ -109,7 +113,7 @@ export const navItems: NavItem[] = [
     icon: 'package',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.products],
+    roles: [Permissions.GymOwner, Permissions.read_products],
   },
   {
     title: 'Revenue',
@@ -119,7 +123,7 @@ export const navItems: NavItem[] = [
     items: [],
     roles: [
       Permissions.GymOwner,
-      Permissions.revenue,
+      Permissions.read_revenue,
       Permissions.personalTrainers,
     ],
   },
@@ -129,7 +133,7 @@ export const navItems: NavItem[] = [
     icon: 'trending-down',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.expenses],
+    roles: [Permissions.GymOwner, Permissions.read_expenses],
   },
   {
     title: 'Transactions',
@@ -137,7 +141,7 @@ export const navItems: NavItem[] = [
     icon: 'receipt',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.transactions],
+    roles: [Permissions.GymOwner, Permissions.read_transactions],
   },
 
   // Subscriptions
@@ -156,7 +160,7 @@ export const navItems: NavItem[] = [
     icon: 'credit-card',
     isActive: false,
     items: [],
-    roles: [Permissions.GymOwner, Permissions.subscriptions],
+    roles: [Permissions.GymOwner, Permissions.read_subscriptions],
   },
 
   // Transactions

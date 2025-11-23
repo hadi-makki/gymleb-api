@@ -25,7 +25,7 @@ export class NotificationSettingsController {
 
   @Patch('/:gymId/:memberId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
   async update(

@@ -23,6 +23,7 @@ import {
 } from 'src/subscription/entities/subscription.entity';
 import {
   PaymentStatus,
+  SubscriptionStatus,
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
@@ -84,19 +85,29 @@ export class MemberService {
     private readonly notificationSettingModel: Repository<NotificationSettingEntity>,
   ) {}
 
-  async checkIfUserHasActiveSubscription(memberId: string) {
-    const activeSubscription = await this.transactionModel.find({
-      where: {
-        member: { id: memberId },
-        endDate: MoreThan(new Date()),
-        isInvalidated: false,
-      },
-      relations: {
-        subscription: true,
-      },
-      order: { endDate: 'DESC' },
-    });
-    return activeSubscription;
+  async checkIfUserHasActiveSubscription(
+    memberId: string,
+    gymId?: string,
+  ): Promise<TransactionEntity[]> {
+    const now = new Date();
+    // Active subscriptions: startDate <= now AND endDate > now AND not invalidated
+    // Note: Frozen subscriptions are included in the results (subscriptionStatus can be FREEZED or ON_GOING)
+    const activeSubscriptions = await this.transactionModel
+      .createQueryBuilder('transaction')
+      .where('transaction.memberId = :memberId', { memberId })
+      .andWhere('transaction.type = :type', {
+        type: TransactionType.SUBSCRIPTION,
+      })
+      .andWhere('transaction.isInvalidated = false')
+      .andWhere('transaction.startDate <= :now', { now })
+      .andWhere('transaction.endDate > :now', { now })
+      .leftJoinAndSelect('transaction.subscription', 'subscription')
+      .orderBy('transaction.endDate', 'DESC')
+      .getMany();
+
+    // Always return all active subscriptions (multiple subscriptions always allowed)
+    // This includes both frozen and ongoing subscriptions
+    return activeSubscriptions;
   }
 
   /**
@@ -356,8 +367,8 @@ export class MemberService {
       notificationSetting,
       hasActiveSessions,
     ] = await Promise.all([
-      // Get active subscription using SQL
-      this.checkIfUserHasActiveSubscription(member.id),
+      // Get active subscriptions using the new definition (startDate <= now && endDate > now)
+      this.checkIfUserHasActiveSubscription(member.id, member.gym?.id),
 
       // Get last subscription with subscription relation for UI needs
       this.getLatestSubscription(member.id, true),
@@ -1114,16 +1125,20 @@ export class MemberService {
       activeSessionsOneToMany,
     ] = await Promise.all([
       // Query 1: Get ALL active subscriptions for ALL members at once
-      this.transactionModel.find({
-        where: {
-          member: { id: In(memberIds) }, // Get for all members in one query
-          endDate: MoreThan(new Date()),
-          isInvalidated: false,
+      // Active subscriptions: startDate <= now AND endDate > now AND not invalidated
+      // Note: Includes both frozen and ongoing subscriptions (subscriptionStatus can be FREEZED or ON_GOING)
+      this.transactionModel
+        .createQueryBuilder('transaction')
+        .where('transaction.memberId IN (:...memberIds)', { memberIds })
+        .andWhere('transaction.type = :type', {
           type: TransactionType.SUBSCRIPTION,
-        },
-        relations: { subscription: true },
-        order: { endDate: 'DESC' },
-      }),
+        })
+        .andWhere('transaction.isInvalidated = false')
+        .andWhere('transaction.startDate <= :now', { now })
+        .andWhere('transaction.endDate > :now', { now })
+        .leftJoinAndSelect('transaction.subscription', 'subscription')
+        .orderBy('transaction.endDate', 'DESC')
+        .getMany(),
 
       // Query 2: Get ALL latest transactions for ALL members at once
       this.transactionModel.find({
@@ -1188,6 +1203,7 @@ export class MemberService {
      */
 
     // Map: memberId -> array of active subscriptions
+    // Always return all active subscriptions (multiple subscriptions always allowed)
     const activeByMember = new Map<string, any[]>();
     for (const tx of activeSubs) {
       const mId = tx.memberId || tx.member?.id;
@@ -1410,68 +1426,60 @@ export class MemberService {
     member.isExpired = false;
     await this.memberModel.save(member);
 
-    let checkSubscription: SubscriptionEntity | null = null;
+    // Validate subscriptionId (now required)
+    if (!isUUID(subscriptionId)) {
+      throw new BadRequestException('Invalid subscription id');
+    }
 
-    // If subscriptionId is provided, use it; otherwise use existing subscription
-    if (subscriptionId) {
-      // Validate the provided subscriptionId
-      if (!isUUID(subscriptionId)) {
-        throw new BadRequestException('Invalid subscription id');
-      }
+    const checkSubscription = await this.subscriptionModel.findOne({
+      where: { id: subscriptionId },
+      relations: {
+        gym: true,
+      },
+    });
 
-      checkSubscription = await this.subscriptionModel.findOne({
-        where: { id: subscriptionId },
-        relations: {
-          gym: true,
+    if (!checkSubscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    // Verify the subscription belongs to the same gym
+    if (checkSubscription.gym.id !== checkGym.id) {
+      throw new BadRequestException('Subscription does not belong to this gym');
+    }
+
+    // Update member's subscription reference
+    member.subscription = checkSubscription;
+    await this.memberModel.save(member);
+
+    // Check if member has active subscriptions with the same subscriptionId
+    const now = new Date();
+    const activeSubscriptionsOfSameType = await this.transactionModel
+      .createQueryBuilder('transaction')
+      .where('transaction.memberId = :memberId', { memberId: member.id })
+      .andWhere('transaction.subscriptionId = :subscriptionId', {
+        subscriptionId,
+      })
+      .andWhere('transaction.type = :type', {
+        type: TransactionType.SUBSCRIPTION,
+      })
+      .andWhere('transaction.isInvalidated = false')
+      .andWhere('transaction.startDate <= :now', { now })
+      .andWhere('transaction.endDate > :now', { now })
+      .orderBy('transaction.endDate', 'DESC')
+      .getMany();
+
+    // If there are active subscriptions of the same type, queue the new one after the latest ending one
+    let calculatedStartDate = startDate;
+    if (activeSubscriptionsOfSameType.length > 0 && !startDate) {
+      // Find the subscription that ends latest
+      const latestEndingSubscription = activeSubscriptionsOfSameType.reduce(
+        (latest, current) => {
+          const latestEndDate = new Date(latest.endDate).getTime();
+          const currentEndDate = new Date(current.endDate).getTime();
+          return currentEndDate > latestEndDate ? current : latest;
         },
-      });
-
-      if (!checkSubscription) {
-        throw new NotFoundException('Subscription not found');
-      }
-
-      // Verify the subscription belongs to the same gym
-      if (checkSubscription.gym.id !== checkGym.id) {
-        throw new BadRequestException(
-          'Subscription does not belong to this gym',
-        );
-      }
-
-      // Update member's subscription if it's different
-      member.subscription = checkSubscription;
-      await this.memberModel.save(member);
-    } else {
-      // Use existing subscription logic
-      if (member.transactions.length > 0) {
-        const getLatestSubscriptionInstance = member.transactions.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        )[0];
-
-        if (!getLatestSubscriptionInstance) {
-          throw new NotFoundException('Subscription not found');
-        }
-
-        const getCheckSubscription = await this.subscriptionModel.findOne({
-          where: { id: getLatestSubscriptionInstance.subscriptionId },
-          relations: {
-            gym: true,
-          },
-        });
-
-        checkSubscription = getCheckSubscription;
-      } else {
-        checkSubscription = await this.subscriptionModel.findOne({
-          where: { gym: { id: checkGym.id } },
-        });
-
-        if (!checkSubscription) {
-          throw new NotFoundException('Subscription not found');
-        }
-
-        member.subscription = checkSubscription;
-        await this.memberModel.save(member);
-      }
+      );
+      calculatedStartDate = latestEndingSubscription.endDate.toISOString();
     }
 
     const createSubscriptionInstance =
@@ -1483,7 +1491,7 @@ export class MemberService {
         amount: checkSubscription?.price,
         giveFullDay,
         willPayLater,
-        startDate,
+        startDate: calculatedStartDate,
         endDate,
         paidAmount,
         currency: checkSubscription.currency,
@@ -1492,8 +1500,27 @@ export class MemberService {
     member.transactions.push(createSubscriptionInstance);
     member.isNotified = false;
 
-    member.subscriptionStartDate = createSubscriptionInstance.startDate;
-    member.subscriptionEndDate = createSubscriptionInstance.endDate;
+    // Update member's subscriptionStartDate and subscriptionEndDate to the subscription that ends last
+    const allActiveSubscriptions = await this.checkIfUserHasActiveSubscription(
+      member.id,
+      gymId,
+    );
+    if (allActiveSubscriptions.length > 0) {
+      // Find the subscription that ends latest
+      const latestEndingSubscription = allActiveSubscriptions.reduce(
+        (latest, current) => {
+          const latestEndDate = new Date(latest.endDate).getTime();
+          const currentEndDate = new Date(current.endDate).getTime();
+          return currentEndDate > latestEndDate ? current : latest;
+        },
+      );
+      member.subscriptionStartDate = latestEndingSubscription.startDate;
+      member.subscriptionEndDate = latestEndingSubscription.endDate;
+    } else {
+      // Fallback to new subscription dates if no active subscriptions found
+      member.subscriptionStartDate = createSubscriptionInstance.startDate;
+      member.subscriptionEndDate = createSubscriptionInstance.endDate;
+    }
 
     await this.memberModel.save(member);
 
@@ -1576,10 +1603,40 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    console.log('this is the member', member);
     // Reset birthday handled when adding a new subscription instance
     member.isBirthdayHandled = false;
     member.subscription = getSubscription;
+
+    // Check if member has active subscriptions with the same subscriptionId
+    const now = new Date();
+    const activeSubscriptionsOfSameType = await this.transactionModel
+      .createQueryBuilder('transaction')
+      .where('transaction.memberId = :memberId', { memberId })
+      .andWhere('transaction.subscriptionId = :subscriptionId', {
+        subscriptionId,
+      })
+      .andWhere('transaction.type = :type', {
+        type: TransactionType.SUBSCRIPTION,
+      })
+      .andWhere('transaction.isInvalidated = false')
+      .andWhere('transaction.startDate <= :now', { now })
+      .andWhere('transaction.endDate > :now', { now })
+      .orderBy('transaction.endDate', 'DESC')
+      .getMany();
+
+    // If there are active subscriptions of the same type, queue the new one after the latest ending one
+    let calculatedStartDate = startDate;
+    if (activeSubscriptionsOfSameType.length > 0 && !startDate) {
+      // Find the subscription that ends latest
+      const latestEndingSubscription = activeSubscriptionsOfSameType.reduce(
+        (latest, current) => {
+          const latestEndDate = new Date(latest.endDate).getTime();
+          const currentEndDate = new Date(current.endDate).getTime();
+          return currentEndDate > latestEndDate ? current : latest;
+        },
+      );
+      calculatedStartDate = latestEndingSubscription.endDate.toISOString();
+    }
 
     const createSubscriptionInstance =
       await this.transactionService.createSubscriptionInstance({
@@ -1590,14 +1647,36 @@ export class MemberService {
         amount: getSubscription?.price,
         giveFullDay,
         willPayLater,
-        startDate,
+        startDate: calculatedStartDate,
         endDate,
         paidAmount,
         forFree,
         isBirthdaySubscription,
       });
 
-    member.subscriptionEndDate = createSubscriptionInstance.endDate;
+    member.transactions.push(createSubscriptionInstance);
+
+    // Update member's subscriptionStartDate and subscriptionEndDate to the subscription that ends last
+    const allActiveSubscriptions = await this.checkIfUserHasActiveSubscription(
+      member.id,
+      gymId,
+    );
+    if (allActiveSubscriptions.length > 0) {
+      // Find the subscription that ends latest
+      const latestEndingSubscription = allActiveSubscriptions.reduce(
+        (latest, current) => {
+          const latestEndDate = new Date(latest.endDate).getTime();
+          const currentEndDate = new Date(current.endDate).getTime();
+          return currentEndDate > latestEndDate ? current : latest;
+        },
+      );
+      member.subscriptionStartDate = latestEndingSubscription.startDate;
+      member.subscriptionEndDate = latestEndingSubscription.endDate;
+    } else {
+      // Fallback to new subscription dates if no active subscriptions found
+      member.subscriptionStartDate = createSubscriptionInstance.startDate;
+      member.subscriptionEndDate = createSubscriptionInstance.endDate;
+    }
 
     await this.memberModel.save(member);
     return {
@@ -2600,6 +2679,132 @@ export class MemberService {
     return { message: 'Member subscription invalidated successfully' };
   }
 
+  async freezeSubscription(
+    memberId: string,
+    gymId: string,
+    transactionId: string,
+  ) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+    if (!isUUID(transactionId)) {
+      throw new BadRequestException('Invalid transaction id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const transaction = await this.transactionModel.findOne({
+      where: {
+        id: transactionId,
+        member: { id: member.id },
+        gym: { id: checkGym.id },
+        type: TransactionType.SUBSCRIPTION,
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(
+        'Subscription transaction not found or does not belong to this member',
+      );
+    }
+
+    if (transaction.subscriptionStatus === SubscriptionStatus.FREEZED) {
+      throw new BadRequestException('Subscription is already frozen');
+    }
+
+    transaction.subscriptionStatus = SubscriptionStatus.FREEZED;
+    transaction.freezedAt = new Date();
+    await this.transactionModel.save(transaction);
+
+    return { message: 'Subscription frozen successfully' };
+  }
+
+  async unfreezeSubscription(
+    memberId: string,
+    gymId: string,
+    transactionId: string,
+  ) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+    if (!isUUID(gymId)) {
+      throw new BadRequestException('Invalid gym id');
+    }
+    if (!isUUID(transactionId)) {
+      throw new BadRequestException('Invalid transaction id');
+    }
+
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const transaction = await this.transactionModel.findOne({
+      where: {
+        id: transactionId,
+        member: { id: member.id },
+        gym: { id: checkGym.id },
+        type: TransactionType.SUBSCRIPTION,
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(
+        'Subscription transaction not found or does not belong to this member',
+      );
+    }
+
+    if (transaction.subscriptionStatus !== SubscriptionStatus.FREEZED) {
+      throw new BadRequestException('Subscription is not frozen');
+    }
+
+    if (!transaction.freezedAt) {
+      throw new BadRequestException(
+        'Subscription freeze date is missing. Cannot unfreeze.',
+      );
+    }
+
+    // Calculate time difference between freeze date and now
+    const now = new Date();
+    const freezedAt = new Date(transaction.freezedAt);
+    const timeDifference = now.getTime() - freezedAt.getTime();
+
+    // Add the time difference to the end date
+    const currentEndDate = new Date(transaction.endDate);
+    const newEndDate = new Date(currentEndDate.getTime() + timeDifference);
+
+    transaction.subscriptionStatus = SubscriptionStatus.ON_GOING;
+    transaction.endDate = newEndDate;
+    transaction.freezedAt = null;
+    await this.transactionModel.save(transaction);
+
+    return { message: 'Subscription unfrozen successfully' };
+  }
+
   async fixMemberUsernamesAndPasscodes() {
     const members = await this.memberModel.find();
     for (const member of members) {
@@ -3291,8 +3496,10 @@ export class MemberService {
     }
 
     // Get active subscriptions
-    const activeSubscriptions =
-      await this.checkIfUserHasActiveSubscription(memberId);
+    const activeSubscriptions = await this.checkIfUserHasActiveSubscription(
+      memberId,
+      gymId,
+    );
 
     let subscriptionToUpdate = null;
 

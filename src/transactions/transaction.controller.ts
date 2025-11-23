@@ -40,13 +40,19 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.read_transactions,
+  )
   @ValidateGymRelatedToManagerOrManagerInGym()
   async getTodayTransactionsPaginated(
     @Param('gymId') gymId: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Headers('currency') currency: Currency = Currency.USD,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     const pageNum = Math.max(1, parseInt(page as any, 10) || 1);
     const limitNum = Math.max(
@@ -58,6 +64,8 @@ export class TransactionController {
       pageNum,
       limitNum,
       currency,
+      startDate,
+      endDate,
     );
   }
 
@@ -67,7 +75,11 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.delete_transactions,
+  )
   async delete(
     @Param('id') id: string,
     @User() manager: ManagerEntity,
@@ -83,7 +95,11 @@ export class TransactionController {
   @ApiUnauthorizedResponse()
   @ValidateGymRelatedToOwner()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.delete_transactions,
+  )
   async bulkDelete(
     @Param('gymId') gymId: string,
     @User() manager: ManagerEntity,
@@ -102,7 +118,11 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.update_transactions,
+  )
   async updatePaymentStatus(
     @Param('id') id: string,
     @User() manager: ManagerEntity,
@@ -123,7 +143,11 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.update_transactions,
+  )
   async togglePayment(
     @Param('id') id: string,
     @User() manager: ManagerEntity,
@@ -138,7 +162,11 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.update_transactions,
+  )
   async togglePtSessionPayment(
     @Param('sessionId') sessionId: string,
     @Param('gymId') gymId: string,
@@ -154,7 +182,11 @@ export class TransactionController {
   @Get('currency-exchange')
   @ApiBearerAuth()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.read_transactions,
+  )
   async currencyExchange() {
     const convert = await Convert().from('USD').fetch();
     console.log(await convert.amount(1).to('LBP'));
@@ -166,7 +198,11 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.update_transactions,
+  )
   @ValidateGymRelatedToManagerOrManagerInGym()
   @ValidateMemberRelatedToGym()
   async updatePaidAmount(
@@ -182,7 +218,11 @@ export class TransactionController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   @ApiOkResponse({ type: SuccessMessageReturn })
-  @Roles(Permissions.SuperAdmin, Permissions.GymOwner, Permissions.transactions)
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.update_transactions,
+  )
   @ValidateGymRelatedToManagerOrManagerInGym()
   @ValidateMemberRelatedToGym()
   async completePayment(@Param('transactionId') transactionId: string) {

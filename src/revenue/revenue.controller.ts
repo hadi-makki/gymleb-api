@@ -22,17 +22,16 @@ import { ValidateRevenueRelatedToGym } from 'src/decorators/validate-revenue-rel
 
 @Controller('revenue')
 @UseGuards(ManagerAuthGuard)
-@Roles(
-  Permissions.GymOwner,
-  Permissions.revenue,
-  Permissions.personalTrainers,
-  Permissions.products,
-)
 export class RevenueController {
   constructor(private readonly revenueService: RevenueService) {}
 
   @Post(':gymId')
   @ValidateRevenueRelatedToGym()
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.create_revenue,
+    Permissions.read_products,
+  )
   @ApiOperation({ summary: 'Create a revenue entry' })
   create(
     @User() user: ManagerEntity,
@@ -45,6 +44,7 @@ export class RevenueController {
 
   @Get('/gym/:gymId')
   @ValidateRevenueRelatedToGym()
+  @Roles(Permissions.GymOwner, Permissions.read_revenue)
   @ApiOperation({
     summary: 'List revenue entries (optionally filtered by date range)',
   })
@@ -61,6 +61,7 @@ export class RevenueController {
 
   @Get('total/:gymId')
   @ValidateRevenueRelatedToGym()
+  @Roles(Permissions.GymOwner, Permissions.read_revenue)
   @ApiOperation({ summary: 'Get total revenue for a date range' })
   @ApiQuery({ name: 'start', required: false })
   @ApiQuery({ name: 'end', required: false })
@@ -77,6 +78,7 @@ export class RevenueController {
 
   @Patch(':gymId/:id')
   @ValidateRevenueRelatedToGym()
+  @Roles(Permissions.GymOwner, Permissions.update_revenue)
   @ApiOperation({ summary: 'Update a revenue entry' })
   update(
     @User() user: ManagerEntity,
@@ -89,6 +91,7 @@ export class RevenueController {
 
   @Delete(':gymId/:id')
   @ValidateRevenueRelatedToGym()
+  @Roles(Permissions.GymOwner, Permissions.delete_revenue)
   @ApiOperation({ summary: 'Delete a revenue entry' })
   remove(
     @User() user: ManagerEntity,

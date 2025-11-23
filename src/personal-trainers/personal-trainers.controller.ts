@@ -47,7 +47,7 @@ export class PersonalTrainersController {
 
   @Post(':gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner)
+  @Roles(Permissions.GymOwner, Permissions.create_personal_trainers)
   @ValidateGymRelatedToOwner()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new personal trainer' })
@@ -81,7 +81,11 @@ export class PersonalTrainersController {
 
   @Get()
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_personal_trainers,
+  )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all personal trainers' })
   @ApiResponse({
@@ -95,7 +99,11 @@ export class PersonalTrainersController {
 
   @Get('gym/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_personal_trainers,
+  )
   @ValidateGymRelatedToOwner()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all personal trainers for a specific gym' })
@@ -113,7 +121,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.read_personal_trainers,
   )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all members for a specific gym' })
@@ -135,7 +143,11 @@ export class PersonalTrainersController {
 
   @Get(':id')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_personal_trainers,
+  )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a personal trainer by ID' })
   @ApiResponse({
@@ -149,7 +161,11 @@ export class PersonalTrainersController {
 
   @Patch('/update/personal-trainer/:gymId/:personalTrainerId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.update_personal_trainers,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -184,7 +200,11 @@ export class PersonalTrainersController {
 
   @Delete(':gymId/:personalTrainerId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.delete_personal_trainers,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -202,7 +222,11 @@ export class PersonalTrainersController {
 
   @Patch(':gymId/:personalTrainerId/read-only')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.update_personal_trainers,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -224,7 +248,11 @@ export class PersonalTrainersController {
 
   @Get('users')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_personal_trainers,
+  )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({
@@ -238,7 +266,12 @@ export class PersonalTrainersController {
 
   @Post('add-user')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.create_personal_trainers,
+    Permissions.update_members,
+  )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a user to a personal trainer' })
   @ApiResponse({
@@ -261,7 +294,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.create_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new session' })
@@ -286,7 +319,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.read_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all sessions for the current trainer' })
@@ -306,7 +339,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.update_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel a session' })
@@ -326,7 +359,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.update_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a session' })
@@ -352,7 +385,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.delete_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({
@@ -375,7 +408,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.delete_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a session' })
@@ -389,7 +422,11 @@ export class PersonalTrainersController {
 
   @Get('trainer/:gymId/:personalTrainerId/sessions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -412,7 +449,11 @@ export class PersonalTrainersController {
 
   @Get('export/:gymId/:personalTrainerId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -459,7 +500,11 @@ export class PersonalTrainersController {
 
   @Get('export/:gymId/:personalTrainerId/member/:memberId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -508,7 +553,11 @@ export class PersonalTrainersController {
 
   @Get('trainer/:gymId/:personalTrainerId/clients')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -529,7 +578,11 @@ export class PersonalTrainersController {
 
   @Get('trainer/:gymId/:personalTrainerId/client/:memberId/sessions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -558,7 +611,11 @@ export class PersonalTrainersController {
 
   @Get('debug/trainer/:gymId/:personalTrainerId/client/:memberId/sessions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -586,7 +643,11 @@ export class PersonalTrainersController {
 
   @Get('trainer/:gymId/:personalTrainerId/group-sessions')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.SuperAdmin)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.read_pt_sessions,
+  )
   @ValidateGymRelatedToOwner()
   @ValidatePersonalTrainerRelatedToGym()
   @ApiBearerAuth()
@@ -622,7 +683,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.read_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({
@@ -647,7 +708,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.read_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({
@@ -670,7 +731,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.read_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({
@@ -696,7 +757,7 @@ export class PersonalTrainersController {
 
   @Get('calendar-sessions/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.GymOwner, Permissions.personalTrainers)
+  @Roles(Permissions.GymOwner, Permissions.read_pt_sessions)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get all PT sessions for calendar view',
@@ -726,7 +787,7 @@ export class PersonalTrainersController {
   @Roles(
     Permissions.GymOwner,
     Permissions.SuperAdmin,
-    Permissions.personalTrainers,
+    Permissions.read_pt_sessions,
   )
   @ApiBearerAuth()
   @ApiOperation({
@@ -783,7 +844,7 @@ export class PersonalTrainersController {
 
   @Get('my-sessions-by-date/:gymId')
   @UseGuards(ManagerAuthGuard)
-  @Roles(Permissions.personalTrainers)
+  @Roles(Permissions.read_pt_sessions)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get my PT sessions by date',

@@ -252,9 +252,11 @@ export class TransactionService {
     page: number,
     limit: number,
     currency: Currency,
+    startDate?: string,
+    endDate?: string,
   ): Promise<any> {
-    const start = startOfDay(new Date());
-    const end = addDays(start, 1);
+    const start = startDate ? new Date(startDate) : startOfDay(new Date());
+    const end = endDate ? endOfDay(new Date(endDate)) : addDays(start, 1);
 
     // OPTIMIZATION: Run pagination and totals calculation in parallel
     const [res, totalsRaw] = await Promise.all([

@@ -20,12 +20,12 @@ import { User } from '../decorators/users.decorator';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
 
 @Controller('bills')
-@Roles(Permissions.GymOwner, Permissions.expenses)
 @UseGuards(ManagerAuthGuard)
 export class BillsController {
   constructor(private readonly billsService: BillsService) {}
 
   @Post()
+  @Roles(Permissions.GymOwner, Permissions.create_bills)
   @ApiOperation({ summary: 'Create a bill' })
   async create(
     @User() user: ManagerEntity,
@@ -36,12 +36,14 @@ export class BillsController {
 
   @Get('gym/:gymId')
   @ApiOperation({ summary: 'Get all bills for a gym' })
+  @Roles(Permissions.GymOwner, Permissions.read_bills)
   async findAll(@User() user: ManagerEntity, @Param('gymId') gymId: string) {
     return await this.billsService.findAll(user, gymId);
   }
 
   @Get('upcoming/:gymId')
   @ApiOperation({ summary: 'Get the next upcoming unpaid bill for a gym' })
+  @Roles(Permissions.GymOwner, Permissions.read_bills)
   async getUpcomingBill(
     @User() user: ManagerEntity,
     @Param('gymId') gymId: string,
@@ -51,12 +53,14 @@ export class BillsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a single bill' })
+  @Roles(Permissions.GymOwner, Permissions.read_bills)
   async findOne(@User() user: ManagerEntity, @Param('id') id: string) {
     return await this.billsService.findOne(user, id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a bill' })
+  @Roles(Permissions.GymOwner, Permissions.update_bills)
   async update(
     @User() user: ManagerEntity,
     @Param('id') id: string,
@@ -67,6 +71,7 @@ export class BillsController {
 
   @Post(':id/mark-paid')
   @ApiOperation({ summary: 'Mark a bill as paid and create expense' })
+  @Roles(Permissions.GymOwner, Permissions.create_bills)
   async markAsPaid(
     @User() user: ManagerEntity,
     @Param('id') id: string,
@@ -77,6 +82,7 @@ export class BillsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a bill' })
+  @Roles(Permissions.GymOwner, Permissions.delete_bills)
   async remove(@User() user: ManagerEntity, @Param('id') id: string) {
     return await this.billsService.remove(user, id);
   }

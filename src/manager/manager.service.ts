@@ -24,7 +24,7 @@ import { ManagerCreatedWithTokenDto } from './dtos/manager-created-with-token.dt
 import { ManagerCreatedDto } from './dtos/manager-created.dto';
 import { UpdateManagerDto } from './dtos/update-manager.sto';
 import { UpdateShiftTimesDto } from './dto/update-shift-times.dto';
-import { ManagerEntity } from './manager.entity';
+import { ManagerEntity, ManagerType } from './manager.entity';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
 @Injectable()
@@ -81,6 +81,7 @@ export class ManagerService {
       permissions: body.roles,
       phoneNumber: body.phoneNumber,
       gyms: [checkGym],
+      type: ManagerType.staff,
     });
 
     await this.managerEntity.save(savedManager);
@@ -137,6 +138,7 @@ export class ManagerService {
       firstName,
       lastName,
       gyms: [checkGym],
+      type: ManagerType.PersonalTrainer,
     });
 
     const savedManager = await this.managerEntity.save(savedManagerModel);

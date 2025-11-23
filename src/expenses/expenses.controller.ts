@@ -20,18 +20,19 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesService } from './expenses.service';
 
 @Controller('expenses')
-@Roles(Permissions.GymOwner, Permissions.expenses)
 @UseGuards(ManagerAuthGuard)
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
   @Post()
+  @Roles(Permissions.GymOwner, Permissions.create_expenses)
   @ApiOperation({ summary: 'Create an expense' })
   async create(@User() user: ManagerEntity, @Body() dto: CreateExpenseDto) {
     return await this.expensesService.create(user, dto);
   }
 
   @Get('gym/:gymId')
+  @Roles(Permissions.GymOwner, Permissions.read_expenses)
   @ApiOperation({
     summary: 'List expenses (optionally filtered by date range)',
   })
@@ -47,6 +48,7 @@ export class ExpensesController {
   }
 
   @Patch(':gymId/:id')
+  @Roles(Permissions.GymOwner, Permissions.update_expenses)
   @ApiOperation({ summary: 'Update an expense' })
   async update(
     @User() user: ManagerEntity,
@@ -58,6 +60,7 @@ export class ExpensesController {
   }
 
   @Delete(':gymId/:id')
+  @Roles(Permissions.GymOwner, Permissions.delete_expenses)
   @ApiOperation({ summary: 'Delete an expense' })
   async remove(
     @User() user: ManagerEntity,

@@ -21,6 +21,12 @@ import { WhishTransaction } from 'src/whish-transactions/entities/whish-transact
 import { RevenueEntity } from 'src/revenue/revenue.entity';
 import { PersonalScheduleEntity } from 'src/personal-schedule/entities/personal-schedule.entity';
 
+export enum ManagerType {
+  PersonalTrainer = 'personal-trainer',
+  GymOwner = 'gym-owner',
+  staff = 'staff',
+}
+
 @Entity('managers')
 export class ManagerEntity extends PgMainEntity {
   @Column({ unique: true })
@@ -105,6 +111,9 @@ export class ManagerEntity extends PgMainEntity {
     default: 'monday,tuesday,wednesday,thursday,friday',
   })
   workingDays: string[];
+
+  @Column('text', { nullable: true, default: null })
+  type: ManagerType;
 
   static async isPasswordMatch(
     password: string,

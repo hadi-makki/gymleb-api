@@ -21,6 +21,7 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOperation,
+  ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -53,13 +54,14 @@ import { MemberService } from './member.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 import { ValidateGymRelatedToManagerOrManagerInGym } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
+import { ApiBadRequestResponse } from 'src/error/api-responses.decorator';
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
 
   @Post('create/:gymId')
   @ApiConsumes('multipart/form-data')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.create_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @UseInterceptors(FileInterceptor('image'))
@@ -128,7 +130,7 @@ export class MemberController {
   }
 
   @Get('gym/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToManagerOrManagerInGym()
   async findAll(
@@ -160,11 +162,7 @@ export class MemberController {
   }
 
   @Get('get-member/:gymId/:memberId')
-  @Roles(
-    Permissions.GymOwner,
-    Permissions.members,
-    Permissions.personalTrainers,
-  )
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -176,7 +174,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -189,7 +187,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/gender')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -207,7 +205,7 @@ export class MemberController {
   }
 
   @Post(':gymId/:memberId/delete')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.delete_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -224,7 +222,7 @@ export class MemberController {
   }
 
   @Post(':gymId/:memberId/renew')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -248,7 +246,7 @@ export class MemberController {
   }
 
   @Post(':gymId/:memberId/add-subscription')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -277,7 +275,7 @@ export class MemberController {
   }
 
   @Get('expired/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   async getExpiredMembers(
@@ -298,7 +296,7 @@ export class MemberController {
   }
 
   @Get('export/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToManagerOrManagerInGym()
   async exportMembers(
@@ -333,7 +331,7 @@ export class MemberController {
   }
 
   @Get('expired/export/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   async exportExpiredMembers(
@@ -411,7 +409,7 @@ export class MemberController {
   }
 
   @Post(':gymId/:memberId/invalidate/:transactionId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -426,6 +424,54 @@ export class MemberController {
     @Param('transactionId') transactionId: string,
   ) {
     return await this.memberService.invalidateMemberSubscription(
+      memberId,
+      gymId,
+      transactionId,
+    );
+  }
+
+  @Post(':gymId/:memberId/freeze/:transactionId')
+  @Roles(Permissions.GymOwner, Permissions.update_members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({ summary: 'Freeze a subscription' })
+  @ApiParam({ name: 'gymId', description: 'Gym ID' })
+  @ApiParam({ name: 'memberId', description: 'Member ID' })
+  @ApiParam({ name: 'transactionId', description: 'Transaction ID' })
+  @ApiCreatedResponse({ description: 'Subscription frozen successfully' })
+  @ApiNotFoundResponse({ description: 'Member, gym, or transaction not found' })
+  @ApiBadRequestResponse('Subscription is already frozen or invalid request')
+  async freezeSubscription(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+    @Param('transactionId') transactionId: string,
+  ) {
+    return await this.memberService.freezeSubscription(
+      memberId,
+      gymId,
+      transactionId,
+    );
+  }
+
+  @Post(':gymId/:memberId/unfreeze/:transactionId')
+  @Roles(Permissions.GymOwner, Permissions.update_members)
+  @UseGuards(ManagerAuthGuard)
+  @ValidateGymRelatedToOwner()
+  @ValidateMemberRelatedToGym()
+  @ApiOperation({ summary: 'Unfreeze a subscription' })
+  @ApiParam({ name: 'gymId', description: 'Gym ID' })
+  @ApiParam({ name: 'memberId', description: 'Member ID' })
+  @ApiParam({ name: 'transactionId', description: 'Transaction ID' })
+  @ApiCreatedResponse({ description: 'Subscription unfrozen successfully' })
+  @ApiNotFoundResponse({ description: 'Member, gym, or transaction not found' })
+  @ApiBadRequestResponse('Subscription is not frozen or invalid request')
+  async unfreezeSubscription(
+    @Param('memberId') memberId: string,
+    @Param('gymId') gymId: string,
+    @Param('transactionId') transactionId: string,
+  ) {
+    return await this.memberService.unfreezeSubscription(
       memberId,
       gymId,
       transactionId,
@@ -450,7 +496,7 @@ export class MemberController {
   @ApiNotFoundResponse({
     description: 'User not found',
   })
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
@@ -487,7 +533,7 @@ export class MemberController {
   }
 
   @Post(':gymId/:memberId/reset-password')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -499,7 +545,7 @@ export class MemberController {
   }
 
   @Post('send-welcome-messages/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   async sendWelcomeMessagesToAllMembers(@Param('gymId') gymId: string) {
@@ -507,7 +553,7 @@ export class MemberController {
   }
 
   @Post('bulk-delete/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.delete_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   async bulkDeleteMembers(
@@ -522,7 +568,7 @@ export class MemberController {
   }
 
   @Post('bulk-notify/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   async bulkNotifyMembers(
@@ -558,7 +604,7 @@ export class MemberController {
 
   // Attending Days Endpoints
   @Get(':gymId/:memberId/attending-days')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -574,7 +620,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/attending-days')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -595,7 +641,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/training-preferences')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -634,7 +680,7 @@ export class MemberController {
   }
 
   @Get('gym-attendances/:gymId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.read_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ApiOperation({
@@ -646,7 +692,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/health-information')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -668,7 +714,7 @@ export class MemberController {
   }
 
   @Patch('membership/extend-duration/:gymId/:memberId/:transactionId')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -687,7 +733,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/program-link')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -727,7 +773,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/mark-welcome-message-sent')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()
@@ -743,7 +789,7 @@ export class MemberController {
   }
 
   @Patch(':gymId/:memberId/mark-subscription-reminder-sent')
-  @Roles(Permissions.GymOwner, Permissions.members)
+  @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
   @ValidateGymRelatedToOwner()
   @ValidateMemberRelatedToGym()

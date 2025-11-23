@@ -94,9 +94,59 @@ export class PersonalTrainersService {
   ): number {
     const ta = this.getComparableInTimeZone(a.sessionDate as unknown, timeZone);
     const tb = this.getComparableInTimeZone(b.sessionDate as unknown, timeZone);
+
+    // Both have dates: sort by date ascending
     if (ta !== null && tb !== null) return ta - tb;
+
+    // Sessions with dates come before sessions without dates
     if (ta !== null) return -1;
     if (tb !== null) return 1;
+
+    // Both are unscheduled: sort by subscription expiration (newest first), then by ptSessionNumber
+    return this.compareUnscheduledSessions(a, b);
+  }
+
+  private compareUnscheduledSessions(
+    a: PTSessionEntity,
+    b: PTSessionEntity,
+  ): number {
+    // Get subscription expiration dates
+    const aEndDate = a.subscriptionTransaction?.endDate
+      ? new Date(a.subscriptionTransaction.endDate).getTime()
+      : 0;
+    const bEndDate = b.subscriptionTransaction?.endDate
+      ? new Date(b.subscriptionTransaction.endDate).getTime()
+      : 0;
+
+    // Sort by expiration date descending (newest first)
+    if (aEndDate !== bEndDate) {
+      return bEndDate - aEndDate;
+    }
+
+    // Same expiration date: sort by subscription start date ascending (oldest first)
+    const aStartDate = a.subscriptionTransaction?.startDate
+      ? new Date(a.subscriptionTransaction.startDate).getTime()
+      : 0;
+    const bStartDate = b.subscriptionTransaction?.startDate
+      ? new Date(b.subscriptionTransaction.startDate).getTime()
+      : 0;
+
+    if (aStartDate !== bStartDate) {
+      return aStartDate - bStartDate; // Ascending order (oldest first)
+    }
+
+    // Same expiration and start date: sort by ptSessionNumber if available
+    const aNum = a.ptSessionNumber ?? 0;
+    const bNum = b.ptSessionNumber ?? 0;
+
+    if (aNum !== 0 && bNum !== 0) {
+      return aNum - bNum; // Ascending order
+    }
+
+    // If one has a number and the other doesn't, put the one with number first
+    if (aNum !== 0) return -1;
+    if (bNum !== 0) return 1;
+
     return 0;
   }
 
@@ -611,6 +661,9 @@ export class PersonalTrainersService {
           subscriptionTransaction: {
             id: createSessionDto.subscriptionTransactionId,
           },
+        }),
+        ...(createSessionDto.subscriptionTransactionId && {
+          ptSessionNumber: i + 1,
         }),
       });
       const createdSession = await this.sessionEntity.save(createSessionModel);
@@ -1328,6 +1381,7 @@ export class PersonalTrainersService {
         personalTrainer: true,
         gym: true,
         transactions: true,
+        subscriptionTransaction: true,
       },
     });
 
@@ -1892,6 +1946,7 @@ export class PersonalTrainersService {
     const dateField: 'createdAt' | 'sessionDate' =
       options?.dateField || 'createdAt';
     let windows: Array<{ start: Date; end: Date }> = [];
+    const memberHasActiveSubscription = new Map<string, boolean>();
     if (filterByWindow) {
       const memberIds = new Set<string>();
       sessions.forEach((s) =>
@@ -1919,18 +1974,32 @@ export class PersonalTrainersService {
                 new Date(b.createdAt).getTime() -
                 new Date(a.createdAt).getTime(),
             )[0];
-          if (tx)
+          if (tx) {
             windows.push({
               start: new Date(tx.startDate),
               end: new Date(tx.endDate),
             });
+            memberHasActiveSubscription.set(m.id, true);
+          } else {
+            memberHasActiveSubscription.set(m.id, false);
+          }
         });
       }
     }
 
-    const inAnyWindow = (d?: Date | null) => {
+    const inAnyWindow = (d?: Date | null, session?: PTSessionEntity) => {
       if (!filterByWindow) return true;
-      if (!d) return false;
+      // For unscheduled sessions (no date), check if any member has an active subscription
+      if (!d) {
+        if (!session) return false;
+        const memberIds = (session.members || [])
+          .map((m) => m.id)
+          .filter(Boolean);
+        // Return true if any member has an active subscription
+        return memberIds.some(
+          (memberId) => memberHasActiveSubscription.get(memberId) === true,
+        );
+      }
       return windows.some((w) => d >= w.start && d <= w.end);
     };
 
@@ -1940,7 +2009,7 @@ export class PersonalTrainersService {
         const compareDate = s[dateField]
           ? new Date(s[dateField] as any)
           : undefined;
-        if (!inAnyWindow(compareDate)) return false;
+        if (!inAnyWindow(compareDate, s)) return false;
         if (wantEverything) return true;
         const isCancelled = !!s.isCancelled;
         const hasDate = !!s.sessionDate;
@@ -2063,7 +2132,11 @@ export class PersonalTrainersService {
     }
     const inWindow = (d?: Date | null) => {
       if (!filterByWindow) return true;
-      if (!d || !window) return false;
+      // For unscheduled sessions (no date), check if member has an active subscription
+      if (!d) {
+        return !!window; // If window exists, member has active subscription
+      }
+      if (!window) return false;
       return d >= window.start && d <= window.end;
     };
 

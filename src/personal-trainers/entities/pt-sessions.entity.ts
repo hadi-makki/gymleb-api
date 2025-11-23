@@ -88,4 +88,8 @@ export class PTSessionEntity extends PgMainEntity {
 
   @RelationId((ptSession: PTSessionEntity) => ptSession.subscriptionTransaction)
   subscriptionTransactionId: string | null;
+
+  // this is for the pt sessions that are created from the subscription
+  @Column('int', { nullable: true })
+  ptSessionNumber: number;
 }
