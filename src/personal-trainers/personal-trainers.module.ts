@@ -21,7 +21,7 @@ import { PersonalTrainersMigrationSeed } from './seed/personal-trainers-migratio
   providers: [
     PersonalTrainersService,
     PtSessionsSeed,
-    PersonalTrainersMigrationSeed,
+    // PersonalTrainersMigrationSeed,
   ],
   exports: [PersonalTrainersService, TypeOrmModule],
 })
