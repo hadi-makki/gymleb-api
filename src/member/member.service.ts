@@ -58,7 +58,11 @@ import {
   DayOfWeek,
   MemberAttendingDaysEntity,
 } from './entities/member-attending-days.entity';
-import { Gender, MemberEntity } from './entities/member.entity';
+import {
+  Gender,
+  MemberEntity,
+  WelcomeMessageStatus,
+} from './entities/member.entity';
 import { HandlePhoneNumber } from 'src/functions/helper-functions';
 import { isValidPhoneUsingISO } from 'src/utils/validations';
 
@@ -3489,6 +3493,8 @@ export class MemberService {
     // Update the member with welcome message sent flag
     await this.memberModel.update(memberId, {
       welcomeMessageSentManually: true,
+      welcomeMessageStatus: WelcomeMessageStatus.SENT,
+      isWelcomeMessageSent: true,
     });
 
     return { message: 'Welcome message marked as sent successfully' };
