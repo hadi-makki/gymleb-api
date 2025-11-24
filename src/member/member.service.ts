@@ -1333,6 +1333,7 @@ export class MemberService {
         phoneNumberISOCode: member.phoneNumberISOCode,
         welcomeMessageSentManually: member.welcomeMessageSentManually,
         hasActiveSessions: hasActiveSessionsByMember.has(mId),
+        welcomeMessageStatus: member.welcomeMessageStatus,
       };
 
       return dto;

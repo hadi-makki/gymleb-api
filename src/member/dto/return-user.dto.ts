@@ -4,7 +4,7 @@ import { MemberAttendingDaysEntity } from '../entities/member-attending-days.ent
 import { MemberTrainingProgramEntity } from '../entities/member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
-import { Gender } from '../entities/member.entity';
+import { Gender, WelcomeMessageStatus } from '../entities/member.entity';
 
 export class ReturnUserDto {
   id: string;
@@ -46,6 +46,7 @@ export class ReturnUserDto {
   lastHealthCheck?: string;
   programLink?: string;
   isWelcomeMessageSent?: boolean;
+  welcomeMessageStatus?: WelcomeMessageStatus;
   notificationSetting?: NotificationSettingEntity;
   phoneNumberISOCode?: string;
   welcomeMessageSentManually?: boolean;
