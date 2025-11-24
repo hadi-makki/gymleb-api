@@ -9,6 +9,7 @@ import { TwilioMessageEntity } from './entities/twilio-message.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { SeedMessagesService } from './seed-messages.service';
+import { TwilioWebhookController } from './twilio-webhook.controller';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { SeedMessagesService } from './seed-messages.service';
     GymModule,
     AuthenticationModule,
   ],
-  controllers: [TwilioController],
+  controllers: [TwilioController, TwilioWebhookController],
   providers: [SeedMessagesService, TwilioService],
   exports: [TwilioService, TypeOrmModule],
 })
