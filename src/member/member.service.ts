@@ -1403,6 +1403,26 @@ export class MemberService {
     return await this.returnMember(member);
   }
 
+  async checkWelcomeMessageStatus(memberId: string, gymId: string) {
+    if (!isUUID(memberId)) {
+      throw new BadRequestException('Invalid member id');
+    }
+
+    const member = await this.memberModel.findOne({
+      where: {
+        id: memberId,
+        gym: { id: gymId },
+      },
+      select: ['id', 'welcomeMessageStatus'],
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    return { welcomeMessageStatus: member.welcomeMessageStatus };
+  }
+
   async renewSubscription(
     id: string,
     subscriptionId: string,
