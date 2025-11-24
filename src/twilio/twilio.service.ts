@@ -561,7 +561,7 @@ export class TwilioService {
         });
         await this.transactionService.toggleNotified(
           transaction.id,
-          MonthlyReminderStatus.SENT,
+          MonthlyReminderStatus.PENDING,
         );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
@@ -588,7 +588,7 @@ export class TwilioService {
         });
         await this.transactionService.toggleNotified(
           transaction.id,
-          MonthlyReminderStatus.SENT,
+          MonthlyReminderStatus.PENDING,
         );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
@@ -662,7 +662,7 @@ export class TwilioService {
         });
         await this.transactionService.toggleNotified(
           transaction.id,
-          MonthlyReminderStatus.SENT,
+          MonthlyReminderStatus.PENDING,
         );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
@@ -671,7 +671,7 @@ export class TwilioService {
         console.log('this is local environment');
         await this.transactionService.toggleNotified(
           transaction.id,
-          MonthlyReminderStatus.SENT,
+          MonthlyReminderStatus.PENDING,
         );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
@@ -741,7 +741,7 @@ export class TwilioService {
       });
       await this.transactionService.toggleNotified(
         transaction.id,
-        MonthlyReminderStatus.SENT,
+        MonthlyReminderStatus.PENDING,
       );
       await this.gymService.addGymMembersNotified(gym.id, 1);
     }
@@ -766,7 +766,7 @@ export class TwilioService {
       });
       await this.transactionService.toggleNotified(
         transaction.id,
-        MonthlyReminderStatus.SENT,
+        MonthlyReminderStatus.PENDING,
       );
       await this.gymService.addGymMembersNotified(gym.id, 1);
     }

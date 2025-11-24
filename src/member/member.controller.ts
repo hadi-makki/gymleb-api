@@ -173,38 +173,6 @@ export class MemberController {
     return await this.memberService.findOne(memberId, gymId);
   }
 
-  @Get(':gymId/:memberId/check-welcome-status')
-  @Roles(Permissions.GymOwner, Permissions.read_members)
-  @UseGuards(ManagerAuthGuard)
-  @ValidateGymRelatedToOwner()
-  @ValidateMemberRelatedToGym()
-  @ApiOperation({
-    summary: 'Check welcome message status',
-    description: 'Returns the welcome message status for a specific member'
-  })
-  @ApiParam({ name: 'gymId', description: 'Gym ID' })
-  @ApiParam({ name: 'memberId', description: 'Member ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Welcome message status retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        welcomeMessageStatus: {
-          type: 'string',
-          enum: ['sent', 'not_sent', 'pending']
-        }
-      }
-    }
-  })
-  @ApiNotFoundResponse({ description: 'Member or gym not found' })
-  async checkWelcomeMessageStatus(
-    @Param('memberId') memberId: string,
-    @Param('gymId') gymId: string,
-  ) {
-    return await this.memberService.checkWelcomeMessageStatus(memberId, gymId);
-  }
-
   @Patch(':gymId/:memberId')
   @Roles(Permissions.GymOwner, Permissions.update_members)
   @UseGuards(ManagerAuthGuard)
