@@ -3,7 +3,7 @@ import { TwilioService } from './twilio.service';
 
 @Controller('twilio-webhook')
 export class TwilioWebhookController {
-  constructor() {}
+  constructor(private readonly twilioService: TwilioService) {}
 
   @Post('/verify-message-status')
   async verifyMessageStatus(
@@ -11,7 +11,13 @@ export class TwilioWebhookController {
     @Query('memberId') memberId: string,
     @Query('transactionId') transactionId: string,
   ) {
-    console.log('this is the body', body);
+    await this.twilioService.verifyMessageStatus({
+      memberId,
+      transactionId,
+      messageStatus: body.MessageStatus,
+      MessageSid: body.MessageSid,
+      errorCode: body.ErrorCode,
+    });
     return { message: 'Message status verified' };
   }
 }
