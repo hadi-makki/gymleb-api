@@ -87,6 +87,12 @@ export class MemberService {
     private readonly notificationSettingModel: Repository<NotificationSettingEntity>,
   ) {}
 
+  async getMemberById(memberId: string) {
+    return this.memberModel.findOne({
+      where: { id: memberId },
+    });
+  }
+
   async checkIfUserHasActiveSubscription(
     memberId: string,
     gymId?: string,

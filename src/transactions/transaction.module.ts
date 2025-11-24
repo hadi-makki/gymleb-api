@@ -34,7 +34,7 @@ import { MigrateTransactions } from './migrate-transactions';
     ]),
     AuthenticationModule,
   ],
-  providers: [TransactionService, MigrateTransactions],
+  providers: [TransactionService],
   controllers: [TransactionController],
   exports: [TransactionService, TypeOrmModule],
 })

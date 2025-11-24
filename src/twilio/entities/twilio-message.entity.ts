@@ -10,6 +10,13 @@ export enum TwilioMessageType {
   memberExpiredReminder = 'memberExpiredReminder',
 }
 
+export enum TwilioMessageDeliveryStatus {
+  delivered = 'delivered',
+  failed = 'failed',
+  pending = 'pending',
+  read = 'read',
+}
+
 @Entity('twilio_messages')
 export class TwilioMessageEntity extends PgMainEntity {
   @Column('text', { nullable: true })
@@ -37,4 +44,10 @@ export class TwilioMessageEntity extends PgMainEntity {
 
   @Column('text', { nullable: true })
   sentBy?: string;
+
+  @Column('text', { default: TwilioMessageDeliveryStatus.pending })
+  deliveryStatus: TwilioMessageDeliveryStatus;
+
+  @Column('text', { nullable: true })
+  errorCode: string;
 }

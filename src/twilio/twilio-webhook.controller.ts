@@ -5,10 +5,13 @@ import { TwilioService } from './twilio.service';
 export class TwilioWebhookController {
   constructor() {}
 
-  @Post('webhook')
-  async handleWebhook(@Body() body: any, @Query() query: any) {
+  @Post('/verify-message-status')
+  async verifyMessageStatus(
+    @Body() body: any,
+    @Query('memberId') memberId: string,
+    @Query('transactionId') transactionId: string,
+  ) {
     console.log('this is the body', body);
-    console.log('this is the query', query);
-    return { message: 'Webhook received' };
+    return { message: 'Message status verified' };
   }
 }

@@ -12,6 +12,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import {
+  MonthlyReminderStatus,
   TransactionEntity,
   TransactionType,
 } from 'src/transactions/transaction.entity';
@@ -23,6 +24,7 @@ import { BadRequestException } from '../error/bad-request-error';
 import { GymService } from '../gym/gym.service';
 import { MemberService } from '../member/member.service';
 import {
+  TwilioMessageDeliveryStatus,
   TwilioMessageEntity,
   TwilioMessageType,
 } from './entities/twilio-message.entity';
@@ -185,7 +187,7 @@ export class TwilioService {
         to: `whatsapp:${phoneNumber}`,
         contentSid: twilioTemplate,
         contentVariables: JSON.stringify(contentVariables),
-        statusCallback: `https://apiv2.gym-leb.com/api/twilio-webhook/webhook?${memberId ? `memberId=${memberId}` : ''}${transactionId ? `transactionId=${transactionId}` : ''}`,
+        statusCallback: `https://apiv2.gym-leb.com/api/twilio-webhook/verify-message-status?${memberId ? `memberId=${memberId}` : ''}${transactionId ? `transactionId=${transactionId}` : ''}`,
       });
 
       return res;
@@ -444,7 +446,7 @@ export class TwilioService {
     return filterTransactions.filter((transaction) => {
       return (
         transaction.isInvalidated === false &&
-        transaction.isNotified === false &&
+        transaction.monthlyReminderStatus === MonthlyReminderStatus.NOT_SENT &&
         transaction.type === TransactionType.SUBSCRIPTION &&
         isBefore(new Date(transaction.endDate), date)
       );
@@ -464,7 +466,7 @@ export class TwilioService {
     return filterTransactions.filter((transaction) => {
       return (
         transaction.isInvalidated === false &&
-        transaction.isNotified === false &&
+        transaction.monthlyReminderStatus === MonthlyReminderStatus.NOT_SENT &&
         transaction.type === TransactionType.SUBSCRIPTION &&
         isBefore(new Date(transaction.endDate), startOfToday)
       );
@@ -516,7 +518,7 @@ export class TwilioService {
       if (!isExpired && !dontCheckExpired) {
         throw new BadRequestException('Transaction is not expired');
       }
-      if (transaction.isNotified) {
+      if (transaction.monthlyReminderStatus === MonthlyReminderStatus.SENT) {
         throw new BadRequestException('Transaction is already notified');
       }
 
@@ -554,7 +556,10 @@ export class TwilioService {
           twilioTemplate:
             TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
         });
-        await this.transactionService.toggleNotified(transaction.id, true);
+        await this.transactionService.toggleNotified(
+          transaction.id,
+          MonthlyReminderStatus.SENT,
+        );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
 
@@ -578,7 +583,10 @@ export class TwilioService {
           twilioTemplate:
             TwilioWhatsappTemplates.expiaryReminder[gym.messagesLanguage],
         });
-        await this.transactionService.toggleNotified(transaction.id, true);
+        await this.transactionService.toggleNotified(
+          transaction.id,
+          MonthlyReminderStatus.SENT,
+        );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
     }
@@ -611,7 +619,7 @@ export class TwilioService {
 
     for (const transaction of transactions) {
       console.log('this is the transaction not notified', transaction);
-      if (transaction.isNotified) {
+      if (transaction.monthlyReminderStatus === MonthlyReminderStatus.SENT) {
         continue;
       }
       const data = {
@@ -649,13 +657,19 @@ export class TwilioService {
           twilioTemplate:
             TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
         });
-        await this.transactionService.toggleNotified(transaction.id, true);
+        await this.transactionService.toggleNotified(
+          transaction.id,
+          MonthlyReminderStatus.SENT,
+        );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
 
       if (checkNodeEnv('local')) {
         console.log('this is local environment');
-        await this.transactionService.toggleNotified(transaction.id, true);
+        await this.transactionService.toggleNotified(
+          transaction.id,
+          MonthlyReminderStatus.SENT,
+        );
         await this.gymService.addGymMembersNotified(gym.id, 1);
       }
     }
@@ -681,7 +695,10 @@ export class TwilioService {
     const transaction =
       await this.transactionService.getTransactionById(transactionId);
 
-    if (!transaction || transaction.isNotified) {
+    if (
+      !transaction ||
+      transaction.monthlyReminderStatus === MonthlyReminderStatus.SENT
+    ) {
       return;
     }
 
@@ -719,7 +736,10 @@ export class TwilioService {
         twilioTemplate:
           TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
       });
-      await this.transactionService.toggleNotified(transaction.id, true);
+      await this.transactionService.toggleNotified(
+        transaction.id,
+        MonthlyReminderStatus.SENT,
+      );
       await this.gymService.addGymMembersNotified(gym.id, 1);
     }
 
@@ -741,7 +761,10 @@ export class TwilioService {
         twilioTemplate:
           TwilioWhatsappTemplates.memberExpiredReminder[gym.messagesLanguage],
       });
-      await this.transactionService.toggleNotified(transaction.id, true);
+      await this.transactionService.toggleNotified(
+        transaction.id,
+        MonthlyReminderStatus.SENT,
+      );
       await this.gymService.addGymMembersNotified(gym.id, 1);
     }
 
@@ -1133,5 +1156,80 @@ export class TwilioService {
         total: 250,
       },
     };
+  }
+
+  async verifyMessageStatus({
+    memberId,
+    transactionId,
+    messageStatus,
+    MessageSid,
+    errorCode,
+  }: {
+    memberId: string;
+    transactionId: string;
+    messageStatus: 'sent' | 'undelivered' | 'delivered' | 'read';
+    MessageSid: string;
+    errorCode: string;
+  }) {
+    if (memberId) {
+      const member = await this.memberModel.findOne({
+        where: { id: memberId },
+      });
+      if (!member) {
+        console.log('this is member not found');
+        return;
+      }
+
+      const twilioMessage = await this.twilioMessageModel.findOne({
+        where: { messageSid: MessageSid },
+      });
+      if (!twilioMessage) {
+        console.log('this is twilio message not found');
+        return;
+      }
+      if (messageStatus === 'undelivered') {
+        twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.failed;
+        twilioMessage.errorCode = errorCode;
+        await this.twilioMessageModel.save(twilioMessage);
+      }
+
+      if (messageStatus === 'delivered') {
+        twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.delivered;
+        await this.twilioMessageModel.save(twilioMessage);
+        member.isWelcomeMessageSent = true;
+        await this.memberModel.save(member);
+      }
+
+      if (messageStatus === 'read') {
+        twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.read;
+        await this.twilioMessageModel.save(twilioMessage);
+      }
+    }
+    if (transactionId) {
+      const twilioMessage = await this.twilioMessageModel.findOne({
+        where: { messageSid: MessageSid },
+      });
+      if (!twilioMessage) {
+        return;
+      }
+      if (messageStatus === 'delivered') {
+        twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.delivered;
+        await this.twilioMessageModel.save(twilioMessage);
+        await this.transactionService.toggleNotified(
+          transactionId,
+          MonthlyReminderStatus.SENT,
+        );
+      }
+      if (messageStatus === 'read') {
+        twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.read;
+        await this.twilioMessageModel.save(twilioMessage);
+      }
+      if (messageStatus === 'undelivered') {
+        twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.failed;
+        twilioMessage.errorCode = errorCode;
+        await this.twilioMessageModel.save(twilioMessage);
+      }
+    }
+    return { message: 'Message status verified' };
   }
 }

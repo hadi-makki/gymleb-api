@@ -1,6 +1,10 @@
 import { OnModuleInit } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
-import { PaymentStatus, TransactionEntity } from './transaction.entity';
+import {
+  MonthlyReminderStatus,
+  PaymentStatus,
+  TransactionEntity,
+} from './transaction.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 
@@ -11,84 +15,29 @@ export class MigrateTransactions implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // await this.migrateTransactions();
-    // await this.migrateTransactionAmounts();
-    // await this.migrateIsNotified();
-    // await this.migratePaidAt();
-  }
+    // Fetch all transaction records from the database
+    const getAllTransactions = await this.transactionRepository.find();
 
-  async migratePaidAt() {
-    const transactions = await this.transactionRepository.find({
-      where: {
-        paidAt: IsNull(),
-        status: PaymentStatus.PAID,
-      },
-    });
+    console.log(`Migrating ${getAllTransactions.length} transactions...`);
 
-    console.log('this is the length', transactions.length);
-
-    Promise.all(
-      transactions.map(async (transaction) => {
-        transaction.paidAt = transaction.updatedAt;
-        await this.transactionRepository.save(transaction);
+    await Promise.all(
+      getAllTransactions.map(async (transaction) => {
+        if (transaction.isNotified) {
+          transaction.monthlyReminderStatus = MonthlyReminderStatus.SENT;
+          await this.transactionRepository.save(transaction);
+          console.log(
+            `Transaction ID ${transaction.id}: isNotified=true; set monthlyReminderStatus to SENT`,
+          );
+        } else {
+          transaction.monthlyReminderStatus = MonthlyReminderStatus.NOT_SENT;
+          await this.transactionRepository.save(transaction);
+          console.log(
+            `Transaction ID ${transaction.id}: isNotified=false; set monthlyReminderStatus to NOT_SENT`,
+          );
+        }
       }),
     );
-  }
 
-  async migrateIsNotified() {
-    const transactions = await this.transactionRepository.find({
-      where: {
-        member: {
-          isNotified: true,
-        },
-        isNotified: false,
-      },
-      relations: {
-        member: true,
-      },
-    });
-    const length = transactions.length;
-    let count = 0;
-    console.log('this is the length', length);
-    console.log('this is the transactions', transactions[0].member.isNotified);
-    console.log(
-      'filter transactions',
-      transactions.filter((t) => !t.member.isNotified).length,
-    );
-    // Promise.all(
-    //   transactions.map(async (transaction) => {
-    //     if (transaction.member.isNotified) {
-    //       transaction.isNotified = true;
-    //       await this.transactionRepository.save(transaction);
-    //     }
-    //   }),
-    // );
-  }
-
-  async migrateTransactions() {
-    const transactions = await this.transactionRepository.find({
-      where: { isPaid: false },
-    });
-    for (const transaction of transactions) {
-      transaction.status = transaction.isPaid
-        ? PaymentStatus.PAID
-        : PaymentStatus.UNPAID;
-      await this.transactionRepository.save(transaction);
-    }
-  }
-
-  async migrateTransactionAmounts() {
-    const transactions = await this.transactionRepository.find({
-      where: { originalAmount: IsNull() },
-    });
-    console.log(transactions.length);
-    let count = 0;
-
-    // Promise.all(
-    //   transactions.map(async (transaction) => {
-    //     transaction.originalAmount = transaction.paidAmount;
-    //     await this.transactionRepository.save(transaction);
-    //   }),
-    // );
+    console.log('Migration of monthlyReminderStatus finished.');
   }
 }

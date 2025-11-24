@@ -25,6 +25,7 @@ import { paginate } from 'nestjs-paginate';
 import { NotFoundException } from '../error/not-found-error';
 import { PaymentDetails } from '../stripe/stripe.interface';
 import {
+  MonthlyReminderStatus,
   PaymentStatus,
   TransactionEntity,
   TransactionType,
@@ -901,9 +902,7 @@ export class TransactionService {
       : new Date(transaction.endDate);
 
     if (updatedStartDate > updatedEndDate) {
-      throw new BadRequestException(
-        'Start date cannot be later than end date',
-      );
+      throw new BadRequestException('Start date cannot be later than end date');
     }
 
     transaction.startDate = updatedStartDate;
@@ -930,14 +929,18 @@ export class TransactionService {
     return transaction;
   }
 
-  async toggleNotified(transactionId: string, isNotified: boolean) {
+  async toggleNotified(
+    transactionId: string,
+    monthlyReminderStatus: MonthlyReminderStatus,
+  ) {
     const transaction = await this.transactionModel.findOne({
       where: { id: transactionId },
     });
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
     }
-    transaction.isNotified = isNotified;
+
+    transaction.monthlyReminderStatus = monthlyReminderStatus;
     await this.transactionModel.save(transaction);
     return transaction;
   }

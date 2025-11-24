@@ -252,8 +252,8 @@ export class TransactionEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isNotified: boolean;
 
-  @Column('text', { default: null, nullable: true })
-  monthlyReminderStatus: MonthlyReminderStatus | null;
+  @Column('text', { default: MonthlyReminderStatus.PENDING })
+  monthlyReminderStatus: MonthlyReminderStatus;
 
   @Column('boolean', { default: false })
   forFree: boolean;
