@@ -10,7 +10,7 @@ import {
   parse,
 } from 'date-fns';
 import { GymEntity } from 'src/gym/entities/gym.entity';
-import { ManagerEntity } from 'src/manager/manager.entity';
+import { ManagerEntity, ManagerType } from 'src/manager/manager.entity';
 import { ManagerService } from 'src/manager/manager.service';
 import { MediaService } from 'src/media/media.service';
 import { MemberEntity } from 'src/member/entities/member.entity';
@@ -719,31 +719,13 @@ export class PersonalTrainersService {
     }
 
     // Use a simpler approach to find personal trainers
-    const allManagers = await this.personalTrainerEntity.find({
+    const personalTrainers = await this.personalTrainerEntity.find({
       where: {
         gyms: { ...(isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId }) },
+        type: ManagerType.PersonalTrainer,
       },
       relations: ['gyms', 'profileImage'],
       order: { createdAt: 'DESC' },
-    });
-
-    // Filter managers who have either only the 'personal-trainers' permission
-    // or only 'personal-trainers' and 'revenue' permission (no other permissions)
-    const personalTrainers = allManagers.filter((manager) => {
-      const perms = manager.permissions;
-      // perms must be ['personal-trainers'] or ['personal-trainers', 'revenue'] (any order)
-      if (!perms.includes(Permissions.personalTrainers)) return false;
-      if (perms.length === 1 && perms[0] === Permissions.personalTrainers) {
-        return true;
-      }
-      if (
-        perms.length === 2 &&
-        perms.includes(Permissions.personalTrainers) &&
-        perms.includes(Permissions.revenue)
-      ) {
-        return true;
-      }
-      return false;
     });
 
     const sessionsResult: {
