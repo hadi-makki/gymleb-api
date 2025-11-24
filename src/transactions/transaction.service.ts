@@ -870,6 +870,52 @@ export class TransactionService {
     return transaction;
   }
 
+  async updateTransactionDates(
+    transactionId: string,
+    manager: ManagerEntity,
+    gymId: string,
+    dto: { startDate?: string; endDate?: string },
+  ) {
+    if (!dto.startDate && !dto.endDate) {
+      throw new BadRequestException('No dates provided');
+    }
+
+    const transaction = await this.transactionModel.findOne({
+      where: { id: transactionId },
+      relations: { gym: true, member: true },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    if (transaction.gym.id !== gymId) {
+      throw new ForbiddenException('Transaction does not belong to this gym');
+    }
+
+    const updatedStartDate = dto.startDate
+      ? new Date(dto.startDate)
+      : new Date(transaction.startDate);
+    const updatedEndDate = dto.endDate
+      ? new Date(dto.endDate)
+      : new Date(transaction.endDate);
+
+    if (updatedStartDate > updatedEndDate) {
+      throw new BadRequestException(
+        'Start date cannot be later than end date',
+      );
+    }
+
+    transaction.startDate = updatedStartDate;
+    transaction.endDate = updatedEndDate;
+
+    await this.transactionModel.save(transaction);
+    return {
+      message: 'Transaction dates updated successfully',
+      transaction,
+    };
+  }
+
   async completePayment(transactionId: string) {
     const transaction = await this.transactionModel.findOne({
       where: { id: transactionId },

@@ -28,6 +28,7 @@ import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { PaymentStatus } from './transaction.entity';
 import { TransactionService } from './transaction.service';
 import { Currency } from 'src/common/enums/currency.enum';
+import { UpdateTransactionDatesDto } from './dto/update-transaction-dates.dto';
 
 @Controller('transactions')
 @ApiTags('Transactions')
@@ -229,5 +230,32 @@ export class TransactionController {
   @ValidateMemberRelatedToGym()
   async completePayment(@Param('transactionId') transactionId: string) {
     return this.service.completePayment(transactionId);
+  }
+
+  @Patch(':gymId/:memberId/:transactionId/dates')
+  @UseGuards(ManagerAuthGuard)
+  @ApiBearerAuth()
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiOkResponse({ type: SuccessMessageReturn })
+  @Roles(
+    Permissions.SuperAdmin,
+    Permissions.GymOwner,
+    Permissions.update_transactions,
+  )
+  @ValidateGymRelatedToManagerOrManagerInGym()
+  @ValidateMemberRelatedToGym()
+  async updateTransactionDates(
+    @Param('transactionId') transactionId: string,
+    @Param('gymId') gymId: string,
+    @User() manager: ManagerEntity,
+    @Body() body: UpdateTransactionDatesDto,
+  ) {
+    return this.service.updateTransactionDates(
+      transactionId,
+      manager,
+      gymId,
+      body,
+    );
   }
 }
