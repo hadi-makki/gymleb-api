@@ -9,7 +9,10 @@ import {
 } from 'src/config/helper/helper-functions';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { ManagerEntity } from 'src/manager/manager.entity';
-import { MemberEntity } from 'src/member/entities/member.entity';
+import {
+  MemberEntity,
+  WelcomeMessageStatus,
+} from 'src/member/entities/member.entity';
 import { OwnerSubscriptionTypeEntity } from 'src/owner-subscriptions/owner-subscription-type.entity';
 import {
   MonthlyReminderStatus,
@@ -1191,12 +1194,15 @@ export class TwilioService {
         twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.failed;
         twilioMessage.errorCode = errorCode;
         await this.twilioMessageModel.save(twilioMessage);
+        member.welcomeMessageStatus = WelcomeMessageStatus.NOT_SENT;
+        await this.memberModel.save(member);
       }
 
       if (messageStatus === 'delivered') {
         twilioMessage.deliveryStatus = TwilioMessageDeliveryStatus.delivered;
         await this.twilioMessageModel.save(twilioMessage);
         member.isWelcomeMessageSent = true;
+        member.welcomeMessageStatus = WelcomeMessageStatus.SENT;
         await this.memberModel.save(member);
       }
 

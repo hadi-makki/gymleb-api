@@ -45,6 +45,12 @@ export enum Gender {
   FEMALE = 'female',
 }
 
+export enum WelcomeMessageStatus {
+  SENT = 'sent',
+  NOT_SENT = 'not_sent',
+  PENDING = 'pending',
+}
+
 @Entity('members')
 export class MemberEntity extends PgMainEntity {
   @Column('text')
@@ -100,6 +106,9 @@ export class MemberEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isWelcomeMessageSent: boolean;
+
+  @Column('text', { default: WelcomeMessageStatus.PENDING })
+  welcomeMessageStatus: WelcomeMessageStatus;
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.members)
   personalTrainer: ManagerEntity;

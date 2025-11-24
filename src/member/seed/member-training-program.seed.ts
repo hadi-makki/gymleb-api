@@ -3,9 +3,10 @@ import {
   MemberTrainingProgramEntity,
   ProgramKey,
 } from '../entities/member-training-program.entity';
-import { MemberEntity } from '../entities/member.entity';
+import { MemberEntity, WelcomeMessageStatus } from '../entities/member.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { MonthlyReminderStatus } from 'src/transactions/transaction.entity';
 
 export class MemberTrainingProgramSeed implements OnModuleInit {
   constructor(
@@ -15,10 +16,7 @@ export class MemberTrainingProgramSeed implements OnModuleInit {
     private readonly memberRepository: Repository<MemberEntity>,
   ) {}
 
-  async onModuleInit() {
-    // await this.migrateTrainingProgramsSchema();
-    // await this.generateDefaultTrainingPrograms();
-  }
+  async onModuleInit() {}
 
   async migrateTrainingProgramsSchema() {
     console.log('Starting training programs schema migration...');
