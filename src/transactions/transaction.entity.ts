@@ -252,7 +252,7 @@ export class TransactionEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isNotified: boolean;
 
-  @Column('text', { default: MonthlyReminderStatus.PENDING })
+  @Column('text', { default: MonthlyReminderStatus.NOT_SENT })
   monthlyReminderStatus: MonthlyReminderStatus;
 
   @Column('boolean', { default: false })
