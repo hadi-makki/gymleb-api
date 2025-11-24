@@ -181,6 +181,7 @@ export class TwilioService {
         to: `whatsapp:${phoneNumber}`,
         contentSid: twilioTemplate,
         contentVariables: JSON.stringify(contentVariables),
+        statusCallback: `https://apiv2.gym-leb.com/api/twilio-webhook/webhook`,
       });
 
       return res;
