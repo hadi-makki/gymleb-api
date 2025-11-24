@@ -59,6 +59,7 @@ import {
   MemberAttendingDaysEntity,
 } from './entities/member-attending-days.entity';
 import { Gender, MemberEntity } from './entities/member.entity';
+import { HandlePhoneNumber } from 'src/functions/helper-functions';
 
 @Injectable()
 export class MemberService {
@@ -439,25 +440,15 @@ export class MemberService {
     gymId: string,
     image?: Express.Multer.File,
   ) {
+    const phoneNumber = HandlePhoneNumber(createMemberDto.phoneNumber);
     if (createMemberDto.phoneNumber) {
       if (!createMemberDto.phoneNumberISOCode) {
         throw new BadRequestException('Phone number ISO code is required');
       }
-      console.log('this is the phone number', createMemberDto.phoneNumber);
-      console.log(
-        'this is the phone number ISO code',
-        createMemberDto.phoneNumberISOCode,
-      );
-      console.log(
-        'this is the isValidPhoneNumber',
-        isValidPhoneNumber(
-          createMemberDto.phoneNumber,
-          createMemberDto.phoneNumberISOCode as CountryCode,
-        ),
-      );
+
       if (
         !isValidPhoneNumber(
-          createMemberDto.phoneNumber,
+          phoneNumber,
           createMemberDto.phoneNumberISOCode as CountryCode,
         )
       ) {
@@ -479,10 +470,10 @@ export class MemberService {
       throw new NotFoundException('Subscription not found');
     }
 
-    const checkIfPhoneExists = createMemberDto.phoneNumber
+    const checkIfPhoneExists = phoneNumber
       ? await this.memberModel.find({
           where: {
-            phone: createMemberDto.phoneNumber,
+            phone: phoneNumber,
             phoneNumberISOCode: createMemberDto.phoneNumberISOCode,
             gym: { id: gym.id },
           },
@@ -513,7 +504,7 @@ export class MemberService {
       name: createMemberDto.name,
       ...(createMemberDto.email && { email: createMemberDto.email }),
       ...(createMemberDto.phoneNumber && {
-        phone: createMemberDto.phoneNumber,
+        phone: phoneNumber,
         phoneNumberISOCode: createMemberDto.phoneNumberISOCode || 'LB',
       }),
       gym: gym,
@@ -590,13 +581,13 @@ export class MemberService {
 
     if (
       createMemberDto.sendWelcomeMessage &&
-      createMemberDto.phoneNumber &&
+      phoneNumber &&
       checkIfPhoneExists.length === 0 &&
       getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
     ) {
       await this.twilioService.sendWelcomeMessage(
         newMember.name,
-        newMember.phone,
+        phoneNumber,
         newMember.phoneNumberISOCode,
         gym,
         getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
@@ -606,14 +597,14 @@ export class MemberService {
 
     if (
       createMemberDto.sendInvoiceMessage &&
-      newMember.phone &&
+      phoneNumber &&
       getLatestGymSubscription.activeSubscription?.ownerSubscriptionType
     ) {
       await this.twilioService.sendPaymentConfirmationMessage({
         memberName: member.name,
         activeSubscription:
           getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
-        memberPhone: member.phone,
+        memberPhone: phoneNumber,
         memberPhoneISOCode: member.phoneNumberISOCode,
         gym,
         subscriptionTitle: subscription.title,
