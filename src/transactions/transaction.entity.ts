@@ -46,6 +46,12 @@ export enum SubscriptionStatus {
   ON_GOING = 'on_going',
 }
 
+export enum MonthlyReminderStatus {
+  SENT = 'sent',
+  NOT_SENT = 'not_sent',
+  PENDING = 'pending',
+}
+
 @Entity('transactions')
 export class TransactionEntity extends PgMainEntity {
   @Column('text', { nullable: true })
@@ -245,6 +251,9 @@ export class TransactionEntity extends PgMainEntity {
 
   @Column('boolean', { default: false })
   isNotified: boolean;
+
+  @Column('text', { default: null, nullable: true })
+  monthlyReminderStatus: MonthlyReminderStatus | null;
 
   @Column('boolean', { default: false })
   forFree: boolean;

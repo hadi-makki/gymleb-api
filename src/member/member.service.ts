@@ -615,6 +615,7 @@ export class MemberService {
     ) {
       await this.twilioService.sendPaymentConfirmationMessage({
         memberName: member.name,
+        transactionId: subscriptionInstance.id,
         activeSubscription:
           getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
         memberPhone: phoneNumber,
@@ -1563,6 +1564,7 @@ export class MemberService {
       endDate: format(createSubscriptionInstance.endDate, 'dd/MM/yyyy'),
       activeSubscription:
         getLatestGymSubscription.activeSubscription?.ownerSubscriptionType,
+      transactionId: createSubscriptionInstance.id,
     });
 
     return {

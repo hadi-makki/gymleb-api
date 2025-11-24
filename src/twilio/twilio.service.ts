@@ -151,6 +151,8 @@ export class TwilioService {
     phoneNumberISOCode,
     gym,
     activeSubscription,
+    transactionId,
+    memberId,
   }: {
     phoneNumber: string;
     twilioTemplate: string;
@@ -158,6 +160,8 @@ export class TwilioService {
     phoneNumberISOCode: string;
     gym: GymEntity;
     activeSubscription: OwnerSubscriptionTypeEntity;
+    transactionId?: string;
+    memberId?: string;
   }) {
     // add logs if we are working on local
     if (checkNodeEnv('local')) {
@@ -181,7 +185,7 @@ export class TwilioService {
         to: `whatsapp:${phoneNumber}`,
         contentSid: twilioTemplate,
         contentVariables: JSON.stringify(contentVariables),
-        statusCallback: `https://apiv2.gym-leb.com/api/twilio-webhook/webhook`,
+        statusCallback: `https://apiv2.gym-leb.com/api/twilio-webhook/webhook?${memberId ? `memberId=${memberId}` : ''}${transactionId ? `transactionId=${transactionId}` : ''}`,
       });
 
       return res;
@@ -299,6 +303,7 @@ export class TwilioService {
       phoneNumberISOCode: memberPhoneISOCode,
       gym,
       activeSubscription,
+      memberId: memberId,
     });
     if (res) {
       await this.saveTwilioMessage({
@@ -351,6 +356,7 @@ export class TwilioService {
     startDate,
     endDate,
     activeSubscription,
+    transactionId,
   }: {
     memberName: string;
     memberPhone: string;
@@ -360,6 +366,7 @@ export class TwilioService {
     startDate: string;
     endDate: string;
     activeSubscription: OwnerSubscriptionTypeEntity;
+    transactionId: string;
   }) {
     if (!gym.sendInvoiceMessages) {
       console.log('gym has invoice messages disabled');
@@ -381,6 +388,7 @@ export class TwilioService {
       phoneNumberISOCode: memberPhoneISOCode,
       gym,
       activeSubscription,
+      transactionId: transactionId,
     });
 
     if (res) {
@@ -532,6 +540,8 @@ export class TwilioService {
         phoneNumberISOCode: memberPhoneISOCode,
         gym,
         activeSubscription,
+
+        transactionId: transaction.id,
       });
       if (res) {
         await this.saveTwilioMessage({
@@ -623,6 +633,7 @@ export class TwilioService {
         phoneNumberISOCode: memberPhoneISOCode,
         gym,
         activeSubscription,
+        transactionId: transaction.id,
       });
 
       console.log('this is twilio response', res);
@@ -694,6 +705,7 @@ export class TwilioService {
       phoneNumberISOCode: memberPhoneISOCode,
       gym,
       activeSubscription,
+      transactionId: transaction.id,
     });
 
     if (res) {
