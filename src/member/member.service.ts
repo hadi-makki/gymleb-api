@@ -60,6 +60,7 @@ import {
 } from './entities/member-attending-days.entity';
 import { Gender, MemberEntity } from './entities/member.entity';
 import { HandlePhoneNumber } from 'src/functions/helper-functions';
+import { isValidPhoneUsingISO } from 'src/utils/validations';
 
 @Injectable()
 export class MemberService {
@@ -441,13 +442,25 @@ export class MemberService {
     image?: Express.Multer.File,
   ) {
     const phoneNumber = HandlePhoneNumber(createMemberDto.phoneNumber);
+    console.log('this is the phone number', phoneNumber);
+    console.log(
+      'this is the phone number ISO code',
+      createMemberDto.phoneNumberISOCode,
+    );
+    console.log(
+      'this is the isValidPhoneUsingISO',
+      isValidPhoneUsingISO(
+        phoneNumber,
+        createMemberDto.phoneNumberISOCode as CountryCode,
+      ),
+    );
     if (createMemberDto.phoneNumber) {
       if (!createMemberDto.phoneNumberISOCode) {
         throw new BadRequestException('Phone number ISO code is required');
       }
 
       if (
-        !isValidPhoneNumber(
+        !isValidPhoneUsingISO(
           phoneNumber,
           createMemberDto.phoneNumberISOCode as CountryCode,
         )

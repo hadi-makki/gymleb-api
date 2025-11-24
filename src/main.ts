@@ -22,7 +22,7 @@ async function bootstrap() {
 
   console.log(
     'check phone number',
-    isValidPhoneUsingISO('+5511984402771', 'BR'),
+    isValidPhoneUsingISO('+2250566517484', 'CI'),
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
