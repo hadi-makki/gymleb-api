@@ -532,6 +532,9 @@ export class MemberService {
       }),
       gym: gym,
       subscription: subscription,
+      welcomeMessageStatus: createMemberDto.sendWelcomeMessage
+        ? WelcomeMessageStatus.PENDING
+        : WelcomeMessageStatus.NOT_SENT,
     });
     const member = await this.memberModel.save(createMemberModel);
     // Optional image upload and assignment
