@@ -39,6 +39,7 @@ import { validateImage } from '../utils/helprt-functions';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { DeleteMemberDto } from './dto/delete-member.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
+import { LoginMemberWithoutGymDto } from './dto/login-member-without-gym.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import { AddSubscriptionToMemberDto } from './dto/add-subscription-to-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
@@ -50,6 +51,8 @@ import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dt
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { Gender, MemberEntity } from './entities/member.entity';
 import { UpdateGenderDto } from './dto/update-gender.dto';
+import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { MemberService } from './member.service';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
@@ -96,6 +99,29 @@ export class MemberController {
     @GetDeviceId() deviceId: string,
   ) {
     const loginMember = await this.memberService.loginMember(
+      body,
+      deviceId,
+      response,
+    );
+    return loginMember;
+  }
+
+  @Post('login/without-gym')
+  @ApiOperation({
+    summary: 'Login member without requiring gymId',
+    description:
+      'Login endpoint that searches for members by phone number across all gyms. More user-friendly for mobile apps.',
+  })
+  @ApiCreatedResponse({
+    description: 'Login successful or requires additional action',
+  })
+  @ApiBadRequestResponse('Invalid phone number or password')
+  async loginWithoutGym(
+    @Body() body: LoginMemberWithoutGymDto,
+    @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
+  ) {
+    const loginMember = await this.memberService.loginMemberWithoutGym(
       body,
       deviceId,
       response,
@@ -664,7 +690,7 @@ export class MemberController {
     );
   }
 
-  @Patch('/training-preferences/update/me')
+  @Post('/training-preferences/update/me')
   @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Update my training preferences',
@@ -820,5 +846,141 @@ export class MemberController {
   @Roles(Permissions.GymOwner)
   async notifyMembersWithExpiredSubscriptions() {
     return await this.memberService.notifyMembersWithExpiredSubscriptions();
+  }
+
+  @Post('device-token')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Register FCM/Expo push token for the authenticated member',
+    description:
+      "Registers or updates the FCM/Expo push notification token for the authenticated member. This token is used to send push notifications to the member's device.",
+  })
+  @ApiCreatedResponse({
+    description: 'Device token registered successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Device token registered successfully',
+        },
+        success: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiBadRequestResponse('Invalid token or platform')
+  async registerDeviceToken(
+    @User() member: MemberEntity,
+    @Body() registerDeviceTokenDto: RegisterDeviceTokenDto,
+  ) {
+    return await this.memberService.registerDeviceToken(
+      member,
+      registerDeviceTokenDto,
+    );
+  }
+
+  @Post('device-token/unregister')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Unregister device token for the authenticated member',
+    description:
+      'Removes the FCM/Expo push notification token for the authenticated member. This will stop push notifications from being sent to this device.',
+  })
+  @ApiCreatedResponse({
+    description: 'Device token unregistered successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Device token unregistered successfully',
+        },
+      },
+    },
+  })
+  async unregisterDeviceToken(@User() member: MemberEntity) {
+    return await this.memberService.unregisterDeviceToken(member);
+  }
+
+  // Member self-service endpoints
+  @Post('me/profile')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Update my profile',
+    description:
+      'Update my own basic profile information (name, email, gender, birthday)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+  })
+  async updateMyProfile(
+    @User() member: MemberEntity,
+    @Body() updateMyProfileDto: UpdateMyProfileDto,
+  ) {
+    return await this.memberService.updateMyProfile(
+      member.id,
+      member.gymId,
+      updateMyProfileDto,
+    );
+  }
+
+  @Post('me/health-information')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Update my health information',
+    description: 'Update my own health information and measurements',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Health information updated successfully',
+  })
+  async updateMyHealthInformation(
+    @User() member: MemberEntity,
+    @Body() updateHealthInformationDto: UpdateHealthInformationDto,
+  ) {
+    return await this.memberService.updateMyHealthInformation(
+      member.id,
+      member.gymId,
+      updateHealthInformationDto,
+    );
+  }
+
+  @Post('me/profile-image')
+  @ApiConsumes('multipart/form-data')
+  @UseGuards(AuthGuard)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiOperation({
+    summary: 'Update my profile image',
+    description: 'Update my own profile image with image upload',
+  })
+  @ApiCreatedResponse({
+    type: SuccessMessageReturn,
+    description: 'Profile image updated successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  async updateMyProfileImage(
+    @User() member: MemberEntity,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+        ],
+        fileIsRequired: false,
+      }),
+      new WebpPipe(),
+    )
+    file?: Express.Multer.File,
+  ) {
+    if (file && !validateImage(file)) {
+      throw new BadRequestException('File must be an image');
+    }
+    return await this.memberService.updateMyProfileImage(
+      member.id,
+      file,
+      member.gymId,
+    );
   }
 }

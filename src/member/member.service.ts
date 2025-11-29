@@ -48,12 +48,18 @@ import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
 import { LoginMemberDto } from './dto/login-member.dto';
-import { ReturnUserDto } from './dto/return-user.dto';
+import { LoginMemberWithoutGymDto } from './dto/login-member-without-gym.dto';
+import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 import { SignupMemberDto } from './dto/signup-member.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
+import {
+  RegisterDeviceTokenDto,
+  TokenType,
+} from './dto/register-device-token.dto';
 import {
   DayOfWeek,
   MemberAttendingDaysEntity,
@@ -442,6 +448,8 @@ export class MemberService {
       phoneNumberISOCode: member.phoneNumberISOCode,
       welcomeMessageSentManually: member.welcomeMessageSentManually,
       hasActiveSessions: hasActiveSessions,
+
+      ...(member.gym && { gym: member.gym }),
     };
   }
 
@@ -855,6 +863,170 @@ export class MemberService {
 
       res.cookie(CookieNames.MemberToken, token.accessToken, cookieOptions);
       return await this.returnMember(member);
+    }
+  }
+
+  async loginMemberWithoutGym(
+    loginMemberDto: LoginMemberWithoutGymDto,
+    deviceId: string,
+    res: Response,
+  ): Promise<
+    | ReturnUserWithTokenDto
+    | {
+        hasPassword: boolean;
+        message: string;
+        membersWithSameNumber?: Array<{
+          id: string;
+          name: string;
+          gymId: string;
+          gymName: string;
+        }>;
+      }
+  > {
+    // If memberId is provided, fetch that specific member with phone match
+    let member: MemberEntity | null = null;
+    if (loginMemberDto.memberId) {
+      member = await this.memberModel.findOne({
+        where: {
+          id: loginMemberDto.memberId,
+          phone: loginMemberDto.phoneNumber,
+          // phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+        },
+        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      });
+    } else {
+      // If no memberId, try to find by phone across all gyms
+      const members = await this.memberModel.find({
+        where: {
+          phone: loginMemberDto.phoneNumber,
+          // phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+        },
+        relations: ['gym'],
+        select: {
+          id: true,
+          name: true,
+          password: true,
+          phone: true,
+          phoneNumberISOCode: true,
+          gym: {
+            id: true,
+            name: true,
+          },
+        },
+      });
+
+      if (!members || members.length === 0) {
+        throw new BadRequestException('Invalid phone number');
+      }
+
+      // If multiple members found and no password provided, return list with gym info
+      if (members.length > 1 && !loginMemberDto.password) {
+        return {
+          hasPassword: members.some((m) => !!m.password),
+          message:
+            'Multiple accounts found with this phone number. Please select your account.',
+          membersWithSameNumber: members.map((m) => ({
+            id: m.id,
+            name: m.name,
+            gymId: m.gym?.id || '',
+            gymName: m.gym?.name || '',
+          })),
+        };
+      }
+
+      // If single member or password provided, fetch full member data
+      member = await this.memberModel.findOne({
+        where: {
+          phone: loginMemberDto.phoneNumber,
+          // phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+        },
+        relations: ['gym', 'subscription', 'transactions', 'attendingDays'],
+      });
+    }
+
+    if (!member) {
+      throw new BadRequestException('Invalid phone number');
+    }
+
+    // If no password provided, return password status (and list if multiples exist)
+    if (!loginMemberDto.password) {
+      // Also include list if there are multiple with same phone
+      const siblings = await this.memberModel.find({
+        where: {
+          phone: loginMemberDto.phoneNumber,
+          // phoneNumberISOCode: loginMemberDto.phoneNumberISOCode,
+        },
+        relations: ['gym'],
+        select: {
+          id: true,
+          name: true,
+          password: true,
+          gym: {
+            id: true,
+            name: true,
+          },
+        },
+      });
+      const multi = siblings.length > 1;
+      return {
+        hasPassword: !!member.password,
+        message: member.password
+          ? 'Please enter your password'
+          : 'Please set a password for your account',
+        ...(multi && {
+          membersWithSameNumber: siblings.map((m) => ({
+            id: m.id,
+            name: m.name,
+            gymId: m.gym?.id || '',
+            gymName: m.gym?.name || '',
+          })),
+        }),
+      } as any;
+    }
+
+    // If member doesn't have password, set it and login
+    if (!member.password) {
+      member.password = await MemberEntity.hashPassword(
+        loginMemberDto.password,
+      );
+      await this.memberModel.save(member);
+
+      const token = await this.tokenService.generateTokens({
+        managerId: null,
+        userId: member.id,
+        deviceId,
+      });
+
+      res.cookie(CookieNames.MemberToken, token.accessToken, cookieOptions);
+      return {
+        ...(await this.returnMember(member)),
+        deviceId,
+        token: token.accessToken,
+      };
+    }
+
+    // If member has password, validate it
+    if (member.password) {
+      const isPasswordMatch = await MemberEntity.isPasswordMatch(
+        loginMemberDto.password,
+        member.password,
+      );
+      if (!isPasswordMatch) {
+        throw new BadRequestException('Invalid password');
+      }
+
+      const token = await this.tokenService.generateTokens({
+        managerId: null,
+        userId: member.id,
+        deviceId,
+      });
+
+      res.cookie(CookieNames.MemberToken, token.accessToken, cookieOptions);
+      return {
+        ...(await this.returnMember(member)),
+        deviceId,
+        token: token.accessToken,
+      };
     }
   }
 
@@ -2025,6 +2197,7 @@ export class MemberService {
         'transactions',
         'attendingDays',
         'trainingPrograms',
+        'profileImage',
       ],
     });
 
@@ -3400,6 +3573,104 @@ export class MemberService {
     return { message: 'Health information updated successfully' };
   }
 
+  async updateMyProfile(
+    memberId: string,
+    gymId: string,
+    updateMyProfileDto: UpdateMyProfileDto,
+  ) {
+    // Validate member exists and belongs to the gym
+    const member = await this.memberModel.findOne({
+      where: { id: memberId, gym: { id: gymId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        'Member not found or does not belong to this gym',
+      );
+    }
+
+    // Update only provided fields
+    if (updateMyProfileDto.name !== undefined) {
+      member.name = updateMyProfileDto.name;
+    }
+    if (updateMyProfileDto.email !== undefined) {
+      member.email = updateMyProfileDto.email;
+    }
+    if (updateMyProfileDto.gender !== undefined) {
+      member.gender = updateMyProfileDto.gender;
+    }
+    if (updateMyProfileDto.birthday !== undefined) {
+      member.birthday = updateMyProfileDto.birthday
+        ? new Date(updateMyProfileDto.birthday)
+        : null;
+    }
+
+    await this.memberModel.save(member);
+    return { message: 'Profile updated successfully' };
+  }
+
+  async updateMyHealthInformation(
+    memberId: string,
+    gymId: string,
+    updateHealthInformationDto: UpdateHealthInformationDto,
+  ) {
+    // Reuse the existing method logic
+    return await this.updateMemberHealthInformation(
+      memberId,
+      gymId,
+      updateHealthInformationDto,
+    );
+  }
+
+  async updateMyProfileImage(
+    id: string,
+    image: Express.Multer.File,
+    gymId: string,
+  ) {
+    const checkGym = await this.gymModel.findOne({
+      where: { id: gymId },
+    });
+    if (!checkGym) {
+      throw new NotFoundException('Gym not found');
+    }
+    const member = await this.memberModel.findOne({
+      where: { id, gym: { id: checkGym.id } },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // For member self-service, we need a manager ID for media upload
+    // We'll use the gym owner or create a system manager reference
+    // For now, we'll use the member's gym owner if available
+    const gym = await this.gymModel.findOne({
+      where: { id: gymId },
+      relations: ['owner'],
+    });
+
+    if (!gym || !gym.owner) {
+      throw new BadRequestException(
+        'Cannot update profile image: gym owner not found',
+      );
+    }
+
+    if (image) {
+      if (member.profileImage) {
+        await this.mediaService.delete(member.profileImage.id);
+      }
+      const imageData = await this.mediaService.upload(image, gym.owner.id);
+      member.profileImage = imageData;
+      await this.memberModel.save(member);
+    } else {
+      if (member.profileImage) {
+        await this.mediaService.delete(member.profileImage.id);
+      }
+      member.profileImage = null;
+      await this.memberModel.save(member);
+    }
+    return { message: 'Profile image updated successfully' };
+  }
+
   async extendMembershipDuration(
     memberId: string,
     gymId: string,
@@ -3630,6 +3901,50 @@ export class MemberService {
 
     return {
       message: `Successfully notified members`,
+    };
+  }
+
+  /**
+   * Register or update FCM/Expo push token for a member
+   */
+  async registerDeviceToken(
+    member: MemberEntity,
+    registerDeviceTokenDto: RegisterDeviceTokenDto,
+  ) {
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Update member's FCM token, platform, and token type
+    member.fcmToken = registerDeviceTokenDto.token;
+    member.devicePlatform = registerDeviceTokenDto.platform;
+    member.tokenType = registerDeviceTokenDto.tokenType || TokenType.EXPO; // Default to EXPO for backward compatibility
+
+    await this.memberModel.save(member);
+
+    return {
+      message: 'Device token registered successfully',
+      success: true,
+    };
+  }
+
+  /**
+   * Unregister device token for a member
+   */
+  async unregisterDeviceToken(member: MemberEntity) {
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Clear FCM token, platform, and token type
+    member.fcmToken = null;
+    member.devicePlatform = null;
+    member.tokenType = null;
+
+    await this.memberModel.save(member);
+
+    return {
+      message: 'Device token unregistered successfully',
     };
   }
 }

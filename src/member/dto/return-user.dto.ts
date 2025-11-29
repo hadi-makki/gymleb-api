@@ -55,4 +55,5 @@ export class ReturnUserDto {
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {
   token: string;
+  deviceId: string;
 }

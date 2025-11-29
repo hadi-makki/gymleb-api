@@ -397,7 +397,11 @@ export class GymOwnerService {
     return savedGym;
   }
 
-  async getAllGymOwners(limit: number, page: number, search?: string) {
+  async getAllGymOwners(
+    limit: number,
+    page: number,
+    search?: string,
+  ): Promise<any> {
     // Build custom where clause for gym name search
     let whereClause: any = {
       permissions: Raw(

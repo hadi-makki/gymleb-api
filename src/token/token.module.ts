@@ -20,5 +20,6 @@ import { TokenService } from './token.service';
   ],
   providers: [JwtService, TokenService, ConfigService],
   controllers: [TokenController],
+  exports: [TokenService],
 })
 export class TokenModule {}
