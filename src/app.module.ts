@@ -56,6 +56,8 @@ import { PersonalScheduleModule } from './personal-schedule/personal-schedule.mo
 import { PersonalScheduleEntity } from './personal-schedule/entities/personal-schedule.entity';
 import { BillsModule } from './bills/bills.module';
 import { BillEntity } from './bills/entities/bill.entity';
+import { FirebaseModule } from './firebase/firebase.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -116,6 +118,8 @@ import { BillEntity } from './bills/entities/bill.entity';
     AppUpdateModule,
     PersonalScheduleModule,
     BillsModule,
+    FirebaseModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

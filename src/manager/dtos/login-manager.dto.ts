@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsStrongPassword } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsStrongPassword,
+} from 'class-validator';
 
 export class LoginManagerDto {
   @ApiProperty()
@@ -14,5 +19,6 @@ export class LoginManagerDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
+  @IsOptional()
   deviceId: string;
 }

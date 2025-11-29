@@ -244,4 +244,16 @@ export class MemberEntity extends PgMainEntity {
 
   @OneToMany(() => PersonalScheduleEntity, (schedule) => schedule.member)
   personalSchedules: PersonalScheduleEntity[];
+
+  @Column('text', { nullable: true })
+  fcmToken: string | null;
+
+  @Column('text', { nullable: true })
+  devicePlatform: string | null; // 'ios', 'android', or 'web'
+
+  @Column('text', { nullable: true })
+  tokenType: string | null; // 'native' (FCM/APNs) or 'expo' (Expo push service)
+
+  @Column('int', { default: 0 })
+  notificationCount: number; // Counter for unread notifications
 }

@@ -20,15 +20,20 @@ export class TokenEntity extends PgMainEntity {
   @Column({ type: 'timestamp without time zone', default: null })
   refreshExpirationDate: Date;
 
-
-
   @Column({ type: 'timestamp without time zone', default: null })
   accessExpirationDate: Date;
 
- 
-
   @Column({ default: null })
   deviceId: string;
+
+  @Column('text', { nullable: true })
+  expoToken: string | null;
+
+  @Column('text', { nullable: true })
+  expoTokenPlatform: string | null; // 'ios', 'android', or 'web'
+
+  @Column({ type: 'timestamp without time zone', nullable: true })
+  expoTokenRegisteredAt: Date | null;
 
   // @Column({ nullable: true })
   // user: User;

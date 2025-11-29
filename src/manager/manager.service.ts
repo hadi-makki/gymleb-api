@@ -95,6 +95,7 @@ export class ManagerService {
     return {
       ...returnManager(savedManager),
       token: token.accessToken,
+      deviceId,
     };
   }
 
@@ -152,6 +153,7 @@ export class ManagerService {
     return {
       ...returnManager(savedManager),
       token: token.accessToken,
+      deviceId,
     };
   }
 
@@ -200,6 +202,7 @@ export class ManagerService {
     return {
       ...returnManager(manager),
       token: token.accessToken,
+      deviceId,
     };
   }
 

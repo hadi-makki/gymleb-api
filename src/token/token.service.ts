@@ -283,14 +283,22 @@ export class TokenService {
     iat: number;
     exp: number;
   }> {
-    const token = req.cookies[CookieNames.ManagerToken];
-    const memberToken = req.cookies[CookieNames.MemberToken];
+    const token =
+      req.cookies[CookieNames.ManagerToken] ||
+      req.headers[CookieNames.ManagerToken.toLowerCase()];
+    const memberToken =
+      req.cookies[CookieNames.MemberToken] ||
+      req.headers[CookieNames.MemberToken.toLowerCase()];
 
     const tokenToUse = isMember ? memberToken : token;
 
+    console.log('this is the token to use', tokenToUse);
+    console.log('this is the isMember', isMember);
+
     if (!tokenToUse) {
+      console.log('we are int ht no token to use');
       this.logger.warn(
-        `Missing auth cookie. isMember=${isMember} deviceId=${req.cookies?.deviceId || 'unknown'}`,
+        `Missing auth cookie. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
       );
       throw new UnauthorizedException('Missing Authorization Header');
     }
@@ -320,7 +328,8 @@ export class TokenService {
       // accept the latest token for this device when it matches the same subject
       if (decodedJwt) {
         const latestTokenDoc = await this.getTokenByDeviceId(
-          req.cookies[CookieNames.DeviceId],
+          req.cookies[CookieNames.DeviceId] ||
+            req.headers[CookieNames.DeviceId.toLowerCase()],
         );
         if (latestTokenDoc) {
           const ownerId =
@@ -357,7 +366,8 @@ export class TokenService {
 
       const newToken = await this.refreshToken(
         tokenToUse,
-        req.cookies[CookieNames.DeviceId],
+        req.cookies[CookieNames.DeviceId] ||
+          req.headers[CookieNames.DeviceId.toLowerCase()],
         res,
       );
       if (newToken) {
@@ -440,5 +450,26 @@ export class TokenService {
       );
       return null;
     }
+  }
+
+  /**
+   * Update Expo token for a device
+   */
+  async updateExpoToken(
+    deviceId: string,
+    expoToken: string,
+    platform: string,
+  ): Promise<TokenEntity | null> {
+    const tokenEntity = await this.getTokenByDeviceId(deviceId);
+
+    if (!tokenEntity) {
+      return null;
+    }
+
+    tokenEntity.expoToken = expoToken;
+    tokenEntity.expoTokenPlatform = platform;
+    tokenEntity.expoTokenRegisteredAt = new Date();
+
+    return await this.tokenRepository.save(tokenEntity);
   }
 }
