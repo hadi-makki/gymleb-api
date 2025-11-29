@@ -60,5 +60,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .bun
 bun.lock
 
-config/fcm-key.json
-config/apns-key.p8
+config
+
+# Firebase credentials and keys
+**/fcm-key.json*
+**/firebase-key.json*
+**/service-account*.json
+src/firebase/config/*.json
