@@ -2,8 +2,7 @@ import { UserEntity } from 'src/user/user.entity';
 import { imageTypes } from './constants';
 
 export const returnUser = (user: UserEntity) => {
-  const { password, ...restUser } = user;
-  return restUser;
+  return user;
 };
 
 export const validateImage = (

@@ -1,11 +1,17 @@
-import { IsDate, IsString } from 'class-validator';
+import { IsDate, IsOptional, IsString } from 'class-validator';
 
 export class GenerateTokenDTO {
   @IsString()
+  @IsOptional()
   userId: string;
 
   @IsString()
+  @IsOptional()
   managerId: string;
+
+  @IsString()
+  @IsOptional()
+  userTokenId: string;
 
   @IsString()
   accessToken: string;

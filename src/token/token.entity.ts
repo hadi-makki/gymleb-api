@@ -2,6 +2,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { Column, Entity, ManyToOne, RelationId } from 'typeorm';
 import { PgMainEntity } from '../main-classes/mainEntity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { UserEntity } from 'src/user/user.entity';
 
 export enum TokenType {
   Access = 'access',
@@ -51,4 +52,13 @@ export class TokenEntity extends PgMainEntity {
 
   @RelationId((token: TokenEntity) => token.manager)
   managerId: string;
+
+  @ManyToOne(() => UserEntity, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  user: UserEntity;
+
+  @RelationId((token: TokenEntity) => token.user)
+  userId: string | null;
 }

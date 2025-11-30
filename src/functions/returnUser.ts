@@ -3,13 +3,7 @@ import { ManagerEntity } from 'src/manager/manager.entity';
 import { UserEntity } from 'src/user/user.entity';
 
 export function returnUser(user: UserEntity) {
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
+  return user;
 }
 
 export function returnManager(manager: ManagerEntity) {

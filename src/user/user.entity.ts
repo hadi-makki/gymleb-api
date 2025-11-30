@@ -1,19 +1,21 @@
-import * as bcrypt from 'bcryptjs';
 import { PgMainEntity } from 'src/main-classes/mainEntity';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Index, OneToMany } from 'typeorm';
+import { MemberEntity } from 'src/member/entities/member.entity';
 
 @Entity('users')
 export class UserEntity extends PgMainEntity {
-  @Column('text')
-  email: string;
-
   @Column('text', { nullable: true })
-  password: string;
-
-  @Column('text')
   name: string;
 
-  async comparePassword(oldPassword: string) {
-    return await bcrypt.compare(oldPassword, this.password);
-  }
+  @Column('text', { nullable: true })
+  @Index()
+  phone: string | null;
+
+  @Column('text', { default: 'LB', nullable: true })
+  phoneNumberISOCode: string | null;
+
+  @OneToMany(() => MemberEntity, (member) => member.user, {
+    onDelete: 'SET NULL',
+  })
+  members: MemberEntity[];
 }
