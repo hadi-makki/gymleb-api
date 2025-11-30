@@ -18,7 +18,7 @@ import { UserService } from './user.service';
     forwardRef(() => MemberModule),
   ],
   controllers: [UserController],
-  providers: [UserService, SeedUserMember],
+  providers: [UserService],
   exports: [UserService, TypeOrmModule],
 })
 export class UserModule {}
