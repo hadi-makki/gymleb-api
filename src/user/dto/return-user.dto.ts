@@ -13,6 +13,8 @@ export class ReturnUserDto {
   trainingPreferences?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  hasDownloadedApp?: boolean;
+  downloadedAt?: Date | null;
 }
 
 export class ReturnUserWithTokenDto extends ReturnUserDto {

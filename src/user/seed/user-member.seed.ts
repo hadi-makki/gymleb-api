@@ -51,58 +51,78 @@ export class SeedUserMember implements OnModuleInit {
 
     console.log(`Found ${membersByPhone.size} unique phone numbers`);
 
-    let usersCreated = 0;
-    let membersUpdated = 0;
+    // Process all groups in parallel
+    const results = await Promise.all(
+      Array.from(membersByPhone.entries()).map(
+        async ([phoneKey, membersWithSamePhone]) => {
+          if (membersWithSamePhone.length === 0) {
+            return { usersCreated: 0, membersUpdated: 0 };
+          }
 
-    // Process each group
-    for (const [phoneKey, membersWithSamePhone] of membersByPhone.entries()) {
-      if (membersWithSamePhone.length === 0) {
-        continue;
-      }
+          // Get the first member's phone info to use for the user
+          const firstMember = membersWithSamePhone[0];
+          const phone = firstMember.phone!;
+          const phoneNumberISOCode = firstMember.phoneNumberISOCode!;
 
-      // Get the first member's phone info to use for the user
-      const firstMember = membersWithSamePhone[0];
-      const phone = firstMember.phone!;
-      const phoneNumberISOCode = firstMember.phoneNumberISOCode!;
+          // Find or create a user with this phone number
+          let user = await this.userRepository.findOne({
+            where: {
+              phone,
+              phoneNumberISOCode,
+            },
+          });
 
-      // Find or create a user with this phone number
-      let user = await this.userRepository.findOne({
-        where: {
-          phone,
-          phoneNumberISOCode,
+          let usersCreated = 0;
+          if (!user) {
+            // Create a new user
+            // Use the first member's name as the user name, or combine names if multiple
+            const userName =
+              membersWithSamePhone.length === 1 ? firstMember.name : null;
+
+            user = this.userRepository.create({
+              name: userName,
+              phone,
+              phoneNumberISOCode,
+            });
+
+            user = await this.userRepository.save(user);
+            usersCreated = 1;
+            console.log(`Created user ${user.id} for phone ${phone}`);
+          }
+
+          // Associate all members with this phone number to the user in parallel
+          const membersToUpdate = membersWithSamePhone.filter(
+            (member) => member.userId !== user.id,
+          );
+
+          await Promise.all(
+            membersToUpdate.map(async (member) => {
+              member.user = user;
+              member.userId = user.id;
+              await this.memberRepository.save(member);
+            }),
+          );
+
+          return {
+            usersCreated,
+            membersUpdated: membersToUpdate.length,
+          };
         },
-      });
+      ),
+    );
 
-      if (!user) {
-        // Create a new user
-        // Use the first member's name as the user name, or combine names if multiple
-        const userName =
-          membersWithSamePhone.length === 1 ? firstMember.name : null;
-
-        user = this.userRepository.create({
-          name: userName,
-          phone,
-          phoneNumberISOCode,
-        });
-
-        user = await this.userRepository.save(user);
-        usersCreated++;
-        console.log(`Created user ${user.id} for phone ${phone}`);
-      }
-
-      // Associate all members with this phone number to the user
-      for (const member of membersWithSamePhone) {
-        if (member.userId !== user.id) {
-          member.user = user;
-          member.userId = user.id;
-          await this.memberRepository.save(member);
-          membersUpdated++;
-        }
-      }
-    }
+    // Sum up the results
+    const totalUsersCreated = results.reduce(
+      (sum, result) => sum + result.usersCreated,
+      0,
+    );
+    const totalMembersUpdated = results.reduce(
+      (sum, result) => sum + result.membersUpdated,
+      0,
+    );
 
     console.log(
-      `Seed completed: ${usersCreated} users created, ${membersUpdated} members updated`,
+      `Seed completed: ${totalUsersCreated} users created, ${totalMembersUpdated} members updated`,
     );
   }
 }

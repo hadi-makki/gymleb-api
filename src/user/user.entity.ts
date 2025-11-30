@@ -49,4 +49,10 @@ export class UserEntity extends PgMainEntity {
 
   @Column('int', { default: 0 })
   notificationCount: number; // Counter for unread notifications
+
+  @Column('boolean', { default: false })
+  hasDownloadedApp: boolean;
+
+  @Column('timestamp without time zone', { nullable: true })
+  downloadedAt: Date | null;
 }

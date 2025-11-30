@@ -171,6 +171,8 @@ export class UserService {
       phoneNumberISOCode: user.phoneNumberISOCode,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      hasDownloadedApp: user.hasDownloadedApp,
+      downloadedAt: user.downloadedAt,
       token: token.accessToken,
       deviceId,
     };
@@ -193,6 +195,8 @@ export class UserService {
       trainingPreferences: user.trainingPreferences,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      hasDownloadedApp: user.hasDownloadedApp,
+      downloadedAt: user.downloadedAt,
     };
   }
 
@@ -308,6 +312,8 @@ export class UserService {
       trainingPreferences: user.trainingPreferences,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      hasDownloadedApp: user.hasDownloadedApp,
+      downloadedAt: user.downloadedAt,
       members: members.map((member) => ({
         id: member.id,
         name: member.name,
@@ -487,5 +493,21 @@ export class UserService {
 
     // Use MemberService to get the full member profile
     return await this.memberService.getMe(memberId);
+  }
+
+  async markAppDownloaded(userId: string): Promise<ReturnUserDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    user.hasDownloadedApp = true;
+    user.downloadedAt = new Date();
+    await this.userRepository.save(user);
+
+    return this.returnUser(user);
   }
 }

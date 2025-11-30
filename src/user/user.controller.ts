@@ -220,4 +220,20 @@ export class UserController {
   ) {
     return await this.userService.updateTrainingPreferences(user.id, body);
   }
+
+  @Patch('mark-app-downloaded')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Mark app as downloaded',
+    description:
+      'Marks that the authenticated user has downloaded the app. Sets hasDownloadedApp to true and downloadedAt to current timestamp.',
+  })
+  @ApiOkResponse({
+    description: 'App download marked successfully',
+    type: ReturnUserDto,
+  })
+  @ApiBadRequestResponse('User not found')
+  async markAppDownloaded(@User() user: UserEntity) {
+    return await this.userService.markAppDownloaded(user.id);
+  }
 }
