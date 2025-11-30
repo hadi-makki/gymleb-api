@@ -460,18 +460,7 @@ export class MemberService {
     image?: Express.Multer.File,
   ) {
     const phoneNumber = HandlePhoneNumber(createMemberDto.phoneNumber);
-    console.log('this is the phone number', phoneNumber);
-    console.log(
-      'this is the phone number ISO code',
-      createMemberDto.phoneNumberISOCode,
-    );
-    console.log(
-      'this is the isValidPhoneUsingISO',
-      isValidPhoneUsingISO(
-        phoneNumber,
-        createMemberDto.phoneNumberISOCode as CountryCode,
-      ),
-    );
+
     if (createMemberDto.phoneNumber) {
       if (!createMemberDto.phoneNumberISOCode) {
         throw new BadRequestException('Phone number ISO code is required');
@@ -531,6 +520,22 @@ export class MemberService {
       throw new BadRequestException('Email already exists');
     }
 
+    let checkIfUserExists = await this.userRepository.findOne({
+      where: {
+        phone: HandlePhoneNumber(createMemberDto.phoneNumber),
+        phoneNumberISOCode: createMemberDto.phoneNumberISOCode as CountryCode,
+      },
+    });
+
+    if (!checkIfUserExists) {
+      checkIfUserExists = this.userRepository.create({
+        name: createMemberDto.name,
+        phone: HandlePhoneNumber(createMemberDto.phoneNumber),
+        phoneNumberISOCode: createMemberDto.phoneNumberISOCode as CountryCode,
+      });
+      await this.userRepository.save(checkIfUserExists);
+    }
+
     const createMemberModel = this.memberModel.create({
       name: createMemberDto.name,
       ...(createMemberDto.email && { email: createMemberDto.email }),
@@ -543,6 +548,7 @@ export class MemberService {
       welcomeMessageStatus: createMemberDto.sendWelcomeMessage
         ? WelcomeMessageStatus.PENDING
         : WelcomeMessageStatus.NOT_SENT,
+      user: checkIfUserExists,
     });
     const member = await this.memberModel.save(createMemberModel);
     // Optional image upload and assignment
