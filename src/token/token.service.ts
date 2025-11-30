@@ -6,6 +6,7 @@ import { addDays, addMinutes, differenceInHours } from 'date-fns';
 import { Request, Response } from 'express';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { UserEntity } from 'src/user/user.entity';
 import { Not, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { UnauthorizedException } from '../error/unauthorized-error';
@@ -26,6 +27,8 @@ export class TokenService {
     // private readonly TokenService: TokenService,
     @InjectRepository(ManagerEntity)
     private readonly managerRepository: Repository<ManagerEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   private readonly logger = new Logger(TokenService.name);
@@ -95,25 +98,29 @@ export class TokenService {
   async generateTokens({
     userId,
     managerId,
+    userTokenId,
     deviceId,
   }: {
-    userId: string;
+    userId?: string;
     managerId?: string;
+    userTokenId?: string;
     deviceId: string;
   }): Promise<{
     accessToken: string;
     refreshToken: string;
     refreshExpirationDate: Date;
   }> {
+    const idToUse = userTokenId || userId || managerId;
     const { accessToken, accessExpirationDate } =
-      await this.generateAccessToken(userId || managerId);
+      await this.generateAccessToken(idToUse);
 
     const { refreshToken, refreshExpirationDate } =
-      await this.generateRefreshToken(userId || managerId);
+      await this.generateRefreshToken(idToUse);
 
     await this.storeToken({
       userId,
       managerId,
+      userTokenId,
       accessToken,
       refreshToken,
       accessExpirationDate,
@@ -138,10 +145,15 @@ export class TokenService {
           manager: { id: data?.managerId },
           deviceId: data?.deviceId,
         },
+        {
+          user: { id: data?.userTokenId },
+          deviceId: data?.deviceId,
+        },
       ],
       relations: {
         member: true,
         manager: true,
+        user: true,
       },
     });
 
@@ -155,9 +167,11 @@ export class TokenService {
           where: { id: data.userId },
         });
         if (!member) {
-          throw new UnauthorizedException('User not found');
+          throw new UnauthorizedException('Member not found');
         }
         checkToken.member = member;
+        checkToken.user = null;
+        checkToken.manager = null;
       }
       if (data.managerId && data.managerId !== checkToken.manager?.id) {
         const manager = await this.managerRepository.findOne({
@@ -167,6 +181,19 @@ export class TokenService {
           throw new UnauthorizedException('Manager not found');
         }
         checkToken.manager = manager;
+        checkToken.member = null;
+        checkToken.user = null;
+      }
+      if (data.userTokenId && data.userTokenId !== checkToken.user?.id) {
+        const user = await this.userRepository.findOne({
+          where: { id: data.userTokenId },
+        });
+        if (!user) {
+          throw new UnauthorizedException('User not found');
+        }
+        checkToken.user = user;
+        checkToken.member = null;
+        checkToken.manager = null;
       }
       return await this.tokenRepository.save(checkToken);
     } else {
@@ -174,6 +201,7 @@ export class TokenService {
         ...data,
         ...(data.userId ? { member: { id: data?.userId } } : {}),
         ...(data.managerId ? { manager: { id: data?.managerId } } : {}),
+        ...(data.userTokenId ? { user: { id: data?.userTokenId } } : {}),
         mongoId: uuidv4(),
       };
       return await this.tokenRepository.save(tokenData);
@@ -182,16 +210,15 @@ export class TokenService {
 
   async getAccessTokenByDeviceIdAndAccessToken(
     deviceId: string,
-    accessToken: string,
   ): Promise<TokenEntity | null> {
     const getToken = await this.tokenRepository.findOne({
       where: {
         deviceId: deviceId,
-        accessToken: accessToken,
       },
       relations: {
         member: true,
         manager: true,
+        user: true,
       },
     });
     return getToken;
@@ -205,6 +232,7 @@ export class TokenService {
       relations: {
         member: true,
         manager: true,
+        user: true,
       },
     });
     return getToken;
@@ -218,8 +246,13 @@ export class TokenService {
       ? [
           { member: { id: userId }, deviceId: deviceId },
           { manager: { id: userId }, deviceId: deviceId },
+          { user: { id: userId }, deviceId: deviceId },
         ]
-      : [{ member: { id: userId } }, { manager: { id: userId } }];
+      : [
+          { member: { id: userId } },
+          { manager: { id: userId } },
+          { user: { id: userId } },
+        ];
 
     const tokenToDelete = await this.tokenRepository.find({
       where: query,
@@ -268,16 +301,18 @@ export class TokenService {
       relations: {
         member: true,
         manager: true,
+        user: true,
       },
     });
   }
 
   async validateJwt(
     req: Request & {
-      user: MemberEntity | ManagerEntity;
+      user: MemberEntity | ManagerEntity | UserEntity;
     },
     res: Response,
     isMember: boolean = false,
+    isUser: boolean = false,
   ): Promise<{
     sub: string;
     iat: number;
@@ -289,14 +324,16 @@ export class TokenService {
     const memberToken =
       req.cookies[CookieNames.MemberToken] ||
       req.headers[CookieNames.MemberToken.toLowerCase()];
+    const userToken =
+      req.cookies[CookieNames.UserToken] ||
+      req.headers[CookieNames.UserToken.toLowerCase()];
 
-    const tokenToUse = isMember ? memberToken : token;
+    const tokenToUse = isUser ? userToken : isMember ? memberToken : token;
 
-    console.log('this is the token to use', tokenToUse);
-    console.log('this is the isMember', isMember);
+    console.log('this is the isMember', isMember, tokenToUse);
+    console.log('this is the isUser and userToken', isUser, tokenToUse);
 
     if (!tokenToUse) {
-      console.log('we are int ht no token to use');
       this.logger.warn(
         `Missing auth cookie. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
       );
@@ -333,7 +370,9 @@ export class TokenService {
         );
         if (latestTokenDoc) {
           const ownerId =
-            latestTokenDoc.member?.id || latestTokenDoc.manager?.id;
+            latestTokenDoc.user?.id ||
+            latestTokenDoc.member?.id ||
+            latestTokenDoc.manager?.id;
           const isSameOwner = ownerId === decodedJwt.sub;
           const isLatestNotExpired =
             differenceInHours(
@@ -347,9 +386,11 @@ export class TokenService {
             latestTokenDoc.accessToken &&
             latestTokenDoc.accessToken !== tokenToUse
           ) {
-            const cookieName = latestTokenDoc.member
-              ? CookieNames.MemberToken
-              : CookieNames.ManagerToken;
+            const cookieName = latestTokenDoc.user
+              ? CookieNames.UserToken
+              : latestTokenDoc.member
+                ? CookieNames.MemberToken
+                : CookieNames.ManagerToken;
             res.cookie(cookieName, latestTokenDoc.accessToken, cookieOptions);
 
             const refreshed = (await this.jwtService.verifyAsync(
@@ -393,10 +434,8 @@ export class TokenService {
     res: Response,
   ): Promise<string | null> {
     try {
-      const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
-        deviceId,
-        token,
-      );
+      const checkToken =
+        await this.getAccessTokenByDeviceIdAndAccessToken(deviceId);
 
       if (!checkToken) {
         this.logger.warn(
@@ -435,9 +474,11 @@ export class TokenService {
         await this.tokenRepository.save(checkToken);
 
         // Set the new token in cookies
-        const cookieName = checkToken.member
-          ? CookieNames.MemberToken
-          : CookieNames.ManagerToken;
+        const cookieName = checkToken.user
+          ? CookieNames.UserToken
+          : checkToken.member
+            ? CookieNames.MemberToken
+            : CookieNames.ManagerToken;
         res.cookie(cookieName, accessToken, cookieOptions);
 
         return accessToken;

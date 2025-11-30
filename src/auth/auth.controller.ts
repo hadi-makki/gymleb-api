@@ -18,8 +18,8 @@ import {
 } from '../error/api-responses.decorator';
 import { AuthGuard } from '../guards/auth.guard';
 import { AuthService } from './auth.service';
-import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 import { RefreshDto } from './dtos/refresh-token.dto';
+import { RefreshTokenOutDto } from './dtos/out/refresh-token-out.dto';
 
 @Controller('auth')
 @ApiTags('auth')

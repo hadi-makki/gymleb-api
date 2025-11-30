@@ -24,5 +24,6 @@ export const imageTypes =
 export enum CookieNames {
   MemberToken = 'memberToken_v1',
   ManagerToken = 'token_v1',
+  UserToken = 'user_token_v2',
   DeviceId = 'deviceId_v1',
 }

@@ -9,7 +9,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SendExpoNotificationDto {
   @ApiProperty({
-    description: 'Expo push token',
+    description: 'Member ID to send notification to',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsNotEmpty()
+  @IsString()
+  memberId: string;
+
+  @ApiProperty({
+    description: 'Expo push token to send the notification to',
     example: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]',
   })
   @IsNotEmpty()
@@ -31,6 +39,23 @@ export class SendExpoNotificationDto {
   @IsNotEmpty()
   @IsString()
   body: string;
+
+  @ApiPropertyOptional({
+    description: 'Notification category',
+    enum: [
+      'payment',
+      'subscription',
+      'expiry',
+      'renewal',
+      'reminder',
+      'general',
+      'pt_session',
+    ],
+    example: 'general',
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
 
   @ApiPropertyOptional({
     description: 'Additional data payload',

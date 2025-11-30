@@ -26,12 +26,14 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { UserEntity } from 'src/user/user.entity';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { AuthGuard } from '../guards/auth.guard';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { UserAuthGuard } from '../guards/user-auth.guard';
 import { SuccessMessageReturn } from '../main-classes/success-message-return';
 import { WebpPipe } from '../pipes/webp.pipe';
 import { cookieOptions } from '../utils/constants';
@@ -425,6 +427,114 @@ export class MemberController {
     return await this.memberService.updateMyPtSessionDate(
       member,
       gymId,
+      sessionId,
+      body.date,
+      timezone,
+    );
+  }
+
+  // User endpoints for getting members with subscription data
+  @Get('user/:gymId/members')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Get all members in gym with their subscription data',
+    description:
+      'Get all members belonging to the authenticated user in the specified gym, along with their subscription information including active subscriptions',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Members with subscription data retrieved successfully',
+  })
+  async getUserMembersInGym(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.getUserMembersInGym(user.id, gymId);
+  }
+
+  // User endpoints for getting all PT sessions for user members in gym
+  @Get('pt-sessions/user/:gymId/all')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Get all PT sessions for all user members in gym',
+    description:
+      'Get all PT sessions for all members belonging to the authenticated user in the specified gym, returned as a flattened list',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'PT sessions retrieved successfully',
+  })
+  async getUserPtSessionsInGym(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.getUserPtSessionsInGym(user.id, gymId);
+  }
+
+  // User endpoints for PT sessions
+  @Get('pt-sessions/user/:gymId')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Get all members in gym with their PT sessions',
+    description:
+      'Get all members belonging to the authenticated user in the specified gym, along with their PT sessions',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Members with PT sessions retrieved successfully',
+  })
+  async getUserMembersWithPtSessions(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberService.getUserMembersWithPtSessions(
+      user.id,
+      gymId,
+    );
+  }
+
+  @Get('pt-sessions/user/:gymId/:memberId')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Get PT sessions for a specific member',
+    description:
+      'Get all PT sessions for a specific member belonging to the authenticated user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'PT sessions retrieved successfully',
+  })
+  async getUserMemberPtSessions(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return await this.memberService.getUserMemberPtSessions(
+      user.id,
+      gymId,
+      memberId,
+    );
+  }
+
+  @Patch('pt-sessions/user/:gymId/:memberId/:sessionId/date')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({ summary: 'Update PT session date for a member' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session date updated successfully',
+  })
+  async updateUserMemberPtSessionDate(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+    @Param('sessionId') sessionId: string,
+    @Body() body: { date: string },
+    @Headers('timezone') timezone?: string,
+  ) {
+    return await this.memberService.updateUserMemberPtSessionDate(
+      user.id,
+      gymId,
+      memberId,
       sessionId,
       body.date,
       timezone,

@@ -35,7 +35,6 @@ export class AuthService {
   }
 
   async test() {
-    this.userService.test();
     return 'test';
   }
   // Refresh tokens: Validate the refresh token and update tokens.
@@ -56,7 +55,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.userService.getUserById(payload.sub);
+    const user = await this.userService.findUserByPhone(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }

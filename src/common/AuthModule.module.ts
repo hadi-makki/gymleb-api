@@ -24,6 +24,13 @@ import { PTSessionEntity } from 'src/personal-trainers/entities/pt-sessions.enti
 import { MediaService } from 'src/media/media.service';
 import { MediaEntity } from 'src/media/media.entity';
 import { S3Service } from 'src/s3/s3.service';
+import { MemberService } from 'src/member/member.service';
+import { MemberAttendingDaysEntity } from 'src/member/entities/member-attending-days.entity';
+import { MemberTrainingProgramEntity } from 'src/member/entities/member-training-program.entity';
+import { TwilioService } from 'src/twilio/twilio.service';
+import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers.service';
+import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
+import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -40,6 +47,10 @@ import { S3Service } from 'src/s3/s3.service';
       RevenueEntity,
       PTSessionEntity,
       MediaEntity,
+      MemberAttendingDaysEntity,
+      MemberTrainingProgramEntity,
+      NotificationSettingEntity,
+      TwilioMessageEntity,
     ]),
   ],
   providers: [
@@ -53,6 +64,9 @@ import { S3Service } from 'src/s3/s3.service';
     TransactionService,
     MediaService,
     S3Service,
+    MemberService,
+    TwilioService,
+    PersonalTrainersService,
   ],
   exports: [
     ManagerService,
@@ -65,6 +79,10 @@ import { S3Service } from 'src/s3/s3.service';
     TypeOrmModule,
     TransactionService,
     MediaService,
+    S3Service,
+    MemberService,
+    TwilioService,
+    PersonalTrainersService,
   ],
 })
 export class AuthenticationModule {}

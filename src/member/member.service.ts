@@ -10,7 +10,8 @@ import {
   startOfDay,
 } from 'date-fns';
 import { Response } from 'express';
-import { CountryCode, isValidPhoneNumber } from 'libphonenumber-js';
+import { CountryCode } from 'libphonenumber-js';
+import { HandlePhoneNumber } from 'src/functions/helper-functions';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { GymService } from 'src/gym/gym.service';
 import { ManagerEntity } from 'src/manager/manager.entity';
@@ -29,26 +30,29 @@ import {
 } from 'src/transactions/transaction.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
+import { isValidPhoneUsingISO } from 'src/utils/validations';
 import { buildMembersWorkbook, MemberExportRow } from 'src/utils/xlsx.util';
-import {
-  Between,
-  In,
-  IsNull,
-  LessThan,
-  MoreThan,
-  Not,
-  Repository,
-} from 'typeorm';
+import { Between, In, IsNull, LessThan, Not, Repository } from 'typeorm';
 import { BadRequestException } from '../error/bad-request-error';
 import { NotFoundException } from '../error/not-found-error';
+import { ForbiddenException } from '@nestjs/common';
 import { MediaService } from '../media/media.service';
 import { TokenService } from '../token/token.service';
 import { TransactionService } from '../transactions/transaction.service';
+import { UserEntity } from '../user/user.entity';
 import { UpdateAttendingDaysDto } from './dto/attending-day.dto';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { ExtendMembershipDurationDto } from './dto/extend-membership-duration.dto';
-import { LoginMemberDto } from './dto/login-member.dto';
 import { LoginMemberWithoutGymDto } from './dto/login-member-without-gym.dto';
+import { LoginMemberDto } from './dto/login-member.dto';
+import {
+  RegisterDeviceTokenDto,
+  TokenType,
+} from './dto/register-device-token.dto';
+import {
+  MemberWithPtSessionsDto,
+  UserPtSessionsResponseDto,
+} from './dto/return-user-pt-sessions.dto';
 import { ReturnUserDto, ReturnUserWithTokenDto } from './dto/return-user.dto';
 import { SignupMemberDto } from './dto/signup-member.dto';
 import { UpdateHealthInformationDto } from './dto/update-health-information.dto';
@@ -56,10 +60,6 @@ import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UpdateProgramLinkDto } from './dto/update-program-link.dto';
 import { UpdateTrainingPreferencesDto } from './dto/update-training-preferences.dto';
-import {
-  RegisterDeviceTokenDto,
-  TokenType,
-} from './dto/register-device-token.dto';
 import {
   DayOfWeek,
   MemberAttendingDaysEntity,
@@ -69,8 +69,6 @@ import {
   MemberEntity,
   WelcomeMessageStatus,
 } from './entities/member.entity';
-import { HandlePhoneNumber } from 'src/functions/helper-functions';
-import { isValidPhoneUsingISO } from 'src/utils/validations';
 
 @Injectable()
 export class MemberService {
@@ -95,6 +93,8 @@ export class MemberService {
     private readonly ptSessionRepository: Repository<PTSessionEntity>,
     @InjectRepository(NotificationSettingEntity)
     private readonly notificationSettingModel: Repository<NotificationSettingEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   async getMemberById(memberId: string) {
@@ -2362,6 +2362,359 @@ export class MemberService {
     };
   }
 
+  // User endpoints methods for PT sessions
+  async getUserMembersWithPtSessions(
+    userId: string,
+    gymId: string,
+  ): Promise<UserPtSessionsResponseDto> {
+    // Get gym first to check permissions
+    const gym = await this.gymModel.findOne({
+      where: isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Get all members for this user in this gym
+    const members = await this.memberModel.find({
+      where: {
+        user: { id: userId },
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+      relations: ['gym'],
+    });
+
+    // Get PT sessions for each member
+    // Sessions can be in both `members` (ManyToMany) and `member` (OneToMany) relations
+    const membersWithSessions: MemberWithPtSessionsDto[] = await Promise.all(
+      members.map(async (member) => {
+        // Get sessions where member is in ManyToMany relation
+        const sessionsInManyToMany = await this.ptSessionRepository.find({
+          where: {
+            gym: { id: gym.id },
+            members: { id: member.id },
+          },
+          relations: { members: true, personalTrainer: true, gym: true },
+          order: { sessionDate: 'ASC' },
+        });
+
+        // Get sessions where member is in OneToMany relation
+        const sessionsInOneToMany = await this.ptSessionRepository.find({
+          where: {
+            gym: { id: gym.id },
+            member: { id: member.id },
+          },
+          relations: { member: true, personalTrainer: true, gym: true },
+          order: { sessionDate: 'ASC' },
+        });
+
+        // Combine and deduplicate sessions by id
+        const allSessions = [...sessionsInManyToMany, ...sessionsInOneToMany];
+        const uniqueSessions = allSessions.filter(
+          (session, index, self) =>
+            index === self.findIndex((s) => s.id === session.id),
+        );
+        uniqueSessions.sort((a, b) => {
+          if (!a.sessionDate && !b.sessionDate) return 0;
+          if (!a.sessionDate) return 1;
+          if (!b.sessionDate) return -1;
+          return (
+            new Date(a.sessionDate).getTime() -
+            new Date(b.sessionDate).getTime()
+          );
+        });
+
+        return {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          phone: member.phone,
+          ptSessions: uniqueSessions,
+        };
+      }),
+    );
+
+    return {
+      members: membersWithSessions,
+      gymId: gym.id,
+      gymName: gym.name,
+      allowMembersSetPtTimes: gym.allowMembersSetPtTimes,
+    };
+  }
+
+  async getUserMemberPtSessions(
+    userId: string,
+    gymId: string,
+    memberId: string,
+  ) {
+    // Verify user owns the member and member belongs to gym
+    const member = await this.memberModel.findOne({
+      where: {
+        id: memberId,
+        user: { id: userId },
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+      relations: ['gym'],
+    });
+
+    if (!member) {
+      throw new ForbiddenException(
+        'Member not found or you do not have access to this member',
+      );
+    }
+
+    // Get sessions where member is in ManyToMany relation
+    const sessionsInManyToMany = await this.ptSessionRepository.find({
+      where: {
+        gym: { id: member.gym.id },
+        members: { id: memberId },
+      },
+      relations: { members: true, personalTrainer: true, gym: true },
+      order: { sessionDate: 'ASC' },
+    });
+
+    // Get sessions where member is in OneToMany relation
+    const sessionsInOneToMany = await this.ptSessionRepository.find({
+      where: {
+        gym: { id: member.gym.id },
+        member: { id: memberId },
+      },
+      relations: { member: true, personalTrainer: true, gym: true },
+      order: { sessionDate: 'ASC' },
+    });
+
+    // Combine and deduplicate sessions by id
+    const allSessions = [...sessionsInManyToMany, ...sessionsInOneToMany];
+    const uniqueSessions = allSessions.filter(
+      (session, index, self) =>
+        index === self.findIndex((s) => s.id === session.id),
+    );
+    uniqueSessions.sort((a, b) => {
+      if (!a.sessionDate && !b.sessionDate) return 0;
+      if (!a.sessionDate) return 1;
+      if (!b.sessionDate) return -1;
+      return (
+        new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
+      );
+    });
+
+    return uniqueSessions;
+  }
+
+  /**
+   * Get all PT sessions for all user members in a specific gym
+   * Returns a flattened list of all PT sessions (not grouped by member)
+   */
+  async getUserPtSessionsInGym(userId: string, gymId: string): Promise<any[]> {
+    // Get gym first to validate it exists
+    const gym = await this.gymModel.findOne({
+      where: isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Get all members for this user in this gym
+    const members = await this.memberModel.find({
+      where: {
+        user: { id: userId },
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+      select: ['id'],
+    });
+
+    if (members.length === 0) {
+      return [];
+    }
+
+    const memberIds = members.map((m) => m.id);
+
+    // Get sessions where members are in ManyToMany relation
+    const sessionsInManyToMany = await this.ptSessionRepository.find({
+      where: {
+        gym: { id: gym.id },
+        members: { id: In(memberIds) },
+      },
+      relations: { members: true, personalTrainer: true, gym: true },
+      order: { sessionDate: 'ASC' },
+    });
+
+    // Get sessions where members are in OneToMany relation
+    const sessionsInOneToMany = await this.ptSessionRepository.find({
+      where: {
+        gym: { id: gym.id },
+        member: { id: In(memberIds) },
+      },
+      relations: { member: true, personalTrainer: true, gym: true },
+      order: { sessionDate: 'ASC' },
+    });
+
+    // Combine and deduplicate sessions by id
+    const allSessions = [...sessionsInManyToMany, ...sessionsInOneToMany];
+    const uniqueSessions = allSessions.filter(
+      (session, index, self) =>
+        index === self.findIndex((s) => s.id === session.id),
+    );
+    uniqueSessions.sort((a, b) => {
+      if (!a.sessionDate && !b.sessionDate) return 0;
+      if (!a.sessionDate) return 1;
+      if (!b.sessionDate) return -1;
+      return (
+        new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()
+      );
+    });
+
+    return uniqueSessions;
+  }
+
+  /**
+   * Get all members for a user in a specific gym with their subscription data
+   * Uses returnMember to get full subscription information including active subscriptions
+   */
+  async getUserMembersInGym(
+    userId: string,
+    gymId: string,
+  ): Promise<ReturnUserDto[]> {
+    // Get gym first to validate it exists
+    const gym = await this.gymModel.findOne({
+      where: isUUID(gymId) ? { id: gymId } : { gymDashedName: gymId },
+    });
+
+    if (!gym) {
+      throw new NotFoundException('Gym not found');
+    }
+
+    // Get all members for this user in this gym
+    const members = await this.memberModel.find({
+      where: {
+        user: { id: userId },
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+      relations: [
+        'gym',
+        'subscription',
+        'transactions',
+        'attendingDays',
+        'profileImage',
+      ],
+    });
+
+    // Use returnMember to get full subscription data for each member
+    const membersWithSubscriptions = await Promise.all(
+      members.map(async (member) => {
+        return await this.returnMember(member);
+      }),
+    );
+
+    return membersWithSubscriptions;
+  }
+
+  async updateUserMemberPtSessionDate(
+    userId: string,
+    gymId: string,
+    memberId: string,
+    sessionId: string,
+    newDate: string,
+    timezone?: string,
+  ) {
+    // Verify user owns the member and member belongs to gym
+    const member = await this.memberModel.findOne({
+      where: {
+        id: memberId,
+        user: { id: userId },
+        ...(isUUID(gymId)
+          ? { gym: { id: gymId } }
+          : { gym: { gymDashedName: gymId } }),
+      },
+      relations: ['gym'],
+    });
+
+    if (!member) {
+      throw new ForbiddenException(
+        'Member not found or you do not have access to this member',
+      );
+    }
+
+    // Check if gym allows member self-scheduling
+    if (!member.gym.allowMembersSetPtTimes) {
+      throw new BadRequestException(
+        'Your gym does not allow member self-scheduling for PT sessions',
+      );
+    }
+
+    // Find the session and validate member is part of it
+    // Check both ManyToMany and OneToMany relations
+    const sessionInManyToMany = await this.ptSessionRepository.findOne({
+      where: {
+        id: sessionId,
+        gym: { id: member.gym.id },
+        members: { id: memberId },
+      },
+      relations: ['personalTrainer', 'members'],
+    });
+
+    const sessionInOneToMany = await this.ptSessionRepository.findOne({
+      where: {
+        id: sessionId,
+        gym: { id: member.gym.id },
+        member: { id: memberId },
+      },
+      relations: ['personalTrainer', 'member'],
+    });
+
+    const session = sessionInManyToMany || sessionInOneToMany;
+
+    if (!session) {
+      throw new NotFoundException(
+        'Session not found or you are not enrolled in this session',
+      );
+    }
+
+    // Get PT's settings
+    const pt = session.personalTrainer;
+    const sessionDuration =
+      session.sessionDurationHours || pt.ptSessionDurationHours;
+
+    // Convert date to UTC if timezone is provided
+    let sessionDate: Date;
+
+    sessionDate = new Date(newDate);
+
+    // Check PT availability
+    const availability = await this.personalTrainersService.checkPtAvailability(
+      pt.id,
+      sessionDate,
+      sessionDuration,
+      sessionId, // Exclude current session from overlap check
+    );
+
+    if (!availability.isAvailable) {
+      throw new BadRequestException(
+        availability.reason ||
+          `This time slot is fully booked for your personal trainer (${availability.currentCapacity}/${availability.maxCapacity} members)`,
+      );
+    }
+
+    // Update the session date
+    await this.ptSessionRepository.update(sessionId, {
+      sessionDate,
+    });
+
+    return {
+      message: 'Session date updated successfully',
+    };
+  }
+
   async getMember(id: string) {
     if (!isUUID(id)) {
       throw new BadRequestException('Invalid member id');
@@ -3473,28 +3826,74 @@ export class MemberService {
 
     const member = await this.memberModel.findOne({
       where: { id: memberId, gym: { id: checkGym.id } },
+      relations: ['user'],
     });
     if (!member) {
       throw new NotFoundException('Member not found');
     }
 
-    // Update training preferences
-    if (updateTrainingPreferencesDto.trainingLevel !== undefined) {
-      member.trainingLevel = updateTrainingPreferencesDto.trainingLevel;
-    }
-    if (updateTrainingPreferencesDto.trainingGoals !== undefined) {
-      member.trainingGoals = updateTrainingPreferencesDto.trainingGoals;
-    }
-    if (updateTrainingPreferencesDto.trainingPreferences !== undefined) {
-      member.trainingPreferences =
-        updateTrainingPreferencesDto.trainingPreferences;
+    // Check if member belongs to a UserEntity
+    if (member.user && member.userId) {
+      // Update UserEntity training preferences
+      const user = await this.userRepository.findOne({
+        where: { id: member.userId },
+      });
+
+      if (user) {
+        if (updateTrainingPreferencesDto.trainingLevel !== undefined) {
+          user.trainingLevel = updateTrainingPreferencesDto.trainingLevel;
+        }
+        if (updateTrainingPreferencesDto.trainingGoals !== undefined) {
+          user.trainingGoals = updateTrainingPreferencesDto.trainingGoals;
+        }
+        if (updateTrainingPreferencesDto.trainingPreferences !== undefined) {
+          user.trainingPreferences =
+            updateTrainingPreferencesDto.trainingPreferences;
+        }
+        await this.userRepository.save(user);
+
+        // Sync to all members under this user
+        const allMembers = await this.memberModel.find({
+          where: { user: { id: user.id } },
+        });
+
+        for (const m of allMembers) {
+          if (updateTrainingPreferencesDto.trainingLevel !== undefined) {
+            m.trainingLevel = updateTrainingPreferencesDto.trainingLevel;
+          }
+          if (updateTrainingPreferencesDto.trainingGoals !== undefined) {
+            m.trainingGoals = updateTrainingPreferencesDto.trainingGoals;
+          }
+          if (updateTrainingPreferencesDto.trainingPreferences !== undefined) {
+            m.trainingPreferences =
+              updateTrainingPreferencesDto.trainingPreferences;
+          }
+          await this.memberModel.save(m);
+        }
+      }
+    } else {
+      // Standalone member - update only this member
+      if (updateTrainingPreferencesDto.trainingLevel !== undefined) {
+        member.trainingLevel = updateTrainingPreferencesDto.trainingLevel;
+      }
+      if (updateTrainingPreferencesDto.trainingGoals !== undefined) {
+        member.trainingGoals = updateTrainingPreferencesDto.trainingGoals;
+      }
+      if (updateTrainingPreferencesDto.trainingPreferences !== undefined) {
+        member.trainingPreferences =
+          updateTrainingPreferencesDto.trainingPreferences;
+      }
+      await this.memberModel.save(member);
     }
 
-    await this.memberModel.save(member);
+    // Reload member to get updated data
+    const updatedMember = await this.memberModel.findOne({
+      where: { id: memberId },
+    });
 
     return {
       message: 'Training preferences updated successfully',
-      member: await this.returnMember(member),
+      member: await this.returnMember(updatedMember),
     };
   }
 
@@ -3635,6 +4034,7 @@ export class MemberService {
     }
     const member = await this.memberModel.findOne({
       where: { id, gym: { id: checkGym.id } },
+      relations: ['user', 'profileImage'],
     });
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -3654,20 +4054,82 @@ export class MemberService {
       );
     }
 
-    if (image) {
-      if (member.profileImage) {
-        await this.mediaService.delete(member.profileImage.id);
+    const managerId = gym.owner.id;
+
+    // Check if member belongs to a UserEntity
+    if (member.user && member.userId) {
+      // Update UserEntity profile image
+      const user = await this.userRepository.findOne({
+        where: { id: member.userId },
+        relations: ['profileImage'],
+      });
+
+      if (user) {
+        if (image) {
+          // Delete old user profile image if exists
+          if (user.profileImage) {
+            await this.mediaService.delete(user.profileImage.id);
+          }
+          // Upload new image
+          const imageData = await this.mediaService.upload(image, managerId);
+          user.profileImage = imageData;
+          await this.userRepository.save(user);
+
+          // Sync to all members under this user
+          const allMembers = await this.memberModel.find({
+            where: { user: { id: user.id } },
+            relations: ['profileImage'],
+          });
+
+          for (const m of allMembers) {
+            // Delete old member profile image if exists
+            if (m.profileImage) {
+              await this.mediaService.delete(m.profileImage.id);
+            }
+            m.profileImage = imageData;
+            await this.memberModel.save(m);
+          }
+        } else {
+          // Remove profile image
+          if (user.profileImage) {
+            await this.mediaService.delete(user.profileImage.id);
+          }
+          user.profileImage = null;
+          await this.userRepository.save(user);
+
+          // Remove from all members
+          const allMembers = await this.memberModel.find({
+            where: { user: { id: user.id } },
+            relations: ['profileImage'],
+          });
+
+          for (const m of allMembers) {
+            if (m.profileImage) {
+              await this.mediaService.delete(m.profileImage.id);
+            }
+            m.profileImage = null;
+            await this.memberModel.save(m);
+          }
+        }
       }
-      const imageData = await this.mediaService.upload(image, gym.owner.id);
-      member.profileImage = imageData;
-      await this.memberModel.save(member);
     } else {
-      if (member.profileImage) {
-        await this.mediaService.delete(member.profileImage.id);
+      // Standalone member - update only this member
+      if (image) {
+        if (member.profileImage) {
+          await this.mediaService.delete(member.profileImage.id);
+        }
+        const imageData = await this.mediaService.upload(image, managerId);
+        member.profileImage = imageData;
+        await this.memberModel.save(member);
+      } else {
+        if (member.profileImage) {
+          await this.mediaService.delete(member.profileImage.id);
+        }
+        member.profileImage = null;
+        await this.memberModel.save(member);
       }
-      member.profileImage = null;
-      await this.memberModel.save(member);
     }
+
     return { message: 'Profile image updated successfully' };
   }
 

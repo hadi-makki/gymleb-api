@@ -10,7 +10,6 @@ import { Response } from 'express';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { S3Service } from '../s3/s3.service';
-import { UserService } from '../user/user.service';
 import { MediaEntity } from './media.entity';
 @Injectable()
 export class MediaService {
@@ -19,7 +18,6 @@ export class MediaService {
     @InjectRepository(MediaEntity)
     private readonly mediaRepository: Repository<MediaEntity>,
     private readonly s3Service: S3Service,
-    private readonly usersService: UserService,
   ) {}
 
   async upload(file: any, userId: string = null) {

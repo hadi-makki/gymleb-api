@@ -21,6 +21,7 @@ import * as bcrypt from 'bcryptjs';
 import { MemberTrainingProgramEntity } from './member-training-program.entity';
 import { NotificationSettingEntity } from 'src/notification-settings/entities/notification-setting.entity';
 import { PersonalScheduleEntity } from 'src/personal-schedule/entities/personal-schedule.entity';
+import { UserEntity } from 'src/user/user.entity';
 
 export enum TrainingLevel {
   BEGINNER = 'beginner',
@@ -91,7 +92,9 @@ export class MemberEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isNotified: boolean;
 
-  @ManyToOne(() => MediaEntity, (media) => media.members)
+  @ManyToOne(() => MediaEntity, (media) => media.members, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'profileImageId' })
   profileImage: MediaEntity;
 
@@ -112,6 +115,14 @@ export class MemberEntity extends PgMainEntity {
 
   @ManyToOne(() => ManagerEntity, (manager) => manager.members)
   personalTrainer: ManagerEntity;
+
+  @ManyToOne(() => UserEntity, (user) => user.members, {
+    onDelete: 'SET NULL',
+  })
+  user: UserEntity;
+
+  @RelationId((member: MemberEntity) => member.user)
+  userId: string | null;
 
   @OneToMany(() => TokenEntity, (token) => token.member, {
     onDelete: 'CASCADE',

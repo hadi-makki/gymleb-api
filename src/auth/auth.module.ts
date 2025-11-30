@@ -10,6 +10,8 @@ import { TokenService } from '../token/token.service';
 import { UserService } from '../user/user.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GymEntity } from 'src/gym/entities/gym.entity';
+import { AuthenticationModule } from 'src/common/AuthModule.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -17,7 +19,9 @@ import { AuthService } from './auth.service';
       UserEntity,
       ManagerEntity,
       MemberEntity,
+      GymEntity,
     ]),
+    AuthenticationModule,
   ],
   controllers: [AuthController],
   providers: [
