@@ -13,6 +13,7 @@ import { TransactionEntity } from '../../transactions/transaction.entity';
 import { SubscriptionEntity } from '../../subscription/entities/subscription.entity';
 import { PTSessionEntity } from '../../personal-trainers/entities/pt-sessions.entity';
 import { GymEntity } from '../../gym/entities/gym.entity';
+import { UserEntity } from '../../user/user.entity';
 
 export enum NotificationProvider {
   EXPO = 'expo',
@@ -32,6 +33,7 @@ export enum NotificationCategory {
 export enum NotificationRecipientType {
   MEMBER = 'member',
   MANAGER = 'manager',
+  USER = 'user',
 }
 
 export enum NotificationDeliveryStatus {
@@ -84,6 +86,16 @@ export class InAppNotificationEntity extends PgMainEntity {
 
   @RelationId((notification: InAppNotificationEntity) => notification.member)
   memberId: string | null;
+
+  @ManyToOne(() => UserEntity, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'userId' })
+  user: UserEntity | null;
+
+  @RelationId((notification: InAppNotificationEntity) => notification.user)
+  userId: string | null;
 
   @ManyToOne(() => ManagerEntity, {
     nullable: true,

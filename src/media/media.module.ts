@@ -5,7 +5,6 @@ import { TokenEntity } from 'src/token/token.entity';
 import { UserEntity } from 'src/user/user.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { S3Service } from '../s3/s3.service';
-import { UserService } from '../user/user.service';
 import { MediaController } from './media.controller';
 import { MediaEntity } from './media.entity';
 import { MediaService } from './media.service';
@@ -16,7 +15,7 @@ import { MediaService } from './media.service';
     AuthenticationModule,
   ],
   controllers: [MediaController],
-  providers: [MediaService, S3Service, ConfigService, UserService],
+  providers: [MediaService, S3Service, ConfigService],
   exports: [MediaService, TypeOrmModule],
 })
 export class MediaModule {}

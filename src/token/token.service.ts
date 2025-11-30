@@ -210,12 +210,10 @@ export class TokenService {
 
   async getAccessTokenByDeviceIdAndAccessToken(
     deviceId: string,
-    accessToken: string,
   ): Promise<TokenEntity | null> {
     const getToken = await this.tokenRepository.findOne({
       where: {
         deviceId: deviceId,
-        accessToken: accessToken,
       },
       relations: {
         member: true,
@@ -332,11 +330,10 @@ export class TokenService {
 
     const tokenToUse = isUser ? userToken : isMember ? memberToken : token;
 
-    console.log('this is the token to use', tokenToUse);
-    console.log('this is the isMember', isMember);
+    console.log('this is the isMember', isMember, tokenToUse);
+    console.log('this is the isUser and userToken', isUser, tokenToUse);
 
     if (!tokenToUse) {
-      console.log('we are int ht no token to use');
       this.logger.warn(
         `Missing auth cookie. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,
       );
@@ -437,10 +434,8 @@ export class TokenService {
     res: Response,
   ): Promise<string | null> {
     try {
-      const checkToken = await this.getAccessTokenByDeviceIdAndAccessToken(
-        deviceId,
-        token,
-      );
+      const checkToken =
+        await this.getAccessTokenByDeviceIdAndAccessToken(deviceId);
 
       if (!checkToken) {
         this.logger.warn(

@@ -10,17 +10,20 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ManagerEntity } from 'src/manager/manager.entity';
+import { UserEntity } from 'src/user/user.entity';
 import { GetDeviceId } from '../decorators/get-device-id.decorator';
 import { Roles } from '../decorators/roles/Role';
 import { Permissions } from '../decorators/roles/role.enum';
 import { User } from '../decorators/users.decorator';
 import { AuthGuard } from '../guards/auth.guard';
 import { ManagerAuthGuard } from '../guards/manager-auth.guard';
+import { UserAuthGuard } from '../guards/user-auth.guard';
 import { MemberEntity } from './entities/member.entity';
 import { CreateTrainingProgramDto } from './dto/create-training-program.dto';
 import { UpdateTrainingProgramDto } from './dto/update-training-program.dto';
 import { MemberTrainingProgramService } from './member-training-program.service';
 import { RenameTrainingProgramKeyDto } from './dto/rename-training-program-key.dto';
+import { UserTrainingProgramsResponseDto } from './dto/return-user-training-programs.dto';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 import { MemberTrainingProgramSeed } from './seed/member-training-program.seed';
@@ -425,5 +428,154 @@ export class MemberTrainingProgramController {
       message: 'Default training programs generated successfully',
       programs: programs || [],
     };
+  }
+
+  // User endpoints (for users to access their members' training programs)
+  @Get('user/:gymId')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Get all members in gym with their training programs',
+    description:
+      'Get all members belonging to the authenticated user in the specified gym, along with their training programs',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Members with training programs retrieved successfully',
+    type: UserTrainingProgramsResponseDto,
+  })
+  async getUserMembersWithTrainingPrograms(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+  ) {
+    return await this.memberTrainingProgramService.getUserMembersWithTrainingPrograms(
+      user.id,
+      gymId,
+    );
+  }
+
+  @Get('user/:gymId/:memberId')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Get training programs for a specific member',
+    description:
+      'Get all training programs for a specific member belonging to the authenticated user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Training programs retrieved successfully',
+  })
+  async getUserMemberTrainingPrograms(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return await this.memberTrainingProgramService.getUserMemberTrainingPrograms(
+      user.id,
+      gymId,
+      memberId,
+    );
+  }
+
+  @Post('user/:gymId/:memberId')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Create or update training program for a member',
+    description:
+      'Create or update training program for a member belonging to the authenticated user',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Training program created/updated successfully',
+  })
+  async createOrUpdateUserMemberTrainingProgram(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+    @Body() createTrainingProgramDto: CreateTrainingProgramDto,
+  ) {
+    return await this.memberTrainingProgramService.createOrUpdateUserMemberTrainingProgram(
+      user.id,
+      gymId,
+      memberId,
+      createTrainingProgramDto,
+    );
+  }
+
+  @Patch('user/:gymId/:memberId/:programKey')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Update training program for a member',
+    description:
+      'Update training program for a specific member and program key',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Training program updated successfully',
+  })
+  async updateUserMemberTrainingProgram(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+    @Param('programKey') programKey: string,
+    @Body() updateTrainingProgramDto: UpdateTrainingProgramDto,
+  ) {
+    return await this.memberTrainingProgramService.updateUserMemberTrainingProgram(
+      user.id,
+      gymId,
+      memberId,
+      programKey,
+      updateTrainingProgramDto,
+    );
+  }
+
+  @Delete('user/:gymId/:memberId/:programKey')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Delete training program for a member',
+    description:
+      'Delete training program for a specific member and program key',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Training program deleted successfully',
+  })
+  async deleteUserMemberTrainingProgram(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+    @Param('programKey') programKey: string,
+  ) {
+    return await this.memberTrainingProgramService.deleteUserMemberTrainingProgram(
+      user.id,
+      gymId,
+      memberId,
+      programKey,
+    );
+  }
+
+  @Patch('user/:gymId/:memberId/by-id/:programId/rename')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Rename training program key for a member',
+    description: 'Rename training program key by program id for a member',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Training program renamed successfully',
+  })
+  async renameUserMemberTrainingProgramKey(
+    @User() user: UserEntity,
+    @Param('gymId') gymId: string,
+    @Param('memberId') memberId: string,
+    @Param('programId') programId: string,
+    @Body() body: RenameTrainingProgramKeyDto,
+  ) {
+    return await this.memberTrainingProgramService.renameUserMemberTrainingProgramKey(
+      user.id,
+      gymId,
+      memberId,
+      programId,
+      body.newProgramKey,
+    );
   }
 }

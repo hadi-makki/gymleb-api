@@ -1,11 +1,19 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Response } from 'express';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
+import { MemberService } from 'src/member/member.service';
 import { TokenService } from 'src/token/token.service';
 import { CookieNames, cookieOptions } from 'src/utils/constants';
+import { MediaService } from 'src/media/media.service';
 import { UserEntity } from './user.entity';
 import { Repository } from 'typeorm';
 import {
@@ -13,6 +21,7 @@ import {
   ReturnUserWithTokenDto,
   ReturnUserMeDto,
 } from './dto/return-user.dto';
+import { UpdateUserTrainingPreferencesDto } from './dto/update-user-training-preferences.dto';
 @Injectable()
 export class UserService {
   constructor(
@@ -23,6 +32,9 @@ export class UserService {
     @InjectRepository(GymEntity)
     private readonly gymRepository: Repository<GymEntity>,
     private readonly tokenService: TokenService,
+    private readonly mediaService: MediaService,
+    @Inject(forwardRef(() => MemberService))
+    private readonly memberService: MemberService,
   ) {}
 
   async findUserByPhone(
@@ -165,11 +177,20 @@ export class UserService {
   }
 
   private async returnUser(user: UserEntity): Promise<ReturnUserDto> {
+    const userWithRelations = await this.userRepository.findOne({
+      where: { id: user.id },
+      relations: ['profileImage'],
+    });
+
     return {
       id: user.id,
       name: user.name,
       phone: user.phone,
       phoneNumberISOCode: user.phoneNumberISOCode,
+      profileImage: userWithRelations?.profileImage,
+      trainingLevel: user.trainingLevel,
+      trainingGoals: user.trainingGoals,
+      trainingPreferences: user.trainingPreferences,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -225,7 +246,7 @@ export class UserService {
     // Get user with members and their gyms
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['members'],
+      relations: ['members', 'profileImage'],
     });
 
     if (!user) {
@@ -281,6 +302,10 @@ export class UserService {
       name: user.name,
       phone: user.phone,
       phoneNumberISOCode: user.phoneNumberISOCode,
+      profileImage: user.profileImage,
+      trainingLevel: user.trainingLevel,
+      trainingGoals: user.trainingGoals,
+      trainingPreferences: user.trainingPreferences,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       members: members.map((member) => ({
@@ -311,5 +336,156 @@ export class UserService {
     await this.userRepository.save(user);
 
     return this.returnUser(user);
+  }
+
+  async updateProfileImage(
+    userId: string,
+    image: Express.Multer.File,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['members', 'profileImage'],
+    });
+
+    console.log('this is the user', user);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Get a manager ID from one of the user's members' gyms for media upload
+    // This is needed for MediaService.upload
+    const memberWithGym = await this.memberRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['gym', 'gym.owner'],
+    });
+
+    if (!memberWithGym || !memberWithGym.gym || !memberWithGym.gym.owner) {
+      throw new BadRequestException(
+        'Cannot update profile image: user has no members with gyms',
+      );
+    }
+
+    const managerId = memberWithGym.gym.owner.id;
+
+    if (image) {
+      console.log('before deleting old profile image');
+      // Delete old profile image if exists
+      if (user.profileImage) {
+        await this.mediaService.delete(user.profileImage.id);
+      }
+
+      console.log('after deleting old profile image');
+
+      // Upload new image
+      const imageData = await this.mediaService.upload(image, managerId);
+      user.profileImage = imageData;
+      await this.userRepository.save(user);
+
+      // Sync profile image to all members under this user
+      const members = await this.memberRepository.find({
+        where: { user: { id: userId } },
+        relations: ['profileImage'],
+      });
+
+      console.log('this is the members', members);
+
+      for (const member of members) {
+        // Delete old member profile image if exists
+        if (member.profileImage) {
+          await this.mediaService.delete(member.profileImage.id);
+        }
+        member.profileImage = imageData;
+        await this.memberRepository.save(member);
+      }
+    } else {
+      // Remove profile image
+      if (user.profileImage) {
+        await this.mediaService.delete(user.profileImage.id);
+      }
+      user.profileImage = null;
+      await this.userRepository.save(user);
+
+      // Remove profile image from all members
+      const members = await this.memberRepository.find({
+        where: { user: { id: userId } },
+        relations: ['profileImage'],
+      });
+
+      for (const member of members) {
+        if (member.profileImage) {
+          await this.mediaService.delete(member.profileImage.id);
+        }
+        member.profileImage = null;
+        await this.memberRepository.save(member);
+      }
+    }
+
+    return { message: 'Profile image updated successfully' };
+  }
+
+  async updateTrainingPreferences(
+    userId: string,
+    updateDto: UpdateUserTrainingPreferencesDto,
+  ): Promise<{ message: string; user: ReturnUserDto }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Update user training preferences
+    if (updateDto.trainingLevel !== undefined) {
+      user.trainingLevel = updateDto.trainingLevel;
+    }
+    if (updateDto.trainingGoals !== undefined) {
+      user.trainingGoals = updateDto.trainingGoals;
+    }
+    if (updateDto.trainingPreferences !== undefined) {
+      user.trainingPreferences = updateDto.trainingPreferences;
+    }
+
+    await this.userRepository.save(user);
+
+    // Sync training preferences to all members under this user
+    const members = await this.memberRepository.find({
+      where: { user: { id: userId } },
+    });
+
+    for (const member of members) {
+      if (updateDto.trainingLevel !== undefined) {
+        member.trainingLevel = updateDto.trainingLevel;
+      }
+      if (updateDto.trainingGoals !== undefined) {
+        member.trainingGoals = updateDto.trainingGoals;
+      }
+      if (updateDto.trainingPreferences !== undefined) {
+        member.trainingPreferences = updateDto.trainingPreferences;
+      }
+      await this.memberRepository.save(member);
+    }
+
+    return {
+      message: 'Training preferences updated successfully',
+      user: await this.returnUser(user),
+    };
+  }
+
+  async getMemberProfile(userId: string, memberId: string): Promise<any> {
+    // Verify that the member belongs to this user
+    const member = await this.memberRepository.findOne({
+      where: { id: memberId, user: { id: userId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        'Member not found or does not belong to this user',
+      );
+    }
+
+    // Use MemberService to get the full member profile
+    return await this.memberService.getMe(memberId);
   }
 }

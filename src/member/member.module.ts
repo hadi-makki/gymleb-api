@@ -7,6 +7,7 @@ import { PersonalTrainersService } from 'src/personal-trainers/personal-trainers
 import { SubscriptionEntity } from 'src/subscription/entities/subscription.entity';
 import { TwilioMessageEntity } from 'src/twilio/entities/twilio-message.entity';
 import { TwilioService } from 'src/twilio/twilio.service';
+import { UserEntity } from 'src/user/user.entity';
 import { AuthenticationModule } from '../common/AuthModule.module';
 import { MediaModule } from '../media/media.module';
 import { TransactionModule } from '../transactions/transaction.module';
@@ -31,6 +32,7 @@ import { MemberTrainingProgramSeed } from './seed/member-training-program.seed';
       PTSessionEntity,
       TwilioMessageEntity,
       NotificationSettingEntity,
+      UserEntity,
     ]),
     TransactionModule,
     MediaModule,

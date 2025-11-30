@@ -92,7 +92,9 @@ export class MemberEntity extends PgMainEntity {
   @Column('boolean', { default: false })
   isNotified: boolean;
 
-  @ManyToOne(() => MediaEntity, (media) => media.members)
+  @ManyToOne(() => MediaEntity, (media) => media.members, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'profileImageId' })
   profileImage: MediaEntity;
 
