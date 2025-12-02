@@ -155,7 +155,7 @@ export class CronService implements OnApplicationBootstrap {
   })
   async notifyMonthlyMembersReminder() {
     try {
-      // await this.memberService.notifyMembersWithExpiringSubscriptions();
+      await this.memberService.notifyMembersWithExpiringSubscriptions();
       this.logger.log('Monthly members reminder cron completed successfully');
     } catch (error) {
       this.logger.error('Monthly members reminder cron failed:', error);
