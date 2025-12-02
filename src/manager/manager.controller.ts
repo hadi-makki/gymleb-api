@@ -243,9 +243,11 @@ export class ManagerController {
     @Query('start') start?: string,
     @Query('end') end?: string,
     @Query('useLast30Days') useLast30Days?: string,
+    @Query('lifetime') lifetime?: string,
     @Headers('currency') currency?: Currency,
   ) {
     const useLast30DaysBool = useLast30Days === 'true';
+    const lifetimeBool = lifetime === 'true';
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     return await this.ManagerService.getAdminAnalytics(
@@ -253,6 +255,7 @@ export class ManagerController {
       end,
       useLast30DaysBool,
       currency,
+      lifetimeBool,
     );
   }
 

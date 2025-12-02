@@ -166,9 +166,18 @@ export class GymController {
     @Param('gymId') gymId: string,
     @Query('start') start?: string,
     @Query('end') end?: string,
+    @Query('lifetime') lifetime?: string,
     @Headers('currency') currency?: Currency,
   ) {
-    return this.gymService.getGymAnalytics(user, start, end, gymId, currency);
+    const lifetimeBool = lifetime === 'true';
+    return this.gymService.getGymAnalytics(
+      user,
+      start,
+      end,
+      gymId,
+      currency,
+      lifetimeBool,
+    );
   }
 
   @Get('super-admin/analytics/:gymId')

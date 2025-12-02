@@ -37,6 +37,7 @@ import { BulkUpdateSessionDatesDto } from './dto/bulk-update-session-dates.dto';
 import { ManagerEntity } from 'src/manager/manager.entity';
 import { ValidateGymRelatedToOwner } from 'src/decorators/validate-gym-related-to-owner.decorator';
 import { ValidatePersonalTrainerRelatedToGym } from 'src/decorators/validate-personal-trainer-related-to-gym.decorator';
+import { ValidateMemberRelatedToGym } from 'src/decorators/validate-member-related-to-gym.decorator';
 import { Response } from 'express';
 
 @Controller('personal-trainers')
@@ -352,6 +353,31 @@ export class PersonalTrainersController {
     @Body() body: { reason: string },
   ) {
     return this.personalTrainersService.cancelSession(sessionId, body.reason);
+  }
+
+  @Patch('sessions/:sessionId/unschedule')
+  @UseGuards(ManagerAuthGuard)
+  @Roles(
+    Permissions.GymOwner,
+    Permissions.SuperAdmin,
+    Permissions.update_pt_sessions,
+  )
+  @ValidateMemberRelatedToGym()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unschedule a session (clear its date)' })
+  @ApiResponse({
+    status: 200,
+    description: 'The session has been successfully unscheduled.',
+  })
+  unscheduleSession(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { memberId: string; gymId: string },
+  ) {
+    return this.personalTrainersService.unscheduleSession(
+      sessionId,
+      body.memberId,
+      body.gymId,
+    );
   }
 
   @Patch('sessions/:sessionId')

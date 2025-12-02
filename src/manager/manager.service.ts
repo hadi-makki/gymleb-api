@@ -291,6 +291,7 @@ export class ManagerService {
     end?: string,
     useLast30Days?: boolean,
     currency?: Currency,
+    lifetime?: boolean,
   ) {
     const now = new Date();
     const lastMonthStart = startOfMonth(subMonths(now, 1));
@@ -298,14 +299,20 @@ export class ManagerService {
     const currentMonthStart = startOfMonth(now);
     const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    // If lifetime mode is enabled, ignore date filters
+    const isLifetime = lifetime === true;
+
     const baseFilter: any = {
       isOwnerSubscriptionAssignment: true,
       ...(currency ? { currency } : {}),
     };
 
-    // Determine the date range based on parameters
+    // Determine the date range based on parameters (only if not lifetime)
     let dateFilter = {};
-    if (start && end) {
+    if (isLifetime) {
+      // No date filter for lifetime mode
+      dateFilter = {};
+    } else if (start && end) {
       // Custom date range provided
       dateFilter = { createdAt: Between(start, end) };
     } else if (useLast30Days) {

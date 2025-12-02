@@ -330,9 +330,6 @@ export class TokenService {
 
     const tokenToUse = isUser ? userToken : isMember ? memberToken : token;
 
-    console.log('this is the isMember', isMember, tokenToUse);
-    console.log('this is the isUser and userToken', isUser, tokenToUse);
-
     if (!tokenToUse) {
       this.logger.warn(
         `Missing auth cookie. isMember=${isMember} deviceId=${req.cookies?.[CookieNames.DeviceId] || 'unknown'}`,

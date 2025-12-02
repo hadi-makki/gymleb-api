@@ -867,6 +867,34 @@ export class PersonalTrainersService {
     };
   }
 
+  async unscheduleSession(sessionId: string, memberId: string, gymId: string) {
+    const session = await this.sessionEntity.findOne({
+      where: { id: sessionId },
+      relations: ['gym', 'members'],
+    });
+
+    if (!session || !session.gym || session.gym.id !== gymId) {
+      throw new NotFoundException('Session not found in gym');
+    }
+
+    const isMemberInSession = (session.members || []).some(
+      (member) => member.id === memberId,
+    );
+
+    if (!isMemberInSession) {
+      throw new NotFoundException(
+        'Session not found for the specified member in gym',
+      );
+    }
+
+    session.sessionDate = null;
+    await this.sessionEntity.save(session);
+
+    return {
+      message: 'Session unscheduled successfully',
+    };
+  }
+
   async checkPtAvailability(
     ptId: string,
     date: Date,

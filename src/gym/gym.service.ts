@@ -174,6 +174,7 @@ export class GymService {
     end?: string,
     gymId?: string,
     currency?: Currency,
+    lifetime?: boolean,
   ) {
     if (!gymId) {
       throw new BadRequestException('Gym ID is required');
@@ -190,24 +191,34 @@ export class GymService {
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
     const currentMonthStart = startOfMonth(now);
 
-    // Build date filter for the specified range
+    // If lifetime mode is enabled, ignore date filters
+    const isLifetime = lifetime === true;
+
+    // Build date filter for the specified range (only if not lifetime)
     const dateFilter: any = {};
-    if (start || end) {
-      if (start && end) {
-        dateFilter.paidAt = Between(new Date(start), new Date(end));
-      } else if (start) {
-        dateFilter.paidAt = MoreThanOrEqual(new Date(start));
-      } else if (end) {
-        dateFilter.paidAt = LessThanOrEqual(new Date(end));
+    if (!isLifetime) {
+      if (start || end) {
+        if (start && end) {
+          dateFilter.paidAt = Between(new Date(start), new Date(end));
+        } else if (start) {
+          dateFilter.paidAt = MoreThanOrEqual(new Date(start));
+        } else if (end) {
+          dateFilter.paidAt = LessThanOrEqual(new Date(end));
+        }
+      } else {
+        // Default to current month when no custom dates provided
+        dateFilter.paidAt = MoreThanOrEqual(currentMonthStart);
       }
-    } else {
-      // Default to current month when no custom dates provided
-      dateFilter.paidAt = MoreThanOrEqual(currentMonthStart);
     }
 
     // Compute aggregates via SQL (avoid loading large transaction lists)
-    const filterFrom = start ? new Date(start) : currentMonthStart;
-    const filterTo = end ? new Date(end) : now;
+    // For lifetime mode, use very early date and current date, or omit date filters entirely
+    const filterFrom = isLifetime
+      ? new Date(0)
+      : start
+        ? new Date(start)
+        : currentMonthStart;
+    const filterTo = isLifetime ? now : end ? new Date(end) : now;
     // OPTIMIZATION: Organize queries with template literals for better readability
     const [
       subscriptionRevenueRow,
@@ -461,8 +472,12 @@ export class GymService {
     const netRevenue = totalRevenue - totalExpenses;
 
     // Determine the actual date range used
-    const analyticsStartDate = start ? new Date(start) : currentMonthStart;
-    const analyticsEndDate = end ? new Date(end) : now;
+    const analyticsStartDate = isLifetime
+      ? new Date(0)
+      : start
+        ? new Date(start)
+        : currentMonthStart;
+    const analyticsEndDate = isLifetime ? now : end ? new Date(end) : now;
 
     return {
       totalRevenue,
