@@ -61,12 +61,16 @@ import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // Time window in milliseconds (1 minute)
-        limit: 100, // Maximum number of requests per ttl window
-      },
-    ]),
+    ...(process.env.NODE_ENV === 'local'
+      ? []
+      : [
+          ThrottlerModule.forRoot([
+            {
+              ttl: 60000, // Time window in milliseconds (1 minute)
+              limit: 100, // Maximum number of requests per ttl window
+            },
+          ]),
+        ]),
 
     TypeOrmModule.forFeature([
       ManagerEntity,
@@ -126,10 +130,14 @@ import { NotificationsModule } from './notifications/notifications.module';
     AppService,
     ManagerSeeding,
     GymSeeding,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.NODE_ENV === 'local'
+      ? []
+      : [
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]),
     DatabaseMigration,
   ],
 })

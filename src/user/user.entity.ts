@@ -55,4 +55,7 @@ export class UserEntity extends PgMainEntity {
 
   @Column('timestamp without time zone', { nullable: true })
   downloadedAt: Date | null;
+
+  @Column('boolean', { default: false })
+  isDeactivated: boolean;
 }

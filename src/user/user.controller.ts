@@ -28,12 +28,15 @@ import { User } from '../decorators/users.decorator';
 import { ApiBadRequestResponse } from '../error/api-responses.decorator';
 import { validateImage } from '../utils/helprt-functions';
 import { WebpPipe } from '../pipes/webp.pipe';
+import { CookieNames, cookieOptions } from '../utils/constants';
 import { GymEntity } from 'src/gym/entities/gym.entity';
 import { UserEntity } from './user.entity';
 import { CheckUserPasswordDto } from './dto/check-user-password.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { UpdateUserNameDto } from './dto/update-user-name.dto';
 import { UpdateUserTrainingPreferencesDto } from './dto/update-user-training-preferences.dto';
+import { DeactivateUserDto } from './dto/deactivate-user.dto';
+import { DeleteUserDto } from './dto/delete-user.dto';
 import {
   ReturnUserWithTokenDto,
   ReturnUserMeDto,
@@ -74,7 +77,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Login user or create password',
     description:
-      'Login user with password. If no members have passwords, sets password for all members. If members have passwords, validates against them.',
+      'Login user with password. If no members have passwords, sets password for all members. If members have passwords, validates against them. If the account is deactivated, it will be automatically reactivated upon successful login.',
   })
   @ApiCreatedResponse({
     description: 'Login successful',
@@ -235,5 +238,88 @@ export class UserController {
   @ApiBadRequestResponse('User not found')
   async markAppDownloaded(@User() user: UserEntity) {
     return await this.userService.markAppDownloaded(user.id);
+  }
+
+  @Post('logout')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Logout user',
+    description:
+      'Logs out the authenticated user and clears their session token.',
+  })
+  @ApiOkResponse({
+    description: 'Logged out successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Logged out successfully' },
+      },
+    },
+  })
+  async logout(
+    @User() user: UserEntity,
+    @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
+  ) {
+    response.clearCookie(CookieNames.UserToken, cookieOptions);
+    await this.userService.logout(user, deviceId);
+    return { message: 'Logged out successfully' };
+  }
+
+  @Post('deactivate')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Deactivate user account',
+    description:
+      'Deactivates the authenticated user account. Requires password verification. Members remain in the database. The account can be reactivated by logging in again.',
+  })
+  @ApiOkResponse({
+    description: 'Account deactivated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Account deactivated successfully',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse('Invalid password or user not found')
+  async deactivate(
+    @User() user: UserEntity,
+    @Body() body: DeactivateUserDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.userService.deactivateUser(user.id, body.password);
+    response.clearCookie(CookieNames.UserToken, cookieOptions);
+    return { message: 'Account deactivated successfully' };
+  }
+
+  @Post('delete')
+  @UseGuards(UserAuthGuard)
+  @ApiOperation({
+    summary: 'Delete user account',
+    description:
+      'Permanently deletes the authenticated user account. Requires password verification. Members remain in the database with user reference set to null.',
+  })
+  @ApiOkResponse({
+    description: 'Account deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Account deleted successfully' },
+      },
+    },
+  })
+  @ApiBadRequestResponse('Invalid password or user not found')
+  async delete(
+    @User() user: UserEntity,
+    @Body() body: DeleteUserDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.userService.deleteUser(user.id, body.password);
+    response.clearCookie(CookieNames.UserToken, cookieOptions);
+    return { message: 'Account deleted successfully' };
   }
 }

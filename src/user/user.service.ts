@@ -154,6 +154,12 @@ export class UserService {
       }
     }
 
+    // Reactivate account if it was deactivated
+    if (user.isDeactivated) {
+      user.isDeactivated = false;
+      await this.userRepository.save(user);
+    }
+
     // Generate JWT token for user
     const token = await this.tokenService.generateTokens({
       userTokenId: user.id,
@@ -509,5 +515,71 @@ export class UserService {
     await this.userRepository.save(user);
 
     return this.returnUser(user);
+  }
+
+  async logout(user: UserEntity, deviceId: string): Promise<void> {
+    await this.tokenService.deleteTokensByUserId(user.id, deviceId);
+  }
+
+  async deactivateUser(
+    userId: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Validate password
+    const isValid = await this.validatePasswordAgainstMembers(userId, password);
+    if (!isValid) {
+      throw new BadRequestException('Invalid password');
+    }
+
+    // Set isDeactivated flag
+    user.isDeactivated = true;
+    await this.userRepository.save(user);
+
+    // Delete all tokens for this user (logout from all devices)
+    await this.tokenService.deleteTokensByUserId(user.id);
+
+    return { message: 'Account deactivated successfully' };
+  }
+
+  async deleteUser(
+    userId: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profileImage'],
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Validate password
+    const isValid = await this.validatePasswordAgainstMembers(userId, password);
+    if (!isValid) {
+      throw new BadRequestException('Invalid password');
+    }
+
+    // Delete all tokens for this user
+    await this.tokenService.deleteTokensByUserId(user.id);
+
+    // Delete profile image if exists
+    if (user.profileImage) {
+      await this.mediaService.delete(user.profileImage.id);
+    }
+
+    // Delete the user entity
+    // Members will have user reference set to null via onDelete: 'SET NULL'
+    await this.userRepository.delete(userId);
+
+    return { message: 'Account deleted successfully' };
   }
 }
