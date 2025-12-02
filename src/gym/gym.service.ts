@@ -47,7 +47,12 @@ import {
   TransactionType,
 } from 'src/transactions/transaction.entity';
 import { SubscriptionType } from 'src/subscription/entities/subscription.entity';
-import { paginate, FilterOperator } from 'nestjs-paginate';
+import {
+  paginate,
+  FilterOperator,
+  PaginateConfig,
+  PaginateQuery,
+} from 'nestjs-paginate';
 import { Permissions } from 'src/decorators/roles/role.enum';
 import { isUUID } from 'class-validator';
 import { UpdateGymLocationDto } from './dto/update-gym-location.dto';
@@ -1880,7 +1885,7 @@ export class GymService {
     }
 
     // Build the paginate options
-    const paginateOptions: any = {
+    const paginateOptions: PaginateConfig<TransactionEntity> = {
       relations: [
         'subscription',
         'member',
@@ -1892,9 +1897,15 @@ export class GymService {
         'relatedPtSession',
         'personalTrainer',
       ],
-      sortableColumns: ['createdAt', 'updatedAt', 'paidAmount', 'type'],
+      sortableColumns: [
+        'paidAt',
+        'createdAt',
+        'updatedAt',
+        'paidAmount',
+        'type',
+      ],
       searchableColumns: ['title', 'paidBy'],
-      defaultSortBy: [['createdAt', 'DESC']],
+      defaultSortBy: [['updatedAt', 'DESC']],
       filterableColumns: { type: [FilterOperator.EQ] },
       maxLimit: 100,
     };
