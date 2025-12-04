@@ -3836,7 +3836,7 @@ export class GymService {
   async getPublicGyms(): Promise<GymEntity[]> {
     const gyms = await this.gymModel.find({
       where: { isDeactivated: false },
-      select: ['id', 'name'],
+      select: ['id', 'name', 'gymDashedName', 'address', 'allowUserSignUp'],
     });
 
     return gyms;

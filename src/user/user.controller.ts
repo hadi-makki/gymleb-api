@@ -42,12 +42,32 @@ import {
   ReturnUserMeDto,
   ReturnUserDto,
 } from './dto/return-user.dto';
+import { SignupUserDto } from './dto/signup-user.dto';
 import { UserService } from './user.service';
 
 @Controller('user')
 @ApiTags('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Post('signup')
+  @ApiOperation({
+    summary: 'Sign up user with phone and password',
+    description:
+      'Creates a new user account using phone number, phone ISO code, and password. Does not create members or link to a gym.',
+  })
+  @ApiCreatedResponse({
+    description: 'Signup successful',
+    type: ReturnUserWithTokenDto,
+  })
+  @ApiBadRequestResponse('User already exists')
+  async signup(
+    @Body() body: SignupUserDto,
+    @Res({ passthrough: true }) response: Response,
+    @GetDeviceId() deviceId: string,
+  ) {
+    return await this.userService.signupUser(body, deviceId, response);
+  }
 
   @Post('check-password')
   @ApiOperation({

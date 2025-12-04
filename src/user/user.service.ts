@@ -22,6 +22,7 @@ import {
   ReturnUserMeDto,
 } from './dto/return-user.dto';
 import { UpdateUserTrainingPreferencesDto } from './dto/update-user-training-preferences.dto';
+import { SignupUserDto } from './dto/signup-user.dto';
 @Injectable()
 export class UserService {
   constructor(
@@ -179,6 +180,54 @@ export class UserService {
       updatedAt: user.updatedAt,
       hasDownloadedApp: user.hasDownloadedApp,
       downloadedAt: user.downloadedAt,
+      token: token.accessToken,
+      deviceId,
+    };
+  }
+
+  async signupUser(
+    signupUserDto: SignupUserDto,
+    deviceId: string,
+    res: Response,
+  ): Promise<ReturnUserWithTokenDto> {
+    const { phoneNumber, phoneNumberISOCode, password, name } = signupUserDto;
+
+    const existingUser = await this.findUserByPhone(
+      phoneNumber,
+      phoneNumberISOCode,
+    );
+
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+
+    const user = this.userRepository.create({
+      phone: phoneNumber,
+      phoneNumberISOCode,
+      name: name ?? null,
+    });
+
+    const savedUser = await this.userRepository.save(user);
+
+    // Note: password is intentionally not stored on UserEntity.
+    // Gyms will later create MemberEntity records for this user and manage passwords there.
+
+    const token = await this.tokenService.generateTokens({
+      userTokenId: savedUser.id,
+      deviceId,
+    });
+
+    res.cookie(CookieNames.UserToken, token.accessToken, cookieOptions);
+
+    return {
+      id: savedUser.id,
+      name: savedUser.name,
+      phone: savedUser.phone,
+      phoneNumberISOCode: savedUser.phoneNumberISOCode,
+      createdAt: savedUser.createdAt,
+      updatedAt: savedUser.updatedAt,
+      hasDownloadedApp: savedUser.hasDownloadedApp,
+      downloadedAt: savedUser.downloadedAt,
       token: token.accessToken,
       deviceId,
     };
