@@ -1912,6 +1912,7 @@ export class MemberService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+    const oldPhoneNumber = member.phone;
 
     member.name = updateMemberDto.name;
     member.email = updateMemberDto.email;
@@ -1921,7 +1922,7 @@ export class MemberService {
       : null;
     await this.memberModel.save(member);
 
-    if (updateMemberDto.phoneNumber != member.phone) {
+    if (updateMemberDto.phoneNumber != oldPhoneNumber) {
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(checkGym.id);
       member.welcomeMessageStatus = WelcomeMessageStatus.PENDING;
