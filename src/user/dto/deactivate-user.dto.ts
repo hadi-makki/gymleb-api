@@ -10,4 +10,3 @@ export class DeactivateUserDto {
   @IsString()
   password: string;
 }
-

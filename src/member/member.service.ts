@@ -1920,6 +1920,19 @@ export class MemberService {
       ? updateMemberDto.phoneNumberISOCode || 'LB'
       : null;
     await this.memberModel.save(member);
+
+    if (updateMemberDto.phoneNumber != member.phone) {
+      const getLatestGymSubscription =
+        await this.gymService.getGymActiveSubscription(checkGym.id);
+      await this.twilioService.sendWelcomeMessage(
+        member.name,
+        updateMemberDto.phoneNumber,
+        updateMemberDto.phoneNumberISOCode,
+        checkGym,
+        getLatestGymSubscription?.activeSubscription?.ownerSubscriptionType,
+        member.id,
+      );
+    }
     return await this.returnMember(member);
   }
 

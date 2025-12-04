@@ -10,4 +10,3 @@ export class DeleteUserDto {
   @IsString()
   password: string;
 }
-
