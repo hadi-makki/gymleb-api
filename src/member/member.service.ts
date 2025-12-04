@@ -1924,6 +1924,8 @@ export class MemberService {
     if (updateMemberDto.phoneNumber != member.phone) {
       const getLatestGymSubscription =
         await this.gymService.getGymActiveSubscription(checkGym.id);
+      member.welcomeMessageStatus = WelcomeMessageStatus.PENDING;
+      await this.memberModel.save(member);
       await this.twilioService.sendWelcomeMessage(
         member.name,
         updateMemberDto.phoneNumber,
