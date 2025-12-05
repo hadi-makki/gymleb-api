@@ -21,6 +21,8 @@ import { GymEntity } from 'src/gym/entities/gym.entity';
 import { MemberEntity } from 'src/member/entities/member.entity';
 import { isUUID } from 'class-validator';
 import { VALIDATE_GYM_RELATED_TO_MANAGER_OR_MANAGER_IN_GYM_KEY } from 'src/decorators/validate-gym-related-to-manager-or-manager-in-gym.dto';
+import { Redis } from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
 @Injectable()
 export class ManagerAuthGuard implements CanActivate {
   constructor(
@@ -32,6 +34,7 @@ export class ManagerAuthGuard implements CanActivate {
     private gymRepository: Repository<GymEntity>,
     @InjectRepository(MemberEntity)
     private memberRepository: Repository<MemberEntity>,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -82,10 +85,27 @@ export class ManagerAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const manager = await this.managerRepository.findOne({
-      where: { id: userId },
-    });
+    // check if the manager is cached
+    let manager: ManagerEntity;
+    const cachedManager = await this.redis.get(`manager:${userId}`);
 
+    if (cachedManager) {
+      manager = JSON.parse(cachedManager);
+    } else {
+      const getManager = await this.managerRepository.findOne({
+        where: { id: userId },
+      });
+      if (!getManager) {
+        throw new ForbiddenException('Manager not found');
+      }
+      manager = getManager;
+      await this.redis.set(
+        `manager:${userId}`,
+        JSON.stringify(getManager),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
+    }
     if (
       (!manager ||
         !requiredRoles.some((role) => manager.permissions.includes(role))) &&
@@ -107,6 +127,7 @@ export class ManagerAuthGuard implements CanActivate {
     if (validateGymRelatedToManagerOrManagerInGym) {
       await this.validateGymRelatedToManagerOrManagerInGym(manager, request);
     }
+
     request.user = manager;
 
     return true;
@@ -130,12 +151,28 @@ export class ManagerAuthGuard implements CanActivate {
       throw new BadRequestException('Invalid gym id');
     }
 
-    const gym = await this.gymRepository.findOne({
-      where: { id: gymId },
-      relations: {
-        owner: true,
-      },
-    });
+    // check if the gym is cached
+    const cachedGym = await this.redis.get(`gym:${gymId}`);
+    let gym: GymEntity;
+    if (cachedGym) {
+      gym = JSON.parse(cachedGym);
+    } else {
+      gym = await this.gymRepository.findOne({
+        where: { id: gymId },
+        relations: {
+          owner: true,
+        },
+      });
+      if (!gym) {
+        throw new ForbiddenException('Gym not found');
+      }
+      await this.redis.set(
+        `gym:${gymId}`,
+        JSON.stringify(gym),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
+    }
 
     if (!gym) {
       throw new ForbiddenException('Gym not found');
@@ -145,12 +182,28 @@ export class ManagerAuthGuard implements CanActivate {
       return true;
     }
 
-    const managerInGym = await this.managerRepository.findOne({
-      where: { id: manager.id, gyms: { id: gymId } },
-    });
+    // check if the manager in gym is cached
+    const cachedManagerInGym = await this.redis.get(
+      `manager:${manager.id}:gym:${gymId}`,
+    );
+    let managerInGym: ManagerEntity;
+    if (cachedManagerInGym) {
+      managerInGym = JSON.parse(cachedManagerInGym);
+    } else {
+      const getManagerInGym = await this.managerRepository.findOne({
+        where: { id: manager.id, gyms: { id: gymId } },
+      });
+      if (!getManagerInGym) {
+        throw new ForbiddenException('Manager not found');
+      }
+      managerInGym = getManagerInGym;
 
-    if (!managerInGym) {
-      throw new ForbiddenException('Member not found');
+      await this.redis.set(
+        `manager:${manager.id}:gym:${gymId}`,
+        JSON.stringify(managerInGym),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
     }
 
     return true;
@@ -171,27 +224,53 @@ export class ManagerAuthGuard implements CanActivate {
       throw new BadRequestException('Invalid gym id');
     }
 
-    const gym = await this.gymRepository.findOne({
-      where: { id: gymId },
-      relations: {
-        owner: true,
-      },
-    });
-
-    if (!gym) {
-      throw new ForbiddenException('Gym not found');
+    // check if the gym is cached
+    const cachedGym = await this.redis.get(`gym:${gymId}`);
+    let gym: GymEntity;
+    if (cachedGym) {
+      gym = JSON.parse(cachedGym);
+    } else {
+      gym = await this.gymRepository.findOne({
+        where: { id: gymId },
+        relations: {
+          owner: true,
+        },
+      });
+      if (!gym) {
+        throw new ForbiddenException('Gym not found');
+      }
+      await this.redis.set(
+        `gym:${gymId}`,
+        JSON.stringify(gym),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
     }
-
     if (gym.owner.id === manager.id) {
       return true;
     }
 
-    const managerInGym = await this.managerRepository.findOne({
-      where: { id: manager.id, gyms: { id: gymId } },
-    });
-
-    if (!managerInGym) {
-      throw new ForbiddenException('Member not found');
+    // check if the manager in gym is cached
+    const cachedManagerInGym = await this.redis.get(
+      `manager:${manager.id}:gym:${gymId}`,
+    );
+    let managerInGym: ManagerEntity;
+    if (cachedManagerInGym) {
+      managerInGym = JSON.parse(cachedManagerInGym);
+    } else {
+      const getManagerInGym = await this.managerRepository.findOne({
+        where: { id: manager.id, gyms: { id: gymId } },
+      });
+      if (!getManagerInGym) {
+        throw new ForbiddenException('Manager not found');
+      }
+      managerInGym = getManagerInGym;
+      await this.redis.set(
+        `manager:${manager.id}:gym:${gymId}`,
+        JSON.stringify(managerInGym),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
     }
 
     return true;
@@ -220,12 +299,28 @@ export class ManagerAuthGuard implements CanActivate {
       throw new BadRequestException('Invalid gym id');
     }
 
-    const member = await this.memberRepository.findOne({
-      where: { id: memberId, gym: { id: gymId } },
-      relations: {
-        gym: true,
-      },
-    });
+    // check if the member is cached
+    const cachedMember = await this.redis.get(`member:${memberId}`);
+    let member: MemberEntity;
+    if (cachedMember) {
+      member = JSON.parse(cachedMember);
+    } else {
+      member = await this.memberRepository.findOne({
+        where: { id: memberId, gym: { id: gymId } },
+        relations: {
+          gym: true,
+        },
+      });
+      if (!member) {
+        throw new ForbiddenException('Member not found');
+      }
+      await this.redis.set(
+        `member:${memberId}`,
+        JSON.stringify(member),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
+    }
     if (!member) {
       throw new ForbiddenException('Member not found');
     }
@@ -257,15 +352,29 @@ export class ManagerAuthGuard implements CanActivate {
     }
 
     // Find the personal trainer
-    const personalTrainer = await this.managerRepository.findOne({
-      where: { id: personalTrainerId },
-      relations: {
-        gyms: true,
-      },
-    });
-
-    if (!personalTrainer) {
-      throw new ForbiddenException('Personal trainer not found');
+    const cachedPersonalTrainer = await this.redis.get(
+      `personalTrainer:${personalTrainerId}`,
+    );
+    let personalTrainer: ManagerEntity;
+    if (cachedPersonalTrainer) {
+      personalTrainer = JSON.parse(cachedPersonalTrainer);
+    } else {
+      const getPersonalTrainer = await this.managerRepository.findOne({
+        where: { id: personalTrainerId },
+        relations: {
+          gyms: true,
+        },
+      });
+      if (!getPersonalTrainer) {
+        throw new ForbiddenException('Personal trainer not found');
+      }
+      personalTrainer = getPersonalTrainer;
+      await this.redis.set(
+        `personalTrainer:${personalTrainerId}`,
+        JSON.stringify(personalTrainer),
+        'EX',
+        60 * 60, // expires in 1 hour
+      );
     }
 
     // Check if the personal trainer has personalTrainers permission

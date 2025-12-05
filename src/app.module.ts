@@ -58,6 +58,7 @@ import { BillsModule } from './bills/bills.module';
 import { BillEntity } from './bills/entities/bill.entity';
 import { FirebaseModule } from './firebase/firebase.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -91,7 +92,7 @@ import { NotificationsModule } from './notifications/notifications.module';
       PersonalScheduleEntity,
       BillEntity,
     ]),
-    ConfigModule,
+    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     MediaModule,
     S3Module,
@@ -124,6 +125,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     BillsModule,
     FirebaseModule,
     NotificationsModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [

@@ -155,6 +155,7 @@ export class ManagerController {
   @ApiBadRequestResponse()
   @ApiUnauthorizedResponse()
   async me(@User() user: ManagerEntity) {
+    console.log('this is the user', user);
     return this.ManagerService.getMe(user);
   }
 
